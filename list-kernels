@@ -1,0 +1,29 @@
+#!/bin/bash -eu
+
+rroot=/mnt/space/mirror
+#5.1  c6  c7  c7.1  c8  c8.1  c9f1  c9f2  c9m1  c9m2  p10  p5  p6  p7  p8  p9  p9-armh  Sisyphus  Sisyphus-armh
+skip="5.1|c[678].*|c9[fm]1|c9m2|p[5678]|.*armh"
+
+branches=$(cd $rroot; ls | grep -E -vwe "$skip")
+flavours='std-def std-debug un-def'
+flavours='*'
+
+list=
+for b in $branches; do
+	for f in "$flavours"; do
+		r=$rroot/$b/files/x86_64/RPMS
+		test -d $r || continue
+		f=$r/kernel-image-$f-[0-9]*-alt*.x86_64.rpm
+		for i in $f; do
+			test -e $i || continue
+			flv=${i##*kernel-image-}
+			flv=${flv%%-[0-9]*}
+			[[ $flv =~ debuginfo|domU|checkinstall ]] && continue
+			list+=" $i"
+		done
+	done
+done
+ls -ltr $list \
+	| sed -E 's/^\S+\s+\S+\s+\S+\s+\S+//' \
+	| grep -E --color '^|[0-9.]+-alt[^.]+'
+
