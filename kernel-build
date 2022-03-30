@@ -1,0 +1,36 @@
+#!/bin/bash -efu
+
+V() { echo + "$@" >&2; "$@"; }
+
+br=$(git branch --show-current)
+branch=${br#*/}
+brflvr=${br%/*}
+case $branch in
+	sisyphus|p[1-9]*|c[1-9]*) ;;
+	*) echo >&2 "Invalid repo $branch"; exit 1 ;;
+esac
+case $brflvr in
+	un-def|std-def|std-pae|std-debug) ;;
+	*) echo >&2 "Invalid flavour $brflvr"; exit 1 ;;
+esac
+
+# Set tags to build.
+if [ "$*" ]; then
+	set "$@"
+else
+	set -- $(git tag --points-at @)
+fi
+V git push gitery $br -f
+for tag; do
+	flavour=${tag#kernel-image-}
+	flavour=${flavour%-*-alt*}
+
+	V git push gitery $tag -f
+	task=$(V ssh girar task new $branch)
+	V ssh girar task add $task repo kernel-image $tag
+	echo PESIGN | \
+	V ssh girar task approve $task 100
+	V ssh girar task add $task kmodules $flavour
+	V ssh girar task run --commit $task -m kmodules
+done
+
