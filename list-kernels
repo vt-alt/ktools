@@ -11,9 +11,9 @@ flavours='*'
 list=
 for b in $branches; do
 	for f in "$flavours"; do
-		r=$rroot/$b/files/x86_64/RPMS
+		r=$rroot/$b/files/${1-x86_64}/RPMS
 		test -d $r || continue
-		f=$r/kernel-image-$f-[0-9]*-alt*.x86_64.rpm
+		f=$r/kernel-image-$f-[0-9]*-alt*.*.rpm
 		for i in $f; do
 			test -e $i || continue
 			flv=${i##*kernel-image-}
