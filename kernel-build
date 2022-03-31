@@ -30,7 +30,8 @@ for tag; do
 	V ssh girar task add $task repo kernel-image $tag
 	echo PESIGN | \
 	V ssh girar task approve $task 100
-	V ssh girar task add $task kmodules $flavour
-	V ssh girar task run --commit $task -m kmodules
+	if V ssh girar task add $task kmodules $flavour; then
+		V ssh girar task run --commit $task -m kmodules
+	fi
 done
 
