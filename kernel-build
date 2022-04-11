@@ -10,7 +10,7 @@ case $branch in
 	*) echo >&2 "Invalid repo $branch"; exit 1 ;;
 esac
 case $brflvr in
-	un-def|std-def|std-pae|std-debug) ;;
+	un-def|std-def|std-pae|std-debug|next) ;;
 	*) echo >&2 "Invalid flavour $brflvr"; exit 1 ;;
 esac
 
