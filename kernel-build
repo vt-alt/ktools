@@ -2,6 +2,11 @@
 
 V() { echo + "$@" >&2; "$@"; }
 
+commit=--test-only
+if [ "${1-}" = --commit ]; then
+	commit=--commit
+	shift
+fi
 br=$(git branch --show-current)
 branch=${br#*/}
 brflvr=${br%/*}
@@ -32,6 +37,6 @@ for tag; do
 	V ssh girar task approve $task 100
 	msg="-m kmodules"
 	V ssh girar task add $task kmodules $flavour || msg=
-	V ssh girar task run --commit $task $msg
+	V ssh girar task run $commit $task $msg
 done
 
