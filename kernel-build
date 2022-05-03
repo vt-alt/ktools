@@ -36,7 +36,8 @@ for tag; do
 	echo PESIGN | \
 	V ssh girar task approve $task 100
 	msg="-m kmodules"
+	V ssh girar task share $task enable
 	V ssh girar task add $task kmodules $flavour || msg=
-	V ssh girar task run $commit $task $msg
+	V ssh girar task run --fail-late $commit $task $msg
 done
 
