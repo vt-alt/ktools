@@ -2,11 +2,16 @@
 
 V() { echo + "$@" >&2; "$@"; }
 
-commit=--test-only
-if [ "${1-}" = --commit ]; then
-	commit=--commit
+unset commit shared
+for opt do
 	shift
-fi
+	case "$opt" in
+		--commit) commit=y ;;
+		--share*) shared=y ;;
+		*) set -- "$opt" "$@"; break ;;
+	esac
+done
+
 br=$(git branch --show-current)
 branch=${br#*/}
 brflvr=${br%/*}
@@ -34,10 +39,13 @@ for tag; do
 	task=$(V ssh girar task new $branch)
 	V ssh girar task add $task repo kernel-image $tag
 	echo PESIGN | \
-	V ssh girar task approve $task 100
-	msg="-m kmodules"
-	V ssh girar task share $task enable
-	V ssh girar task add $task kmodules $flavour || msg=
-	V ssh girar task run --fail-late $commit $task $msg
+	V ssh girar task approve $task all
+	[ -v shared ] && V ssh girar task share $task enable
+	if V ssh girar task add $task kmodules $flavour; then
+		msg="-m kmodules"
+	else
+		msg=
+	fi
+	V ssh girar task run --fail-late ${commit+--commit} $task $msg
 done
 
