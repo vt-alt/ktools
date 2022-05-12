@@ -6,18 +6,25 @@ skip="5.1|c[678].*|fm]1|p[567]|.*armh"
 
 branch=Sisyphus arch=x86_64 flavour=std-def
 branches= flavours=
+configs=
 for i; do
 	if [ -d /ALT/$i ]; then
 		branch=$i
 		branches+=" $i"
+		continue
 	fi
 	if [ -d /ALT/$branch/files/$i ]; then
 		arch=$i
+		continue
 	fi
 	if [ -e /ALT/$branch/files/$arch/RPMS/kernel-image-$i-[1-9]*.rpm ]; then
 		flavour=$i
 		flavours+=" $i"
+		continue
 	fi
+	case "$i" in
+		--config*) configs=y ;;
+	esac
 done
 
 [ -z "${branches-}" ] && branches=$(cd $rroot; ls | grep -E -vwe "$skip")
@@ -44,6 +51,15 @@ for b in $branches; do
 		set -f
 	done
 done
+if [ "$configs" ]; then
+	for i in $list; do
+		prefix=${i##*mirror/}
+		branch=${prefix%%/files/*}
+		prefix=${prefix##*kernel-image-}
+		prefix=${prefix%.rpm}
+		kernel-config $i | sed "s,^,$branch/$prefix:,"
+	done
+fi
 ls -ltrd -- $list \
 	| sed -E 's/^\S+\s+\S+\s+\S+\s+\S+//' \
 	| grep -E --color '^|[0-9.]+-alt[^.]+'

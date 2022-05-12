@@ -1,21 +1,24 @@
 #!/bin/bash -eu
 
-branch=Sisyphus
-arch=x86_64
-flavour=std-def
-for i; do
-	if [ -d /ALT/$i ]; then
-		branch=$i
-	fi
-	if [ -d /ALT/$branch/files/$i ]; then
-		arch=$i
-	fi
-	if [ -e /ALT/$branch/files/$arch/RPMS/kernel-image-$i-[1-9]*.rpm ]; then
-		flavour=$i
-	fi
-done
+if [ -e "${1-}" ]; then
+	file=$1
+else
+	branch=Sisyphus
+	arch=x86_64
+	flavour=std-def
+	for i; do
+		if [ -d /ALT/$i ]; then
+			branch=$i
+		fi
+		if [ -d /ALT/$branch/files/$i ]; then
+			arch=$i
+		fi
+		if [ -e /ALT/$branch/files/$arch/RPMS/kernel-image-$i-[1-9]*.rpm ]; then
+			flavour=$i
+		fi
+	done
+	file=/ALT/$branch/files/$arch/RPMS/kernel-image-$flavour-[1-9]*.$arch.rpm
+fi
 
-file=/ALT/$branch/files/$arch/RPMS/kernel-image-$flavour-[1-9]*.$arch.rpm
-
-echo >&2 $file
+[ -t 1 ] && echo >&2 $file
 rpmpeek $file bash -c 'cat boot/config-*'
