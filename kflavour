@@ -1,0 +1,20 @@
+#!/bin/bash -efu
+
+V() { echo "- $*" >&2; "$@"; }
+
+if [ -n "$*" ]; then
+	V git config gear.specsubst.kflavour std-def
+else
+	br=$(git branch --show-current)
+	branch=${br#*/}
+	brflvr=${br%/*}
+	case $branch in
+		sisyphus|p[1-9]*|c[1-9]*) ;;
+		*) echo >&2 "Invalid repo $branch"; exit 1 ;;
+	esac
+	case $brflvr in
+		un-def|std-def|std-pae|std-debug|next) ;;
+		*) echo >&2 "Invalid flavour $brflvr"; exit 1 ;;
+	esac
+	V git config gear.specsubst.kflavour $brflvr
+fi
