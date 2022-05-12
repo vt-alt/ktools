@@ -17,5 +17,5 @@ done
 
 file=/ALT/$branch/files/$arch/RPMS/kernel-image-$flavour-[1-9]*.$arch.rpm
 
+echo >&2 $file
 rpmpeek $file bash -c 'cat boot/config-*'
-echo "# RPM:" $file
