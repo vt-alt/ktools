@@ -1,21 +1,36 @@
-#!/bin/bash -euf
+#!/bin/bash -eu
 
 rroot=/mnt/space/mirror
-#5.1  c6  c7  c7.1  c8  c8.1  c9f1  c9f2  c9m1  c9m2  p10  p5  p6  p7  p8  p9  p9-armh  Sisyphus  Sisyphus-armh
 skip="5.1|c[678].*|c9[fm]1|c9m2|p[5678]|.*armh"
 skip="5.1|c[678].*|fm]1|p[567]|.*armh"
 
-[ -n "$*" ] && branches=$* || branches=$(cd $rroot; ls | grep -E -vwe "$skip")
-flavours='std-def std-debug un-def'
-flavours='*'
+branch=Sisyphus arch=x86_64 flavour=std-def
+branches= flavours=
+for i; do
+	if [ -d /ALT/$i ]; then
+		branch=$i
+		branches+=" $i"
+	fi
+	if [ -d /ALT/$branch/files/$i ]; then
+		arch=$i
+	fi
+	if [ -e /ALT/$branch/files/$arch/RPMS/kernel-image-$i-[1-9]*.rpm ]; then
+		flavour=$i
+		flavours+=" $i"
+	fi
+done
 
-# echo branches: $branches
-# echo flavours: $flavours
+[ -z "${branches-}" ] && branches=$(cd $rroot; ls | grep -E -vwe "$skip")
+: ${flavours:=*}
+
+# echo "branches: $branches"
+# echo "flavours: $flavours"
+
+set -f
 list=
 for b in $branches; do
 	for f in $flavours; do
-		r=$rroot/$b/files/${1-x86_64}/RPMS
-		r=$rroot/$b/files/x86_64/RPMS
+		r=$rroot/$b/files/$arch/RPMS
 		test -d $r || continue
 		f=$r/kernel-image-$f-[0-9]*-alt*.*.rpm
 		set +f
