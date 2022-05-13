@@ -1,0 +1,53 @@
+#!/bin/bash
+# https://drivers.suse.com/doc/Developer_Notes/Retpoline.html
+
+abort() {
+	echo >&2 "$*"
+	exit 1
+}
+
+ret=0
+export unsafe safe verbose
+for i; do
+	case $i in
+		-v) verbose=y; continue ;;
+		-u) safe=n;   continue ;;
+		-s) unsafe=n; continue ;;
+		-*) abort "Unknown option" ;;
+	esac
+	if [ -d $i ]; then
+		find $i -type f -name '*.ko*' |
+		xargs -P`nproc` -n`nproc` retpo-check
+		continue
+	fi
+	case $i in
+		*.ko.gz)  C=gzip ;;
+		*.ko.xz)  C=xz ;;
+		*.ko.zst) C=zstd ;;
+		*.ko)     C= ;;
+		*) abort "$i: unknown file type" ;;
+	esac
+	if [ -n "$C" ]; then
+		f=$(mktemp)
+		$C -dc $i > $f
+		r=$f
+	else
+		f=$i
+		r=
+	fi
+
+	t=$(objdump -d -Matt $f 2>/dev/null | grep -E "(jmp|call).*%" | head)
+	if [ -n "$t" ]; then
+		if [ -z "$unsafe" ]; then
+			echo "$i: unsafe"
+			[ -n "$verbose" ] && echo "$t"
+		fi
+		ret=1
+	else
+		if [ -z "$safe" ]; then
+			echo "$i: safe"
+		fi
+	fi
+	[ -n "$r" ] && rm $r
+done
+exit $ret
