@@ -30,12 +30,12 @@ if [ "$*" ]; then
 else
 	set -- $(git tag --points-at @)
 fi
-V git push gitery $br -f
+V git push kernelbot $br -f
 for tag; do
 	flavour=${tag#kernel-image-}
 	flavour=${flavour%-*-alt*}
 
-	V git push gitery $tag -f
+	V git push kernelbot $tag -f
 	task=$(V ssh girar task new $branch)
 	V ssh girar task add $task repo kernel-image $tag
 	echo PESIGN | \
