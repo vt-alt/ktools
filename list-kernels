@@ -1,12 +1,13 @@
-#!/bin/bash -eu
+#!/bin/bash
 
+set -eu +f
 rroot=/mnt/space/mirror
 skip="5.1|c[678].*|c9[fm]1|c9m2|p[5678]|.*armh"
 skip="5.1|c[678].*|fm]1|p[567]|.*armh"
 
 branch=Sisyphus arch=x86_64 flavour=std-def
-branches= flavours=
-configs= pattern=
+branches= flavours= arches=
+configs= pattern= all_arch=
 for i; do
 	if [ -d /ALT/$i ]; then
 		branch=$i
@@ -15,9 +16,10 @@ for i; do
 	fi
 	if [ -d /ALT/$branch/files/$i ]; then
 		arch=$i
+		arches+=" $i"
 		continue
 	fi
-	if [ -e /ALT/$branch/files/$arch/RPMS/kernel-image-$i-[1-9]*.rpm ]; then
+	if ls /ALT/$branch/files/*/RPMS/kernel-image-$i-[1-9]*.rpm &>/dev/null; then
 		flavour=$i
 		flavours+=" $i"
 		continue
@@ -25,11 +27,13 @@ for i; do
 	case "$i" in
 		--config*) configs=y ;;
 		--grep=*)  pattern="${i#*=}" ;;
+		--all-arch*) all_arch=y ;;
 	esac
 done
 
 [ -z "${branches-}" ] && branches=$(cd $rroot; ls | grep -E -vwe "$skip")
 : ${flavours:=*}
+[ -z "$arches" ] && arches=$arch
 
 # echo "branches: $branches"
 # echo "flavours: $flavours"
@@ -38,18 +42,23 @@ set -f
 list=
 for b in $branches; do
 	for f in $flavours; do
-		r=$rroot/$b/files/$arch/RPMS
-		test -d $r || continue
-		f=$r/kernel-image-$f-[0-9]*-alt*.*.rpm
-		set +f
-		for i in $f; do
-			test -e $i || continue
-			flv=${i##*kernel-image-}
-			flv=${flv%%-[0-9]*}
-			[[ $flv =~ debuginfo|domU|checkinstall ]] && continue
-			list+=" $i"
+		if [ -n "$all_arch" ]; then
+			arches=$(ls $rroot/$b/files/ | grep -v -e - -e SRPMS -e list)
+		fi
+		for a in $arches; do
+			r=$rroot/$b/files/$a/RPMS
+			test -d $r || continue
+			pat=$r/kernel-image-$f-[0-9]*-alt*.$a.rpm
+			set +f
+			for i in $pat; do
+				test -e $i || continue
+				flv=${i##*kernel-image-}
+				flv=${flv%%-[0-9]*}
+				[[ $flv =~ debuginfo|domU|checkinstall ]] && continue
+				list+=" $i"
+			done
+			set -f
 		done
-		set -f
 	done
 done
 if [ "$configs" ]; then
@@ -60,7 +69,7 @@ if [ "$configs" ]; then
 		prefix=kernel-image-${prefix##*kernel-image-}
 		prefix=${prefix%.rpm}
 		if [ -n "$pattern" ]; then
-			if ! kernel-config $i | sed "s,^,$branch/$prefix:," | grep $pattern; then
+			if ! kernel-config $i | sed "s,^,$branch/$prefix:," | grep --color=auto $pattern; then
 				echo "$branch/$prefix:no match"
 			fi
 		else
