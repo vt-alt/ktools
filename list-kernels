@@ -6,7 +6,7 @@ skip="5.1|c[678].*|fm]1|p[567]|.*armh"
 
 branch=Sisyphus arch=x86_64 flavour=std-def
 branches= flavours=
-configs=
+configs= pattern=
 for i; do
 	if [ -d /ALT/$i ]; then
 		branch=$i
@@ -24,6 +24,7 @@ for i; do
 	fi
 	case "$i" in
 		--config*) configs=y ;;
+		--grep=*)  pattern="${i#*=}" ;;
 	esac
 done
 
@@ -52,13 +53,21 @@ for b in $branches; do
 	done
 done
 if [ "$configs" ]; then
+	list=$(echo $list | tr ' ' '\n' | sort)
 	for i in $list; do
 		prefix=${i##*mirror/}
 		branch=${prefix%%/files/*}
-		prefix=${prefix##*kernel-image-}
+		prefix=kernel-image-${prefix##*kernel-image-}
 		prefix=${prefix%.rpm}
-		kernel-config $i | sed "s,^,$branch/$prefix:,"
+		if [ -n "$pattern" ]; then
+			if ! kernel-config $i | sed "s,^,$branch/$prefix:," | grep $pattern; then
+				echo "$branch/$prefix:no match"
+			fi
+		else
+			kernel-config $i | sed "s,^,$branch/$prefix:,"
+		fi
 	done
+	exit
 fi
 ls -ltrd -- $list \
 	| sed -E 's/^\S+\s+\S+\s+\S+\s+\S+//' \
