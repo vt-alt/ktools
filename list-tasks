@@ -1,0 +1,118 @@
+#!/usr/bin/ruby -Kn
+# SPDX-License-Identifier: GPL-2.0-only
+
+require 'getoptlong'
+require 'json'
+
+@user = 'kernelbot'
+
+if STDOUT.tty?
+  RED   = "\e[1;31m"
+  GREEN = "\e[1;32m"
+  CYAN  = "\e[1;36m"
+  NORM  = "\e[m"
+else
+  RED   = ""
+  GREEN = ""
+  CYAN  = ""
+  NORM  = ""
+end
+
+GetoptLong.new(
+  ['--user',         GetoptLong::REQUIRED_ARGUMENT],
+  ['--verbose',         GetoptLong::NO_ARGUMENT],
+).each do |opt, arg|
+  case opt
+  when '--user'
+    @user = arg
+  when '--verbose'
+    @verbose = true
+  end
+end
+
+def run(cmd)
+  STDERR.puts "#{CYAN}+ #{cmd}#{NORM}" if @verbose
+  t = `#{cmd}`
+  raise Exception.new($?) unless $?.success?
+  t
+end
+
+tasks = run("ssh girar task ls --brief --user=#{@user}")
+tasks.split("\n").each do |task|
+  id, _ = task.split(' ', 2)
+  id.delete_prefix!('#')
+  task_info_t = run("ssh girar task show --json #{id}")
+  # STDERR.puts  task_info_t
+  task_info = JSON.parse(task_info_t)
+  t_kernels  = []
+  t_modules  = []
+  t_other    = []
+  disapprove = []
+  subtasks = task_info['subtasks'].clone
+  next unless subtasks
+  subtasks.reject! {|k,v| !v['tag_name'] }
+  subtasks.each do |sub_id, sub_info|
+    dir = sub_info['dir']
+    tag = sub_info['tag_name']
+    disapprove << sub_info['disapproved_by'] if sub_info['disapproved_by']
+    if dir =~ /kernel-image/ || tag =~ /kernel-image/
+        t_kernels << tag
+    elsif dir =~ /kernel-modules/ || tag =~ /kernel-modules/
+        t_modules << tag
+    else
+        t_other << tag
+    end
+  end
+  if !t_kernels.empty?
+    t_text = t_kernels.join(',')
+    t_text << " + #{t_modules.size} modules" if !t_modules.empty?
+    t_text << " + #{t_other.size} modules" if !t_other.empty?
+  else
+    t_combined = t_other + t_modules
+    t_text = subtasks.first[1]['tag_name']
+    t_text << " + #{t_combined.size - 1} other" if t_other.size > 1
+  end
+  t_state = task_info["state"]
+  t_color = case t_state
+            when "EPERM", "DONE", "TESTED" then GREEN
+            when "FAILED" then RED
+            else CYAN
+            end
+  o_id    = "#{t_color}#{id}#{NORM}"
+  o_state = "#{t_color}#{t_state}#{NORM}"
+  unless disapprove.empty?
+    t_approve = disapprove.uniq.join(',')
+    o_approve = "#{RED}D:#{t_approve}#{NORM}"
+  end
+  t_repo = task_info['repo']
+
+  o_time = task_info['build_time'][/^[^T]*/]
+
+  puts "#{o_id} #{o_time} #{o_state} #{o_approve} #{t_repo} #{t_text}"
+ # exit
+end
+
+=begin
+ "updated": 1653496159,
+ "taskid": 300622,
+ "shared": false,
+ "fail_early": true,
+ "test_only": false,
+ "repo": "p8",
+ "state": "BUILDING",
+ "try": 1,
+ "iter": 1,
+ "age": 0,
+ "build_time": "2022-05-25T16:29:18",
+
+  {"100"=>
+    {"dir"=>"/people/kernelbot/packages/kernel-image.git",
+     "tag_name"=>"kernel-image-std-def-4.9.315-alt0.M80P.1",
+     "tag_id"=>"70f15728f1091ca7b932ad79148c10f15c9d56cd",
+     "tag_author"=>"Kernel Bot <kernelbot@altlinux.org>",
+     "fetched"=>"2022-05-19T06:08:07",
+     "type"=>"repo",
+     "approved_by"=>["kernelbot"],
+     "pkgname"=>"kernel-image-std-def",
+     "userid"=>"kernelbot"},
+=end
