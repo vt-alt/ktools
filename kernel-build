@@ -2,11 +2,12 @@
 
 V() { echo + "$@" >&2; "$@"; }
 
+remote=gitery
 unset commit shared
 for opt do
 	shift
 	case "$opt" in
-		--commit) commit=y ;;
+		--commit) commit=y; remote=kernelbot ;;
 		--share*) shared=y ;;
 		*) set -- "$opt" "$@"; break ;;
 	esac
@@ -30,12 +31,12 @@ if [ "$*" ]; then
 else
 	set -- $(git tag --points-at @)
 fi
-V git push kernelbot $br -f
+V git push $remote $br -f
 for tag; do
 	flavour=${tag#kernel-image-}
 	flavour=${flavour%-*-alt*}
 
-	V git push kernelbot $tag -f
+	V git push $remote $tag -f
 	task=$(V ssh girar task new $branch)
 	V ssh girar task add $task repo kernel-image $tag
 	echo PESIGN | \
