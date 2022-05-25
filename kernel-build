@@ -2,17 +2,28 @@
 
 V() { echo + "$@" >&2; "$@"; }
 
-remote=gitery
-unset commit shared
+unset commit shared kernelbot
+force=
 for opt do
 	shift
 	case "$opt" in
-		--commit) commit=y; remote=kernelbot ;;
+		--kernelbot) kernelbot=y ;;
+		--force) force="-f" ;;
+		--commit) commit=y kernelbot=y ;;
 		--share*) shared=y ;;
 		*) set -- "$opt" "$@"; break ;;
 	esac
 done
 
+if [ -v kernelbot ]; then
+	remote=kernelbot
+	repo=/people/kernelbot/packages/kernel-image
+	approver=girarbot
+else
+	remote=gitery
+	repo=kernel-image
+	approver=girar
+fi
 br=$(git branch --show-current)
 branch=${br#*/}
 brflvr=${br%/*}
@@ -31,22 +42,21 @@ if [ "$*" ]; then
 else
 	set -- $(git tag --points-at @)
 fi
-V git push $remote $br -f
+V git push $remote $br $force
 for tag; do
 	flavour=${tag#kernel-image-}
 	flavour=${flavour%-*-alt*}
 
-	V git push $remote $tag -f
+	V git push $remote $tag $force
 	task=$(V ssh girar task new $branch)
-	V ssh girar task add $task repo kernel-image $tag
-	echo PESIGN | \
-	V ssh girar task approve $task all
+	V ssh girar task add $task repo $repo $tag
 	[ -v shared ] && V ssh girar task share $task enable
 	if V ssh girar task add $task kmodules $flavour; then
-		msg="-m kmodules"
+		msg="-m kmodules:$tag"
 	else
 		msg=
 	fi
+	echo PESIGN | V ssh $approver task approve $task all
 	V ssh girar task run --fail-late ${commit+--commit} $task $msg
 done
 
