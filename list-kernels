@@ -2,8 +2,8 @@
 
 set -eu +f
 rroot=/mnt/space/mirror
-skip="5.1|c[678].*|c9[fm]1|c9m2|p[5678]|.*armh"
-skip="5.1|c[678].*|fm]1|p[567]|.*armh"
+skip="5.1|c[678].*|c9[fm]1|c9m2|c9f1|p[5678]|.*armh"
+skip="5.1|c[678].*|fm]1|c9m[12]|c9f1|p[567]|.*armh"
 
 branch=Sisyphus arch=x86_64 flavour=std-def
 branches= flavours= arches=
