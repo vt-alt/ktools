@@ -66,10 +66,10 @@ tasks.split("\n").each do |task|
   if !t_kernels.empty?
     t_text = t_kernels.join(',')
     t_text << " + #{t_modules.size} modules" if !t_modules.empty?
-    t_text << " + #{t_other.size} modules" if !t_other.empty?
+    t_text << " + #{t_other.size} other" if !t_other.empty?
   else
     t_combined = t_other + t_modules
-    t_text = subtasks.first[1]['tag_name']
+    t_text = subtasks.first[1]['dir'].split('/').last + '=' + subtasks.first[1]['tag_name']
     t_text << " + #{t_combined.size - 1} other" if t_other.size > 1
   end
   t_state = task_info["state"]
