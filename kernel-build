@@ -2,13 +2,14 @@
 
 V() { echo -e "+ \e[1;33m$@\e[m" >&2; "$@"; }
 
-unset commit shared kernelbot
+unset commit shared kernelbot task
 force=
 for opt do
 	shift
 	case "$opt" in
 		--kernelbot) kernelbot=y ;;
 		--force) force="-f" ;;
+		--task=*) task="${opt#*=}" ;;
 		--commit) commit=y kernelbot=y ;;
 		--share*) shared=y ;;
 		*) set -- "$opt" "$@"; break ;;
@@ -48,7 +49,7 @@ for tag; do
 	flavour=${flavour%-*-alt*}
 
 	V git push $remote $tag $force
-	task=$(V ssh girar task new $branch)
+	[ -v task ] || task=$(V ssh girar task new $branch)
 	V ssh girar task add $task repo $repo $tag
 	[ -v shared ] && V ssh girar task share $task enable
 	if V ssh girar task add $task kmodules $flavour; then
