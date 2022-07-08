@@ -9,11 +9,13 @@ require 'json'
 if STDOUT.tty?
   RED   = "\e[1;31m"
   GREEN = "\e[1;32m"
+  BLUE  = "\e[1;34m"
   CYAN  = "\e[1;36m"
   NORM  = "\e[m"
 else
   RED   = ""
   GREEN = ""
+  BLUE  = ""
   CYAN  = ""
   NORM  = ""
 end
@@ -75,7 +77,8 @@ tasks.split("\n").each do |task|
   t_state = task_info["state"]
   t_color = case t_state
             when "EPERM", "DONE", "TESTED" then GREEN
-            when "FAILED" then RED
+            when "FAILED", "FAILING" then RED
+            when "POSTPONED", "AWAITING" then BLUE
             else CYAN
             end
   o_id    = "#{t_color}#{id}#{NORM}"
