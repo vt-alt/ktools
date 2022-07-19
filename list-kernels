@@ -1,5 +1,6 @@
 #!/bin/bash
 
+export GREP_COLORS="mt=01;32"
 set -eu +f
 rroot=/mnt/space/mirror
 skip="5.1|c[678].*|c9[fm]1|c9m2|c9f1|p[5678]|.*armh"
@@ -10,6 +11,8 @@ branch=Sisyphus arch=x86_64 flavour=std-def
 branches= flavours= arches=
 configs= pattern= all_arch=
 for i; do
+	[ "$i" = sisyphus ] && i=Sisyphus
+	[ "$i" = def ] && flavours+=" std-def un-def"
 	if [ -d /ALT/$i ]; then
 		branch=$i
 		branches+=" $i"
@@ -28,7 +31,7 @@ for i; do
 	case "$i" in
 		--package=*) package="${i#*=}" ;;
 		--config*) configs=y ;;
-		--grep=*)  pattern="${i#*=}" ;;
+		--grep=*)  pattern="${i#*=}"; configs=y ;;
 		--all-arch*) all_arch=y ;;
 		-*) echo "No option $i"; exit 1 ;;
 	esac

@@ -21,4 +21,4 @@ else
 fi
 
 [ -t 1 ] && echo >&2 $file
-rpmpeek $file bash -c 'cat boot/config-*'
+rpmpeek $file bash -c 'cat boot/config-*' 2>/dev/null
