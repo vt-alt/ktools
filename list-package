@@ -1,0 +1,60 @@
+#!/bin/bash
+
+export GREP_COLORS="mt=01;32"
+set -eu +f
+rroot=/ALT
+skip="5.1|c[678].*|fm]1|c9m[12]|c9f1|p[567]|.*armh"
+
+branch=Sisyphus arch=x86_64
+branches= arches= packages=
+all_arch= lsopts='-ltrd'
+for i; do
+	[ "$i" = sisyphus ] && i=Sisyphus
+	if [ -d /ALT/$i ]; then
+		branch=$i
+		branches+=" $i"
+		continue
+	fi
+	if [ -d /ALT/$branch/files/$i ]; then
+		arch=$i
+		arches+=" $i"
+		continue
+	fi
+	case "$i" in
+		-a|--all-arch*) all_arch=y ;;
+		--full-time) lsopts+=" $i" ;;
+		-1|--names) lsopts= ;;
+		-*) echo "No option $i"; exit 1 ;;
+		*) packages+=" $i" ;;
+	esac
+done
+
+[ -z "${branches-}" ] && branches=$(cd $rroot; ls | grep -E -vwe "$skip" | sort -fu)
+: ${flavours:=*}
+[ -z "$arches" ] && arches="$arch noarch"
+
+set -f
+list=
+for package in $packages; do
+	for b in $branches; do
+		if [ -n "$all_arch" ]; then
+			arches=$(ls $rroot/$b/files/ | grep -v -e - -e SRPMS -e list)
+		fi
+		for a in $arches; do
+			r=$rroot/$b/files/$a/RPMS
+			test -d $r || continue
+			pat=$r/$package-[0-9]*-alt*.$a.rpm
+			set +f
+			for i in $pat; do
+				test -e $i || continue
+				list+=" $i"
+			done
+			set -f
+		done
+	done
+done
+[ -n "$list" ] || { echo "No match"; exit 1; }
+ls $lsopts -- $list \
+	| sed -E 's/^\S+\s+\S+\s+\S+\s+\S+//' \
+	| grep -P --color '^|[^-]+-alt[^-]+(?=\.[^.]+(\.src)?\.s?rpm)'
+
