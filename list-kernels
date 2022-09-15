@@ -12,6 +12,7 @@ branches= flavours= arches=
 configs= pattern= all_arch=
 for i; do
 	[ "$i" = sisyphus ] && i=Sisyphus
+	[ "$i" = s ] && i=Sisyphus
 	[ "$i" = def ] && flavours+=" std-def un-def"
 	if [ -d /ALT/$i ]; then
 		branch=$i
