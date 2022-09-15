@@ -11,12 +11,14 @@ if STDOUT.tty?
   RED   = "\e[1;31m"
   GREEN = "\e[1;32m"
   BLUE  = "\e[1;34m"
+  MAGEN = "\e[1;35m"
   CYAN  = "\e[1;36m"
   NORM  = "\e[m"
 else
   RED   = ""
   GREEN = ""
   BLUE  = ""
+  MAGEN = ""
   CYAN  = ""
   NORM  = ""
 end
@@ -41,6 +43,29 @@ if @cache
   FileUtils.mkdir_p(CACHE)
 end
 
+def obsoleted_repo(repo, tag)
+  pkgname = tag.sub(/-[^-]+-[^-]+$/, '')
+  pkgver  = tag[(pkgname.size + 1)..-1]
+  mask = "/ALT/#{repo}/files/x86_64/RPMS/#{pkgname}-*.x86_64.rpm"
+  pkgs = Dir.glob(mask).reject {|e| e =~ /-debuginfo|-checkinstall/}
+  return nil if pkgs.empty?
+  pkginrepopath = pkgs.first
+  pkginrepobn   = File.basename(pkginrepopath)
+  pkginrepover  = pkginrepobn[(pkgname.size + 1)..-1].sub(/\.x86_64\.rpm$/, '')
+  cmp = `rpmvercmp #{pkgver} #{pkginrepover}`.to_i
+  #  1: pkgver > pkginrepover
+  # -1: pkgver < pkginrepover
+end
+
+def obsoleted_task(tag)
+  pkgname = tag.sub(/-[^-]+-[^-]+$/, '')
+  pkgver  = tag[(pkgname.size + 1)..-1]
+  kernellist = @kernellist.reject {|e| !e.start_with?(pkgname + '-')}
+  kernellist.map! {|e| e[(pkgname.size + 1)..-1]}
+  kernellist.map! {|ver| `rpmvercmp #{pkgver} #{ver}`.to_i }
+  kernellist.min
+end
+
 def run(cmd)
   filename = CACHE + '/' + cmd.gsub(/\s+/, '_')
   return File.read(filename) if @cache and File.exist?(filename)
@@ -52,16 +77,22 @@ def run(cmd)
 end
 
 tasks = run("ssh girar task ls --brief --user=#{@user}")
+@kernellist = []
 tasks.split("\n").each do |task|
   id, _ = task.split(' ', 2)
   id.delete_prefix!('#')
   task_info_t = run("ssh girar task show --json #{id}")
   # STDERR.puts  task_info_t
-  task_info = JSON.parse(task_info_t)
-  t_kernels  = []
-  t_modules  = []
-  t_other    = []
-  disapprove = []
+  task_info   = JSON.parse(task_info_t)
+  t_kernels   = []
+  t_modules   = []
+  t_other     = []
+  disapprove  = []
+  t_obsolete1 = []
+  t_obsolete2 = []
+  t_repo   = task_info['repo']
+  t_state  = task_info["state"]
+  o_time   = task_info['build_time'][/^[^T]*/]
   subtasks = task_info['subtasks'].clone
   next unless subtasks
   subtasks.reject! {|k,v| !v['tag_name'] }
@@ -70,7 +101,10 @@ tasks.split("\n").each do |task|
     tag = sub_info['tag_name']
     disapprove << sub_info['disapproved_by'] if sub_info['disapproved_by']
     if dir =~ /kernel-image/ || tag =~ /kernel-image/
-        t_kernels << tag
+        t_kernels   << tag
+        @kernellist << tag
+        t_obsolete1 << obsoleted_repo(t_repo, tag)
+        t_obsolete2 << obsoleted_task(tag)
     elsif dir =~ /kernel-modules/ || tag =~ /kernel-modules/
         t_modules << tag
     else
@@ -86,7 +120,6 @@ tasks.split("\n").each do |task|
     t_text = subtasks.first[1]['dir'].split('/').last + '=' + subtasks.first[1]['tag_name']
     t_text << " + #{t_combined.size - 1} other" if t_other.size > 1
   end
-  t_state = task_info["state"]
   t_color = case t_state
             when "EPERM", "DONE", "TESTED" then GREEN
             when "FAILED", "FAILING" then RED
@@ -95,16 +128,19 @@ tasks.split("\n").each do |task|
             end
   o_id    = "#{t_color}#{id}#{NORM}"
   o_state = "#{t_color}#{t_state}#{NORM}"
+  o_info  = ''
   unless disapprove.empty?
     t_approve = disapprove.uniq.join(',')
-    o_approve = "#{RED}D:#{t_approve}#{NORM}"
+    o_info << "!#{RED}D:#{t_approve}#{NORM}"
   end
-  t_repo = task_info['repo']
+  if t_obsolete1.any?(-1)
+    o_info << "!#{RED}O:REPO#{NORM}"
+  end
+  if t_obsolete2.any?(-1)
+    o_info << "!#{MAGEN}O:TASK#{NORM}"
+  end
 
-  o_time = task_info['build_time'][/^[^T]*/]
-
-  puts "#{o_id} #{o_time} #{o_state} #{o_approve} #{t_repo} #{t_text}"
- # exit
+  puts "#{o_id} #{o_time} #{o_state} #{o_info} #{t_repo} #{t_text}"
 end
 
 =begin
