@@ -1,6 +1,7 @@
 #!/usr/bin/ruby -Kn
 # SPDX-License-Identifier: GPL-2.0-only
 
+require 'fileutils'
 require 'getoptlong'
 require 'json'
 
@@ -21,10 +22,13 @@ else
 end
 
 GetoptLong.new(
-  ['--user',         GetoptLong::REQUIRED_ARGUMENT],
+  ['--cache',           GetoptLong::NO_ARGUMENT],
+  ['--user',            GetoptLong::REQUIRED_ARGUMENT],
   ['--verbose',         GetoptLong::NO_ARGUMENT],
 ).each do |opt, arg|
   case opt
+  when '--cache'
+    @cache = true
   when '--user'
     @user = arg
   when '--verbose'
@@ -32,10 +36,18 @@ GetoptLong.new(
   end
 end
 
+CACHE = ENV['HOME'] + '/.cache/list-tasks'
+if @cache
+  FileUtils.mkdir_p(CACHE)
+end
+
 def run(cmd)
+  filename = CACHE + '/' + cmd.gsub(/\s+/, '_')
+  return File.read(filename) if @cache and File.exist?(filename)
   STDERR.puts "#{CYAN}+ #{cmd}#{NORM}" if @verbose
   t = `#{cmd}`
   raise Exception.new($?) unless $?.success?
+  File.open(filename, "w") {|f| f.write(t)}
   t
 end
 
