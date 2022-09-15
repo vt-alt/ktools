@@ -92,6 +92,10 @@ tasks.split("\n").each do |task|
   t_obsolete2 = []
   t_repo   = task_info['repo']
   t_state  = task_info["state"]
+  t_ok = case t_state
+         when "EPERM", "DONE", "TESTED" then true
+         else false
+         end
   o_time   = task_info['build_time'][/^[^T]*/]
   subtasks = task_info['subtasks'].clone
   next unless subtasks
@@ -102,7 +106,7 @@ tasks.split("\n").each do |task|
     disapprove << sub_info['disapproved_by'] if sub_info['disapproved_by']
     if dir =~ /kernel-image/ || tag =~ /kernel-image/
         t_kernels   << tag
-        @kernellist << tag
+        @kernellist << tag if t_ok
         t_obsolete1 << obsoleted_repo(t_repo, tag)
         t_obsolete2 << obsoleted_task(tag)
     elsif dir =~ /kernel-modules/ || tag =~ /kernel-modules/
