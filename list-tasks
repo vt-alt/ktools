@@ -96,9 +96,9 @@ tasks.split("\n").each do |task|
          when "EPERM", "DONE", "TESTED" then true
          else false
          end
-  o_time   = task_info['build_time'][/^[^T]*/]
+  o_time   = task_info['build_time'][/^[^T]*/] rescue 'NEVER'
   subtasks = task_info['subtasks'].clone
-  next unless subtasks
+  subtasks = [] unless subtasks.is_a?(Hash)
   subtasks.reject! {|k,v| !v['tag_name'] }
   subtasks.each do |sub_id, sub_info|
     dir = sub_info['dir']
@@ -119,10 +119,12 @@ tasks.split("\n").each do |task|
     t_text = t_kernels.join(',')
     t_text << " + #{t_modules.size} modules" if !t_modules.empty?
     t_text << " + #{t_other.size} other" if !t_other.empty?
-  else
+  elsif !subtasks.empty?
     t_combined = t_other + t_modules
     t_text = subtasks.first[1]['dir'].split('/').last + '=' + subtasks.first[1]['tag_name']
     t_text << " + #{t_combined.size - 1} other" if t_other.size > 1
+  else
+    t_text = "empty"
   end
   t_color = case t_state
             when "EPERM", "DONE", "TESTED" then GREEN
