@@ -13,7 +13,7 @@ configs= pattern= all_arch=
 for i; do
 	[ "$i" = sisyphus ] && i=Sisyphus
 	[ "$i" = s ] && i=Sisyphus
-	[ "$i" = def ] && flavours+=" std-def un-def"
+	[ "$i" = def ] && flavours+=" std-def un-def std-pae std-debug"
 	if [ -d /ALT/$i ]; then
 		branch=$i
 		branches+=" $i"
@@ -24,6 +24,12 @@ for i; do
 		arches+=" $i"
 		continue
 	fi
+	case $i in
+		std-def|std-debug|std-pae|un-def)
+			flavours+=" $i"
+			continue
+			;;
+	esac
 	if ls /ALT/$branch/files/*/RPMS/$package-$i-[1-9]*.rpm &>/dev/null; then
 		flavour=$i
 		flavours+=" $i"
