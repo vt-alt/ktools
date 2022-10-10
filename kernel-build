@@ -12,6 +12,7 @@ for opt do
 		--task=*) task="${opt#*=}" ;;
 		--commit) commit=y kernelbot=y ;;
 		--share*) shared=y ;;
+		--branch=*) branch="${opt#*=}" ;;
 		*) set -- "$opt" "$@"; break ;;
 	esac
 done
@@ -26,12 +27,12 @@ else
 	approver=girar
 fi
 br=$(git branch --show-current)
-branch=${br#*/}
-brflvr=${br%/*}
+[ -n "${branch-}" ] || branch=${br#*/}
 case $branch in
-	sisyphus|p[1-9]*|c[1-9]*) ;;
+	sisyphus | [cp][1-9]* | icarus* ) ;;
 	*) echo >&2 "Invalid repo $branch"; exit 1 ;;
 esac
+brflvr=${br%/*}
 case $brflvr in
 	un-def|std-def|std-pae|std-debug|next) ;;
 	*) echo >&2 "Invalid flavour $brflvr"; exit 1 ;;
