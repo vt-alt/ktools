@@ -1,0 +1,97 @@
+#!/bin/bash -efu
+# Get task number from package name
+
+# for t in `rpm --querytags`; do echo $t: `rpm -q --qf "%{$t}" -p $r`;done
+
+export LC_ALL=C
+repo=Sisyphus
+for i; do
+	case $i in s | sisyphus) i=Sisyphus ;; esac
+	case $i in
+		-v | --verbose) verbose=y ;;
+		-j | --json) json=y ;;
+		-R | --requires) requires=y ;;
+		--task-id) task_id=only ;;
+		--pkgname) pkgname=y ;;
+		--srcrpm) srcrpm=y ;;
+		--plan=*) plan=${1#*=} ;;
+		[cpt][1-9] | [cp]1[0-9] | Sisyphus ) repo=$i ;;
+		*) set -- "$@" "$i"
+       	esac
+	shift
+done
+if [[ $1 =~ ^[[:digit:]]+$ ]]; then
+	task=$1
+	subtask=
+else
+	rpm=
+	for pkg in "$@"; do
+		arches=$(ls /ALT/$repo/files/ | grep -v -e - -e SRPMS -e list)
+		for arch in noarch $arches; do
+			r=/ALT/$repo/files/$arch/RPMS
+			pat=$r/$pkg-[0-9]*-alt*.$arch.rpm
+			set +f
+			for i in $pat; do
+				set -f
+				test -e $i || continue
+				rpm=$(ls "$i")
+				break 2
+			done
+			set -f
+		done
+	done
+	if [ -z "$rpm" ]; then
+		echo >&2 "Package $pkg not found."
+		exit 1
+	fi
+	[ -v verbose ] && echo "$rpm"
+	DISTTAG=$(rpm -qp --qf "%{DISTTAG}" "$rpm")
+	try=${DISTTAG#*+}
+	task=${try%%.*}
+	subtask=${try#"$task".}
+	subtask=${subtask%%.*}
+	unset rpm DISTTAG try
+fi
+
+gitalt="https://git.altlinux.org/tasks/$task"
+taskdir="/tasks/archive/done/_$((task/1024))/$task"
+taskurl="https://git.altlinux.org$taskdir"
+
+print_json() {
+	curl -sS -L -f "$taskurl/info.json"
+}
+# https://stedolan.github.io/jq/manual/
+subtasks_list() {
+	print_json | jq -r '.subtasks | with_entries(select(.value.pkgname) | select(.key)) | keys[]' | sort -V
+}
+srpm_list() {
+	local arch=${1-x86_64}
+	curl -sS -L -f "$taskurl/build/$t/$arch/srpm.log" | tail -1 |
+		grep -Po '/usr/src/in/srpm/\K[^ ]+.rpm'
+}
+declare -a srpms
+
+if [ -v plan ]; then
+	curl -sS -L -f "$taskurl/plan/$plan"
+elif [ -v pkgname ]; then
+	print_json | jq -r '.subtasks[] | .pkgname | select(length > 0)'
+elif [ -v srcrpm ]; then
+	for t in $(subtasks_list); do
+		[ -v verbose ] && echo -n "$task: $t: "
+		srpm_list
+	done
+elif [ -v requires ]; then
+	for t in $(subtasks_list); do
+		[ -v verbose ] && echo "subtask: $t"
+		for srpm in $(srpm_list); do
+			srpms+=( "$taskdir/build/$t/x86_64/srpm/$srpm" )
+		done
+	done
+	ssh team rpm -qRp "${srpms[@]}" | grep -Po '^^\S+' | sort -u
+elif [ -v json ]; then
+	[ -t 1 ] && print_json | less || print_json
+elif [ -v task_id ]; then
+	echo "$task"
+else
+	echo "$task $subtask"
+fi
