@@ -15,11 +15,15 @@ for i; do
 		--pkgname) pkgname=y ;;
 		--srcrpm) srcrpm=y ;;
 		--plan=*) plan=${1#*=} ;;
-		[cpt][1-9] | [cp]1[0-9] | Sisyphus ) repo=$i ;;
+		[cpt][1-9] | [cp]1[0-9] | Sisyphus | c9?? ) repo=$i ;;
 		*) set -- "$@" "$i"
        	esac
 	shift
 done
+if [ ${#@} -gt 1 ]; then
+	echo >&2 "Too much arguments: $*"
+	exit 1
+fi
 if [[ $1 =~ ^[[:digit:]]+$ ]]; then
 	task=$1
 	subtask=
