@@ -1,0 +1,112 @@
+#!/bin/bash -efu
+
+PATH=$(dirname $0):$PATH
+
+usage() {
+	echo "Usage: $0 [options] <task_from> <task_to> [include regexp] [exclude regexp]"
+	exit 0
+}
+
+for i; do
+	case $i in
+		--include=*) include=${1#*=} ;;
+		--exclude=*) exclude=${1#*=} ;;
+		--to=*) target=${1#*=} ;;
+		*) set -- "$@" "$i"
+       	esac
+	shift
+done
+[ ${#@} -ge 1 ] || usage
+
+from=$1
+
+gitalt="https://git.altlinux.org/tasks"
+task_info() {
+	local task=$1 info=$2
+	curl -sS -L -f "$gitalt/$task/task/$info"
+}
+resolve_task() {
+	local t=$1
+	if [[ $t =~ ^[[:digit:]]+$ ]]; then
+		echo "$t"
+	else
+		# Can say 'p10:git' or just 'git'.
+		girar-info --task-id ${t/:/ }
+	fi
+}
+
+from=$(resolve_task $from)
+from_repo=$(task_info $from repo)
+
+echo "Copy task $from/$from_repo include '${include-}' exclude '${exclude-}'."
+
+packages=$(
+{
+	girar-info "$from" -R
+	girar-info "$from" --pkgname
+}  \
+	| grep -P -e "${include-}" \
+	| grep ${exclude+ -v} -P -e "${exclude-}"
+)
+echo "$packages" | sed 's/^/\t/'
+
+[ -v target ] || exit 0
+target=$(resolve_task $target)
+target_repo=$(task_info $target repo)
+echo "Target task $target/$target_repo"
+
+find_rpm() {
+	local repo=$1 pkg=$2
+	for arch in noarch x86_64; do
+		pat=/ALT/$repo/files/$arch/RPMS/$pkg-[0-9]*-alt*.$arch.rpm
+		set +f
+		for i in $pat; do
+			set -f
+			test -e $i || continue
+			echo "$i"
+			return
+		done
+		set -f
+	done
+}
+rpm_ver() {
+	local pkg=$1 rpm=$2 v
+	v=${rpm#"$pkg"-}
+	v=${v%.*.rpm}
+	echo "$v"
+}
+
+  RED=$'\e[1;31m'
+GREEN=$'\e[1;32m'
+ BLUE=$'\e[1;34m'
+ NORM=$'\e[m'
+
+declare -a filtered
+echo "$packages" | \
+	while read -r pkg; do
+		rpmA=$(find_rpm $from_repo $pkg)
+		rpmB=$(find_rpm $target_repo $pkg)
+		bnA=$(basename "$rpmA")
+		bnB=$(basename "$rpmB")
+		# echo $bnA : $bnB
+		if [ -z "$rpmB" ] ; then
+			echo >&2 "$BLUE? $pkg is a new package.$NORM"
+			filteres+=( $pkg )
+		else
+			verA=$(rpm_ver $pkg $bnA)
+			verB=$(rpm_ver $pkg $bnB)
+			case $(rpmvercmp $verA $verB) in
+				-1)
+					echo >&2 "$RED? $pkg in $target_repo is newer thain in $from_repo. [$verA < $verB], skipping.$NORM"
+				       	;;
+				1)
+					echo >&2 "$GREEN? $pkg updating. to new version [$verA > $verB]$NORM"
+					filteres+=( $pkg )
+				       	;;
+				0)
+					echo >&2 "? $pkg is already in $target_repo, skipping."
+				       	;;
+			esac
+		fi
+	done
+
