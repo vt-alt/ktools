@@ -10,6 +10,7 @@ package=kernel-image
 branch=Sisyphus arch=x86_64 flavour=std-def
 branches= flavours= arches=
 configs= pattern= all_arch=
+unset logs
 for i; do
 	[ "$i" = sisyphus ] && i=Sisyphus
 	[ "$i" = s ] && i=Sisyphus
@@ -40,6 +41,7 @@ for i; do
 		--config*) configs=y ;;
 		--grep=*)  pattern="${i#*=}"; configs=y ;;
 		--all-arch*) all_arch=y ;;
+		--log*) logs=y ;;
 		-*) echo "No option $i"; exit 1 ;;
 	esac
 done
@@ -88,6 +90,22 @@ if [ "$configs" ]; then
 		else
 			kernel-config $i | sed "s,^,$branch/$prefix:,"
 		fi
+	done
+	exit
+fi
+if [ -v logs ]; then
+	list=$(echo $list | tr ' ' '\n' | sort)
+	# https://git.altlinux.org/tasks/309028/build/100/x86_64/log
+	for rpm in $list; do
+		DISTTAG=$(rpm -qp --qf "%{DISTTAG}" "$rpm")
+		try=${DISTTAG#*+}
+		task=${try%%.*}
+		subtask=${try#"$task".}
+		subtask=${subtask%%.*}
+		{
+			echo : $i task=$task subtask=$subtask arch=$arch
+			curl -sS -L -f "https://git.altlinux.org/tasks/$task/build/$subtask/$arch/log"
+		} | less -K || exit
 	done
 	exit
 fi
