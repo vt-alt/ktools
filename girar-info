@@ -14,6 +14,8 @@ for i; do
 		--task-id) task_id=only ;;
 		--pkgname) pkgname=y ;;
 		--srcrpm) srcrpm=y ;;
+		--summary) summary=y ;;
+		--log*) logs=y ;;
 		--plan=*) plan=${1#*=} ;;
 		[cpt][1-9] | [cp]1[0-9] | Sisyphus | c9?? ) repo=$i ;;
 		*) set -- "$@" "$i"
@@ -94,6 +96,12 @@ elif [ -v requires ]; then
 	ssh team rpm -qRp "${srpms[@]}" | grep -Po '^^\S+' | sort -u
 elif [ -v json ]; then
 	[ -t 1 ] && print_json | less || print_json
+elif [ -v summary ]; then
+	girar-summary-task "$task"
+elif [ -v logs ]; then
+	arch=x86_64
+	curl -sS -L -f "https://git.altlinux.org/tasks/$task/build/$subtask/$arch/log" \
+		| less -K || exit
 elif [ -v task_id ]; then
 	echo "$task"
 else
