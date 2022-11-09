@@ -151,9 +151,9 @@ tasks.split("\n").each do |task|
   if t_obsolete1.any?(-1)
     o_info << "!#{RED}O:REPO#{NORM}"
   end
-  if t_obsolete2.any?(-1)
-    o_info << "!#{MAGEN}O:TASK#{NORM}"
-  end
+  # if t_obsolete2.any?(-1)
+  #   o_info << "!#{MAGEN}O:TASK#{NORM}"
+  # end
 
   puts "#{o_id} #{o_time} #{o_state} #{o_info} #{t_repo} #{t_text}"
 end
