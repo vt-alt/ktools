@@ -1,0 +1,55 @@
+#!/bin/bash
+
+set -efu -o pipefail
+
+gear_describe()
+{
+	set -- $(gear --describe)
+	NAME=$1
+	VERSION=$2
+	RELEASE=$3
+}
+
+gear_describe
+
+. ~/.hasher/config
+cd  ~/hasher/repo/${def_target:-$(arch)}/RPMS.hasher
+
+list=()
+for i in $(set +f; echo *.rpm); do
+	SOURCERPM=$(rpm -qp --qf '%{SOURCERPM}' "$i")
+	SRCNAME=${SOURCERPM%-*-*}
+	SRCVREL=${SOURCERPM%.*.*}
+	[ "$NAME-$VERSION-$RELEASE" = "$SRCVREL" ] || continue
+	list+=( "$i" )
+done
+
+tmp=$(mktemp -d)
+trap "rm -rf $tmp" 0
+export QUOTING_STYLE=shell-escape
+sep=
+
+shopt -s extglob
+for i in "${list[@]}"; do
+	name=${i%-*-*}
+	printf "%s= %s =\n" "$sep" "$name"
+	rpmvrel=${i%.*.*}
+	rpmarch=${i#"$rpmvrel"}
+
+	rpm -qp "$i" ${@:--R} > $tmp/$i
+	touch -r "$i" $tmp/$i
+
+	r=$(set +f; ls /ALT/sisyphus/files/*/RPMS/$name-+([^-])-+([^-])$rpmarch)
+	if [ -e "$r" ]; then
+		rr=$(basename $r)
+		rpm -qp "$r" ${@:--R} > $tmp/$rr
+		touch -r "$r" $tmp/$rr
+	else
+		rr=/dev/null
+	fi
+	(
+		cd $tmp
+		colordiff -u "$rr" "$i"  | sed 's/^/\t/' || :
+	)
+	sep=$'\n'
+done
