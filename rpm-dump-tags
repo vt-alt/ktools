@@ -1,0 +1,5 @@
+#!/bin/bash
+
+for i in $(rpm --querytags); do
+	rpm -qp "${1:?}" --qf "$i=%{$i:shescape}\n"
+done
