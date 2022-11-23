@@ -1,0 +1,83 @@
+#!/bin/bash
+
+set -efu -o pipefail
+
+: ${REPO:=sisyphus}
+gear_describe()
+{
+	set -- $(gear --describe)
+	NAME=$1
+	VERSION=$2
+	RELEASE=$3
+}
+
+gear_describe
+
+list_mode()
+{
+	local j=${NAME:0:1}
+	curl -sS -L -f http://ftp.altlinux.org/pub/distributions/archive/$REPO/index/src/$j/$NAME/d-t-s-evr.list
+	exit 0
+}
+
+for o do
+	shift
+	case "$o" in
+		--repo=*) REPO=${o#*=} ;;
+		--list)   list_mode=1 ;;
+		--devel)  add_devel=1 ;;
+	esac
+done
+
+[ -v list_mode ] && list_mode
+
+. ~/.hasher/config
+RPMS=$HOME/hasher/repo/${def_target:-$(arch)}/RPMS.hasher
+cd  $RPMS
+
+list=()
+for i in $(set +f; echo *.rpm); do
+	SOURCERPM=$(rpm -qp --qf '%{SOURCERPM}' "$i")
+	SRCNAME=${SOURCERPM%-*-*}
+	SRCVREL=${SOURCERPM%.*.*}
+	[ "$NAME-$VERSION-$RELEASE" = "$SRCVREL" ] || continue
+	list+=( "$i" )
+done
+
+if [ ${#list[@]} -eq 0 ]; then
+	echo >&1 "'$NAME' packages not found in $RPMS"
+	exit 1
+fi
+
+tmp=$(mktemp -d)
+trap "rm -rf $tmp" 0
+export QUOTING_STYLE=shell-escape
+sep=
+
+shopt -s extglob
+for i in "${list[@]}"; do
+	name=${i%-*-*}
+	[[ "$name" =~ -debuginfo ]] && continue
+	[[ "$name" =~ -devel ]] && continue
+	printf "\ns= %s =\n" "$name"
+	vrel=${i%.*.*}
+	archrpm=${i#"$vrel"}
+	vrel=${i#"$name-"}
+	vrel=${vrel%"$archrpm"}
+
+	r=$(set +f; ls /ALT/$REPO/files/*/RPMS/$name-+([^-])-+([^-])$archrpm 2>/dev/null || :)
+	if [ ! -e "$r" ]; then
+		echo >&2 "$r not found in $REPO"
+		continue
+	fi
+	cmd="$r"
+
+	rd=$(set +f; ls /ALT/$REPO/files/*/RPMS/$name-debuginfo-+([^-])-+([^-])$archrpm 2>/dev/null || :)
+	[ -e "$rd" ] && cmd+=" --d1 $rd"
+
+	cmd+=" $i"
+
+	[ -e "$name-debuginfo-$vrel$archrpm" ] && cmd+=" --d2 $name-debuginfo-$vrel$archrpm"
+
+	(set -x; abipkgdiff $cmd)
+done
