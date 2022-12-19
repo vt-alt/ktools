@@ -1,0 +1,160 @@
+#!/bin/bash
+# Easy-peasy single command robot-bobot package update script
+# Copyright (c) 2022 Vitaly Chikunov <vt@altlinux.org>
+#
+# shellcheck disable=SC2128,SC2207
+
+# shellcheck source=/usr/bin/gear-utils-sh-functions
+. gear-utils-sh-functions
+
+set -euo pipefail
+shopt -s extglob
+
+V() {
+        printf >&2 '\e[1;32m+'
+        printf >&2 ' %q' "$@"
+        printf >&2 '\e[m\n'
+        "$@"
+}
+
+fatal() {
+	printf >&2 "\e[1;31mError: %s\e[m\n" "$*"
+	exit 1
+}
+
+warn() {
+	printf >&2 "\e[1;34mWarning: %s\e[m\n" "$*"
+}
+
+info() {
+	printf >&2 "\e[1;36minfo: %s\e[m\n" "$*"
+}
+
+force='' build='' push='' commit=''
+for opt; do
+	case "$opt" in
+		-f | --force) force=-f ;;
+		--build) build=y ;;
+		--push)  build=y; push=y ;;
+		--commit | --test-only) build=y; push=y; commit=$opt ;;
+		*) fatal "Unknown option: $opt" ;;
+	esac
+done
+
+export disable_specsubst=1
+chdir_to_toplevel
+guess_specfile
+# Sets '$specfile'.
+export specfile
+
+gear_describe() {
+	# shellcheck disable=SC2046
+	set -- $(gear --describe --disable-specsubst)
+	export NAME=$1 VERSION=$2 RELEASE=$3
+}
+gear_describe
+
+# Update repos
+V git fetch origin
+V git gears-add
+
+# Find new tags
+tags=()
+while read -r tag; do
+	[[ $tag =~ -alt|^gb-|rc|beta|alpha ]] && continue
+	git merge-base --is-ancestor "$tag" HEAD && break
+	tags+=( "$tag" )
+done < <(git tag --sort=-creatordate -l)
+
+case ${#tags[@]} in
+	0) warn "No new tags."; tag= ;;
+	1) tag=$tags ;;
+	*) tag=$(gum choose -- "${tags[@]}") ;;
+esac
+
+# Have tag to merge.
+if [ -n "$tag" ]; then
+	if git cat-file -p "$tag" | grep -q 'BEGIN PGP SIGNATURE'; then
+		V git verify-tag "$tag"
+		tagstate=verified
+	else
+		warn "Lame upstream, tag is not signed."
+		tagstate=unsigned
+	fi
+
+	V git merge --no-edit "$tag"
+else
+	tagstate=unknown
+fi
+
+git rev-parse @^2 >/dev/null 2>&1 || fatal "Not in a merge commit."
+git cat-file -p @ | grep -q '^committer .*@altlinux.org>' || fatal "Foreign merge commit."
+
+# What tag is merged?
+tags=( $(git tag --points-at @^2) )
+case ${#tags[@]} in
+	0) fatal "No tags at HEAD." ;;
+	1) tag=$tags ;;
+	*) fatal "Too many tags pointing at HEAD: ${tags[*]}" ;;
+esac
+ver=${tag#[Vv]}
+info "Top tag is $tag ($tagstate), Version: $ver"
+[[ "$ver" =~ ^[[:digit:]]+(.[[:digit:]]+)*$ ]] || fatal "Unknown version format: $ver"
+
+futag=$ver-alt1
+[ -z "$force" ] && [ -n "$(git tag -l "$futag")" ] \
+	&& fatal "Future tag $futag already exists (--force to skip this check)."
+
+if [ -d /ALT/ ]; then
+	repo=${branch-Sisyphus}
+	srpm=( /ALT/$repo/files/SRPMS/$NAME-+([^-])-+([^-]).src.rpm )
+	suff=${srpm%-*-*.src.rpm}
+	revr=${srpm#"$suff-"}
+	revr=${revr%.src.rpm}
+
+	case $(rpmevrcmp "$futag" "$revr") in
+		-1) fatal "Package version in $repo $revr is newer than $futag";;
+		0)  fatal "Package version in $repo $revr is equal to $futag" ;;
+		1)  info  "Package version in $repo $revr is older than $futag" ;;
+		*)  fatal "'rpmevrcmp $futag $revr' error."
+	esac
+	unset suff repo
+else
+	fatal "Package versions cannot be compared (cuz no /ALT/)."
+fi
+
+sver=$(grep -Po '^Version:\s*\K\S+' "$specfile")
+[ -n "$sver" ] || fatal "No 'Version:' found in $specfile"
+# $sver is unquoted to detect parse errors.
+# shellcheck disable=SC2086
+case $(rpmvercmp "$ver" $sver) in
+	-1) fatal "Version in $specfile is newer than $ver" ;;
+	0)  fatal "Version in $specfile is equal to $ver" ;;
+	1) ;;
+	*)  fatal "'rpmvercmp $ver $sver' error." ;;
+esac
+
+# Modify spec.
+new_tag_date=$(git log -1 --pretty=format:%cd --date=format:%Y-%m-%d "$tag")
+append_changelog="- Update to $tag ($new_tag_date)."
+sed -i -E "s/^Version:.*/Version: $ver/" "$specfile"
+sed -i -E "s/^Release:.*/Release: alt1/" "$specfile"
+safe-add-changelog -e "$append_changelog" "$specfile"
+
+git diff
+git add "$specfile"
+gear-commit --no-edit
+git l --first-parent  -3
+setsid gear-create-tag $force
+
+# Externalize changes.
+[ -n "$build" ] && V gear-hsh --commit 2>&1 | tee build.log
+[ -n "$push" ]  && V git push gitery "$futag" $force
+if [ -n "$commit" ]; then
+	# shellcheck disable=SC2086
+	task=$(V ssh girar task new ${branch-})
+	echo "$task" > .gear/task
+	V ssh girar task add "$task" repo "$NAME" "$futag"
+	V ssh girar task run "$commit" "$task"
+fi
+
