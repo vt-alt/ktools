@@ -87,6 +87,10 @@ else
 	tagstate=unknown
 fi
 
+if git cat-file -p @ | grep -q 'BEGIN PGP SIGNATURE'; then
+	fatal "Signed commit."
+fi
+
 git rev-parse @^2 >/dev/null 2>&1 || fatal "Not in a merge commit."
 git cat-file -p @ | grep -q '^committer .*@altlinux.org>' || fatal "Foreign merge commit."
 
