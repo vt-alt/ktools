@@ -72,23 +72,39 @@ case ${#tags[@]} in
 	*) tag=$(gum choose -- "${tags[@]}") ;;
 esac
 
+# Prepare GPG
+GPGKEYS=.gear/keys.gpg
+if [ -e "$GPGKEYS" ]; then
+	export GNUPGHOME=.gear/.gnupg
+	rm -rf "$GNUPGHOME"
+	(umask 077; mkdir -p "$GNUPGHOME")
+	gpg --quiet --import "$GPGKEYS"
+fi
+
 # Have tag to merge.
 if [ -n "$tag" ]; then
+	msg=
 	if git cat-file -p "$tag" | grep -q 'BEGIN PGP SIGNATURE'; then
-		V git verify-tag "$tag"
-		tagstate=verified
+		if [ "$(git cat-file -t "$tag")" = commit ]; then
+			V git verify-commit "$tag"
+			msg=.git/COMMIT_EDITMSG
+			printf -- "Merge tag '%s' into %s\n\n%s" \
+				"$tag" \
+				"$(git branch --show-current)" \
+				"$(git verify-commit "$tag" |& sed 's/^/# /')" > $msg
+		else
+			# In case of signed tag git-merge adds message automatically.
+			V git verify-tag "$tag"
+		fi
+		tagstate=VERIFIED
 	else
 		warn "Lame upstream, tag is not signed."
 		tagstate=unsigned
 	fi
 
-	V git merge --no-edit "$tag"
+	V git merge --cleanup=whitespace --no-edit ${msg:+-F "$msg"} "$tag"
 else
 	tagstate=unknown
-fi
-
-if git cat-file -p @ | grep -q 'BEGIN PGP SIGNATURE'; then
-	fatal "Signed commit."
 fi
 
 git rev-parse @^2 >/dev/null 2>&1 || fatal "Not in a merge commit."
@@ -173,6 +189,7 @@ git diff
 git add "$specfile"
 gear-commit --no-edit
 git l --first-parent  -3
+unset GNUPGHOME
 setsid gear-create-tag $force
 
 # Externalize changes.
