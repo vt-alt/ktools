@@ -127,6 +127,30 @@ else
 	fatal "Package versions cannot be compared (cuz no /ALT/)."
 fi
 
+# Vendorize.
+cmd=
+if [ -f Cargo.toml ]; then
+	cmd="cargo vendor"
+	V $cmd --quiet
+	# Delete windows' garbage.
+	V find vendor \( -path '*win*' -o -path '*vcpkg*' \) \
+		\( -name '*.a' -o -name '*.lib' -o -name '*.exe' \) \
+		-delete
+	# Except: *.obj
+elif [ -f go.mod ]; then
+	cmd="go mod vendor"
+	V $cmd
+fi
+if [ -n "$cmd" ] && [ -d vendor ]; then
+	grep -sq -w 'text' .gitattributes && echo '* -text' > vendor/.gitattributes
+	V git add -f -A vendor
+	if git diff --quiet --cached; then
+		info "Vendoring is unchanged."
+	else
+		V git commit -q -m "ALT: $cmd"
+	fi
+fi
+
 sver=$(grep -Po '^Version:\s*\K\S+' "$specfile")
 [ -n "$sver" ] || fatal "No 'Version:' found in $specfile"
 # $sver is unquoted to detect parse errors.
