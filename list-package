@@ -7,8 +7,9 @@ skip="5.1|c[678].*|fm]1|c9m[12]|c9f1|p[567]|.*armh"
 
 branch=Sisyphus arch=x86_64
 branches= arches= packages=
-all_arch= lsopts='-ltrd'
+all_arch= lsopts='-ltrd' rpmpeek=
 for i; do
+	[ "$i" = s ]        && i=Sisyphus
 	[ "$i" = sisyphus ] && i=Sisyphus
 	if [ -d /ALT/$i ]; then
 		branch=$i
@@ -24,6 +25,7 @@ for i; do
 		-a|--all-arch*) all_arch=y ;;
 		--full-time) lsopts+=" $i" ;;
 		-1|--names) lsopts= ;;
+		--peek|--rpmpeek) rpmpeek=y; lsopts= ;;
 		-*) echo "No option $i"; exit 1 ;;
 		*) packages+=" $i" ;;
 	esac
@@ -54,6 +56,13 @@ for package in $packages; do
 	done
 done
 [ -n "$list" ] || { echo "No match"; exit 1; }
+if [ -n "$rpmpeek" ]; then
+	for rpm in $(ls $list | tail -1); do
+		prompt=" \[\033[1;36m\]$rpm\[\033[m\]> "
+		rpmpeek -n "$rpm" bash --rcfile <(cat ~/.bashrc; echo PS1="\"$prompt\"")
+		exit
+	done
+fi
 ls $lsopts -- $list \
 	| sed -E 's/^\S+\s+\S+\s+\S+\s+\S+//' \
 	| grep -P --color '^|[^-]+-alt[^-]+(?=\.[^.]+(\.src)?\.s?rpm)'
