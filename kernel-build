@@ -9,7 +9,7 @@ for opt do
 	shift
 	case "$opt" in
 		--kernelbot) kernelbot=y ;;
-		--force) force="-f" ;;
+		-f | --force) force="-f" ;;
 		--task=*) task="${opt#*=}" ;;
 		--commit) commit=y kernelbot=y ;;
 		--share*) shared=y ;;
