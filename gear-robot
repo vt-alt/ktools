@@ -30,13 +30,14 @@ info() {
 	printf >&2 "\e[1;36minfo: %s\e[m\n" "$*"
 }
 
-force='' build='' push='' commit=''
+force='' build='' push='' commit='' theirs=''
 for opt; do
 	case "$opt" in
 		-f | --force) force=-f ;;
 		--build) build=y ;;
 		--push)  build=y; push=y ;;
 		--commit | --test-only) build=y; push=y; commit=$opt ;;
+		--theirs ) theirs='-X theirs' ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 done
@@ -84,14 +85,16 @@ fi
 # Have tag to merge.
 if [ -n "$tag" ]; then
 	msg=
+	cleanup=
 	if git cat-file -p "$tag" | grep -q 'BEGIN PGP SIGNATURE'; then
 		if [ "$(git cat-file -t "$tag")" = commit ]; then
 			V git verify-commit "$tag"
 			msg=.git/COMMIT_EDITMSG
-			printf -- "Merge tag '%s' into %s\n\n%s" \
+			printf -- "Merge signed commit '%s' into %s\n\n%s" \
 				"$tag" \
 				"$(git branch --show-current)" \
 				"$(git verify-commit "$tag" |& sed 's/^/# /')" > $msg
+			cleanup=--cleanup=whitespace
 		else
 			# In case of signed tag git-merge adds message automatically.
 			V git verify-tag "$tag"
@@ -102,7 +105,7 @@ if [ -n "$tag" ]; then
 		tagstate=unsigned
 	fi
 
-	V git merge --cleanup=whitespace --no-edit ${msg:+-F "$msg"} "$tag"
+	V git merge $cleanup $theirs --no-edit ${msg:+-F "$msg"} "$tag"
 else
 	tagstate=unknown
 fi
@@ -146,13 +149,25 @@ fi
 # Vendorize.
 cmd=
 if [ -f Cargo.toml ]; then
-	cmd="cargo vendor"
-	V $cmd --quiet
-	# Delete windows' garbage.
-	V find vendor \( -path '*win*' -o -path '*vcpkg*' \) \
-		\( -name '*.a' -o -name '*.lib' -o -name '*.exe' \) \
-		-delete
-	# Except: *.obj
+	if type -p cargo-vendor-filterer >/dev/null; then
+		cmd="cargo vendor-filterer"
+		rm -rf vendor
+		V cargo vendor-filterer \
+			--platform=aarch64-unknown-linux-gnu \
+			--platform=armv7-unknown-linux-gnueabihf \
+			--platform=i686-unknown-linux-gnu \
+			--platform=powerpc64le-unknown-linux-gnu \
+			--platform=x86_64-unknown-linux-gnu
+	else
+		cmd="cargo vendor"
+		V cargo vendor --quiet
+		# Delete windows' garbage.
+		V find vendor \( -path '*win*' -o -path '*vcpkg*' \) \
+			\( -name '*.a' -o -name '*.lib' -o -name '*.exe' \) \
+			-delete
+		# Except: *.obj
+	fi
+	git add Cargo.lock
 elif [ -f go.mod ]; then
 	cmd="go mod vendor"
 	V $cmd
@@ -185,6 +200,10 @@ sed -i -E "s/^Version:.*/Version: $ver/" "$specfile"
 sed -i -E "s/^Release:.*/Release: alt1/" "$specfile"
 safe-add-changelog -e "$append_changelog" "$specfile"
 
+# Build nefore tagging.
+[ -n "$build" ] && V gear-hsh --commit 2>&1 | tee build.log
+
+# Tag.
 git diff
 git add "$specfile"
 gear-commit --no-edit
@@ -193,7 +212,6 @@ unset GNUPGHOME
 setsid gear-create-tag $force
 
 # Externalize changes.
-[ -n "$build" ] && V gear-hsh --commit 2>&1 | tee build.log
 [ -n "$push" ]  && V git push gitery "$futag" $force
 if [ -n "$commit" ]; then
 	# shellcheck disable=SC2086
