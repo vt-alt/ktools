@@ -75,10 +75,13 @@ case ${#tags[@]} in
 esac
 
 # Prepare GPG
-GPGKEYS=.gear/keys.gpg
 export GNUPGHOME=.gear/.gnupg
 rm -rf "$GNUPGHOME"
 (umask 077; mkdir -p "$GNUPGHOME")
+# Basically we want keyserver set to
+#   keyserver hkps://keys.openpgp.org
+cp -a ~/.gnupg/gpg.conf $GNUPGHOME/
+GPGKEYS=.gear/keys.gpg
 if [ -e "$GPGKEYS" ]; then
 	gpg --quiet --import "$GPGKEYS"
 fi
@@ -94,7 +97,7 @@ acquire_gpg_key() {
 	git verify-$object_type "$tag" >> .gear/GIT_VERIFY_OUTPUT 2>&1 || :
 	keyid=$(grep -Po "^gpg:\s+using \S+ key \K.*" .gear/GIT_VERIFY_OUTPUT)
 	[ -n "$keyid" ] || fatal "No keyid to find."
-	V gpg2 --search $keyid |& tee -a .gear/GIT_VERIFY_OUTPUT
+	V gpg2 --auto-key-locate wkd --receive-keys "$keyid" |& tee -a .gear/GIT_VERIFY_OUTPUT
 	local who=$(grep -Po '^gpg: key \S+: public key "\K[^"]+(?=" imported)' .gear/GIT_VERIFY_OUTPUT)
 	[ -n "$who" ] || fatal "Key is not imported."
 	V gpg2 --list-keys
