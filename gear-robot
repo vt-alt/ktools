@@ -130,7 +130,22 @@ if [ -n "$tag" ]; then
 		tagstate=unsigned
 	fi
 
-	V git merge $cleanup $theirs --no-edit ${msg:+-F "$msg"} "$tag"
+	if ! V git merge $cleanup $theirs --no-edit ${msg:+-F "$msg"} "$tag"; then
+		if [ -t 0 ]; then
+			# Try manual merge if user is here.
+			GIT_PS1_SHOWCOLORHINTS=true \
+			GIT_PS1_SHOWDIRTYSTATE=true \
+			PS1='\w\[\033[1;35m\]$(__git_ps1)\[\033[m\]> ' \
+			bash --rcfile /usr/share/git-core/contrib/completion/git-prompt.sh || :
+		fi
+	fi
+	if git diff --quiet &&
+	   git diff --quiet --cached &&
+	   git merge-base --is-ancestor "$tag" HEAD; then
+		info "Merge OK. Continuing..."
+	else
+		fatal "Merge failed!"
+	fi
 else
 	tagstate=unknown
 fi
