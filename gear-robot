@@ -149,14 +149,10 @@ fi
 # Vendorize.
 cmd=
 if [ -f Cargo.toml ]; then
-	if type -p cargo-vendor-filterer >/dev/null; then
+	if type -p cargo-vendor-filterer-no >/dev/null; then
 		cmd="cargo vendor-filterer"
 		rm -rf vendor
 		V cargo vendor-filterer \
-			--platform=aarch64-unknown-linux-gnu \
-			--platform=armv7-unknown-linux-gnueabihf \
-			--platform=i686-unknown-linux-gnu \
-			--platform=powerpc64le-unknown-linux-gnu \
 			--platform=x86_64-unknown-linux-gnu
 	else
 		cmd="cargo vendor"
