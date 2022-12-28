@@ -100,8 +100,11 @@ elif [ -v summary ]; then
 	girar-summary-task "$task"
 elif [ -v logs ]; then
 	arch=x86_64
-	curl -sS -L -f "https://git.altlinux.org/tasks/$task/build/$subtask/$arch/log" \
-		| less -K || exit
+	{
+		girar-summary-task $task
+		print_json
+		curl -sS -L -f "https://git.altlinux.org/tasks/$task/build/$subtask/$arch/log"
+	} | less -K || exit
 elif [ -v task_id ]; then
 	echo "$task"
 else
