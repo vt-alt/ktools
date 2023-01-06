@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -efuo pipefail
+: ${HOST:=iblis}
+
+fatal() {
+	echo >&2 "Error: $*"
+	exit 1
+}
+
+[ -d .git ] || fatal "Not in git repo today."
+
+workdir=$(basename $PWD)
+set -x
+rsync -aSHv --exclude tags --exclude "log.$HOST" --info=progress2 $PWD $HOST:
+ssh $HOST "cd $workdir; HOSTTYPE=armh gear-hsh --commit" 2>&1 | tee log.$HOST
+
