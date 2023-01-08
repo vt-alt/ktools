@@ -1,0 +1,4 @@
+#!/bin/bash
+
+LINES=$(tput lines)
+git branch | cut -c 3- | gum choose --height=$LINES | xargs -t -r git switch
