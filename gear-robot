@@ -40,6 +40,7 @@ for opt; do
 		--commit | --test-only) build=y; push=y; commit=$opt ;;
 		--theirs ) theirs='-X theirs' ;;
 		--no-gears ) unset gears_update ;;
+		--all) build=y push=y commit=--commit ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
 done
