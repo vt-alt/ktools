@@ -32,7 +32,9 @@ info() {
 
 force='' build='' push='' commit='' theirs=''
 gears_update=y
-for opt; do
+keyserver="--auto-key-locate wkd"
+while [ $# -gt 0 ]; do
+	opt=$1
 	case "$opt" in
 		-f | --force) force=-f ;;
 		--build) build=y ;;
@@ -41,8 +43,11 @@ for opt; do
 		--theirs ) theirs='-X theirs' ;;
 		--no-gears ) unset gears_update ;;
 		--all) build=y push=y commit=--commit ;;
+		--keyserver=ubuntu) keyserver="--keyserver hkps://keyserver.ubuntu.com" ;;
+		--keyserver) shift; keyserver="--keyserver $1" ;;
 		*) fatal "Unknown option: $opt" ;;
 	esac
+	shift
 done
 
 export disable_specsubst=1
@@ -78,6 +83,7 @@ case ${#tags[@]} in
 	1) tag=$tags ;;
 	*) tag=$(gum choose -- "${tags[@]}") ;;
 esac
+echo "Selected tag: $tag"
 
 # Prepare GPG
 export GNUPGHOME=.gear/.gnupg
@@ -102,13 +108,15 @@ acquire_gpg_key() {
 	git verify-$object_type "$tag" >> .gear/GIT_VERIFY_OUTPUT 2>&1 || :
 	keyid=$(grep -Po "^gpg:\s+using \S+ key \K.*" .gear/GIT_VERIFY_OUTPUT)
 	[ -n "$keyid" ] || fatal "No keyid to find."
-	V gpg2 --auto-key-locate wkd --receive-keys "$keyid" |& tee -a .gear/GIT_VERIFY_OUTPUT
+	# --receive-keys cannot receive unapproved keys: https://keys.openpgp.org/about/faq#older-gnupg
+	gpg_command="gpg2 $keyserver --receive-keys $keyid"
+	V $gpg_command |& tee -a .gear/GIT_VERIFY_OUTPUT
 	local who=$(grep -Po '^gpg: key \S+: public key "\K[^"]+(?=" imported)' .gear/GIT_VERIFY_OUTPUT)
 	[ -n "$who" ] || fatal "Key is not imported."
 	V gpg2 --list-keys
 	V gpg2 --export -a > .gear/keys.gpg
 	V git add .gear/keys.gpg
-	V git commit -m "ALT: Import GPG key for $who"
+	V git commit -m "ALT: Import GPG key for $who" -m "$gpg_command"
 }
 
 # Have tag to merge.
