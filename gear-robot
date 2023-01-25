@@ -182,7 +182,7 @@ tags=( $(git tag --points-at @^2) )
 case ${#tags[@]} in
 	0) fatal "No tags at HEAD." ;;
 	1) tag=$tags ;;
-	*) fatal "Too many tags pointing at HEAD: ${tags[*]}" ;;
+	*) warn "Too many tags pointing at HEAD: ${tags[*]}" ;;
 esac
 ver=${tag#[Vv]}
 info "Top tag is $tag ($tagstate), Version: $ver"
