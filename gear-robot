@@ -112,6 +112,7 @@ acquire_gpg_key() {
 		return
 	fi
 	local object_type=$(git cat-file -t "$tag")
+	git cat-file -p "$tag" | grep -e committer -e tagger
 	echo "git verify-$object_type $tag" > .gear/GIT_VERIFY_OUTPUT
 	git verify-$object_type "$tag" >> .gear/GIT_VERIFY_OUTPUT 2>&1 || :
 	keyid=$(grep -Po "^gpg:\s+using \S+ key \K.*" .gear/GIT_VERIFY_OUTPUT)
@@ -123,7 +124,7 @@ acquire_gpg_key() {
 	[ -n "$who" ] || fatal "Key is not imported."
 	V gpg2 --list-keys
 	V gpg2 --export -a > .gear/keys.gpg
-	V git add .gear/keys.gpg
+	V git add -f .gear/keys.gpg
 	V git commit -m "ALT: Import GPG key for $who" -m "$gpg_command"
 }
 
@@ -227,7 +228,7 @@ if [ -f Cargo.toml ]; then
 			-delete
 		# Except: *.obj
 	fi
-	git add Cargo.lock
+	git add -f Cargo.lock
 elif [ -f go.mod ]; then
 	cmd="go mod vendor"
 	V $cmd
@@ -265,7 +266,7 @@ safe-add-changelog -e "$append_changelog" "$specfile"
 
 # Tag.
 git diff
-git add "$specfile"
+git add -f "$specfile"
 gear-commit --no-edit
 git l --first-parent  -3
 unset GNUPGHOME
