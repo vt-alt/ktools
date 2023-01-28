@@ -192,7 +192,7 @@ case ${#tags[@]} in
 	1) tag=$tags ;;
 	*) warn "Too many tags pointing at HEAD: ${tags[*]}" ;;
 esac
-ver=${tag#[Vv]}
+ver=${tag#*[Vv]}
 info "Top tag is $tag ($tagstate), Version: $ver"
 [[ "$ver" =~ ^[[:digit:]]+(.[[:digit:]]+)*$ ]] || fatal "Unknown version format: $ver"
 
