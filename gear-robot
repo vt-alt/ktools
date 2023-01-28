@@ -94,6 +94,10 @@ rm -rf "$GNUPGHOME"
 # Basically we want keyserver set to
 #   keyserver hkps://keys.openpgp.org
 cp -a ~/.gnupg/gpg.conf $GNUPGHOME/
+# Hide:
+#   gpg: WARNING: This key is not certified with a trusted signature!
+#   gpg:          There is no indication that the signature belongs to the owner.
+echo "trust-model always" >> $GNUPGHOME/gpg.conf
 GPGKEYS=.gear/keys.gpg
 if [ -v nosignature ]; then
 	warn "Importing gpg keys skipped."
@@ -137,6 +141,9 @@ if [ -n "$tag" ]; then
 		tagstate=nosignature
 	elif git cat-file -p "$tag" | grep -q 'BEGIN PGP SIGNATURE'; then
 		acquire_gpg_key "$tag"
+		# Hide:
+		#   gpg: WARNING: Using untrusted key!
+		echo "quiet" >> $GNUPGHOME/gpg.conf
 		if [ "$(git cat-file -t "$tag")" = commit ]; then
 			V git verify-commit "$tag"
 			msg=.git/COMMIT_EDITMSG
