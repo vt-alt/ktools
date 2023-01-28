@@ -72,11 +72,25 @@ if [ -v gears_update ]; then
 	git l gears/${branch-sisyphus}..
 fi
 
+# Find latest (merged) upstream tag in this branch
+unset oldtag
+while read -r tag; do
+	case "$tag" in
+		@ | gb-*-task* | *-alt*) continue ;;
+	esac
+	oldtag=$tag
+	echo "Latest merged tag is $oldtag"
+	break
+done < <(git tag --sort=-creatordate --merged @)
+
 # Find new tags
 tags=()
 while read -r tag; do
 	[[ $tag =~ -alt|^gb-|rc|beta|alpha ]] && continue
+	# --is-ancestor: Check if the first <commit> is an ancestor of the second <commit>, and exit with status 0 if true.
 	git merge-base --is-ancestor "$tag" HEAD && break
+	# Consider only tags in this branch
+	# [ -v oldtag ] && { git merge-base --is-ancestor "$oldtag" "$tag" || continue; }
 	tags+=( "$tag" )
 done < <(git tag --sort=-creatordate -l)
 
