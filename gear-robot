@@ -182,7 +182,7 @@ if [ -n "$tag" ]; then
 			GIT_PS1_SHOWCOLORHINTS=true \
 			GIT_PS1_SHOWDIRTYSTATE=true \
 			PS1='\w\[\033[1;35m\]$(__git_ps1)\[\033[m\]> ' \
-			bash --rcfile /usr/share/git-core/contrib/completion/git-prompt.sh || :
+			bash --rcfile <(cat ~/.bashrc; echo . /usr/share/git-core/contrib/completion/git-prompt.sh) || :
 		fi
 	fi
 	if git diff --quiet &&
