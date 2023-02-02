@@ -176,13 +176,17 @@ if [ -n "$tag" ]; then
 		tagstate=unsigned
 	fi
 
-	if ! V git merge $cleanup $theirs --no-edit ${msg:+-F "$msg"} "$tag"; then
+	if ! V git merge --progress $cleanup $theirs --no-edit ${msg:+-F "$msg"} "$tag"; then
 		if [ -t 0 ]; then
 			# Try manual merge if user is here.
 			GIT_PS1_SHOWCOLORHINTS=true \
 			GIT_PS1_SHOWDIRTYSTATE=true \
 			PS1='\w\[\033[1;35m\]$(__git_ps1)\[\033[m\]> ' \
 			bash --rcfile <(cat ~/.bashrc; echo . /usr/share/git-core/contrib/completion/git-prompt.sh) || :
+		fi
+	else
+		if [ -n "$theirs" ]; then
+			git commit --no-edit --amend --trailer "Merge-Strategy: theirs"
 		fi
 	fi
 	if git diff --quiet &&
