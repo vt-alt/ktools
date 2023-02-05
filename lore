@@ -1,0 +1,161 @@
+#!/bin/bash
+
+set -euuf -o pipefail
+
+dedup=y
+search=patchid
+unset mode force_mode
+if type -p neomutt >/dev/null; then
+	reader=neomutt
+else
+	reader=mutt
+fi
+
+for opt; do
+	shift
+	case "$opt" in
+		--reader=*) reader=${opt#*=} ;;
+		--raw) unset dedup ;;
+		-s | --subject | --subj) search=subject ;;
+		-q | --query) search=query ;;
+		-t | --thr*) force_mode="x=full+threads" ;;
+		-r | --res*) force_mode="z=results+only" ;;
+		-*) echo "unknown option: $opt"; exit 1 ;;
+		*) set -- "$@" "$opt" ;;
+	esac
+done
+
+commit=${1:?committish}
+for dir in . \
+	"$HOME/linux/torvalds" \
+	"$HOME/src/linux" \
+	"$HOME/linux" \
+	"$HOME/src/kernel-image" \
+	"$HOME/src/qemu"
+do
+	cd "$dir" 2>/dev/null || continue
+	git cat-file -e "$commit^{commit}" 2>/dev/null && break
+done
+
+commit_info() {
+	author=$(    git log --format=%an -n1 "$commit" --)
+	aemail=$(    git log --format=%ae -n1 "$commit" --)
+	committer=$( git log --format=%cn -n1 "$commit" --)
+	commemail=$( git log --format=%ce -n1 "$commit" --)
+	subjfn=$(    git log --format=%f  -n1 "$commit" --)
+	subj=$(      git log --format=%s  -n1 "$commit" --)
+	subjre=${subj//[^[:alnum:]]/.}
+}
+
+case "$search" in
+	patchid)
+		commit_info
+		patchid=$(git --no-pager show "$commit" -- | git patch-id --stable)
+		patchid=${patchid% *}
+		if [ -z "$patchid" ]; then
+			objtype=$(git cat-file -t "$commit")
+			git cat-file -t "$commit^2" >/dev/null 2>&1 && objtype="merge commit"
+			echo >&2 "No patch-id for a $objtype."
+			exit 1
+		fi
+		query="patchid:$patchid"
+		mode="x=full+threads"
+		;;
+	subject)
+		commit_info
+		query="s:${subj// /+}"
+		query="s:$(perl -MURI::Escape -e 'print uri_escape($ARGV[0])' "$subj")"
+		query=${query//%20/+}
+		mode="z=results+only"
+		;;
+	query)
+		unset committer
+		query="$(perl -MURI::Escape -e 'print uri_escape($ARGV[0])' "$*")"
+		query=${query//%20/+}
+		mode="z=results+only"
+		subjfn=${query//[^[:alnum:]]/_}
+		subjre=${*//[^[:alnum:]]/.}
+		;;
+esac
+[ -v force_mode ] && mode=$force_mode
+
+tmp=$(mktemp -d --tmpdir lore.XXXXXXXXXX)
+cd "$tmp"
+echo "+ cd $tmp"
+(set -x; curl -sS -L -f "https://lore.kernel.org/all/?q=$query&x=m" -d "$mode" -o mbox.gz)
+gzip -d mbox.gz
+mbox="$subjfn"
+if [ -v dedup ] && type -p formail >/dev/null; then
+	formail -D 16384 idcache -s < mbox > "$mbox"
+else
+	mv -- mbox "$mbox"
+fi
+
+cat > muttrc <<EOF
+set from="$(git config user.email)"
+set realname="$(git config user.name)"
+set reverse_name
+set reverse_realname
+set edit_headers
+set editor=$EDITOR
+set help=no
+set envelope_from=yes
+alternative_order text/plain text/enriched text/html
+ignore *
+unignore from date subject to cc message-id resent-from
+# Note: index-format-hook slows down scrolling considerably
+  index-format-hook resol "~b^fixes:"          Fixes
+  index-format-hook resol "~b^signed-off-by:"  PATCH
+  index-format-hook resol "~b^acked-by:"       Ack
+  index-format-hook resol "~b^reviewed-by:"    Review
+  index-format-hook resol "~b^tested-by:"      Tested
+set index_format="%4C %Z %[%y %b %d %H:%M] %-15.15n %-6@resol@ (%4l%?X?+%X&?) %H %s"
+set sort=threads
+set sort_aux=last-date
+
+color hdrdefault brightblack black
+color header   yellow      black ^(From):
+color header   cyan        black ^(Subject):
+color header   green       black ^(To|Cc):
+color header   white       black ^(Date):
+color header   magenta     black ^(X-Label|X-Maintainer|X-Reviewer):
+color signature blue       black
+color error    brightred   black
+color status   brightwhite blue
+color tree     magenta     black
+color tilde    brightblack black
+color message  cyan        black
+color markers  cyan        black
+color attachment brightgreen black
+color search   black       red
+color quoted   brightblue  black
+color quoted1  yellow      black
+color quoted2  red         black
+color quoted3  green       black
+color quoted4  cyan        black
+color quoted5  blue        black
+color quoted6  yellow      black
+color quoted7  red         black
+color quoted8  green       black
+color quoted9  cyan        black
+color body     green       default "^diff \-.*"
+color body     green       default "^index [a-f0-9].*"
+color body     green       default "^\-\-\- .*"
+color body     green       default "^[\+]{3} .*"
+color body     cyan        default "^[\+][^\+]+.*"
+color body     red         default "^\-[^\-]+.*"
+color body     brightblue  default "^@@ .*"
+color index_subject brightyellow default "~s '$subjre'"
+EOF
+if [ -v committer ]; then
+	cat >> muttrc <<-EOF
+	color index_author  brightgreen  default "~f '$committer'"
+	color index_author  brightgreen  default "~f '$commemail'"
+	color index_author  brightyellow default "~f '$author'"
+	color index_author  brightyellow default "~f '$aemail'"
+	EOF
+fi
+$reader -F muttrc -Rf $mbox
+echo >&2 cd $tmp
+exit 1
+rm -rf "$tmp"
