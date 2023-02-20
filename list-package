@@ -36,6 +36,18 @@ done
 : ${flavours:=*}
 [ -z "$arches" ] && arches="$arch noarch"
 
+gear_describe()
+{
+	set -- $(gear --describe)
+	NAME=$1
+	VERSION=$2
+	RELEASE=$3
+}
+if [ -z "$packages" ]; then
+	gear_describe
+	packages=$NAME
+fi
+
 set -f
 list=
 for package in $packages; do
