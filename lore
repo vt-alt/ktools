@@ -4,7 +4,7 @@ set -euuf -o pipefail
 
 dedup=y
 search=patchid
-unset mode force_mode
+unset mode force_mode tags
 if type -p neomutt >/dev/null; then
 	reader=neomutt
 else
@@ -20,6 +20,7 @@ for opt; do
 		-q | --query) search=query ;;
 		-t | --thr*) force_mode="x=full+threads" ;;
 		-r | --res*) force_mode="z=results+only" ;;
+		-T | --tags) tags=y ;;
 		-*) echo "unknown option: $opt"; exit 1 ;;
 		*) set -- "$@" "$opt" ;;
 	esac
@@ -103,13 +104,23 @@ set envelope_from=yes
 alternative_order text/plain text/enriched text/html
 ignore *
 unignore from date subject to cc message-id resent-from
-# Note: index-format-hook slows down scrolling considerably
-  index-format-hook resol "~b^fixes:"          Fixes
-  index-format-hook resol "~b^signed-off-by:"  PATCH
-  index-format-hook resol "~b^acked-by:"       Ack
-  index-format-hook resol "~b^reviewed-by:"    Review
-  index-format-hook resol "~b^tested-by:"      Tested
-set index_format="%4C %Z %[%y %b %d %H:%M] %-15.15n %-6@resol@ (%4l%?X?+%X&?) %H %s"
+EOF
+if [ -v tags ]; then
+	cat >> muttrc <<-EOF
+	# Note: index-format-hook slows down scrolling considerably
+	  index-format-hook resol "~b^fixes:"          Fixes
+	  index-format-hook resol "~b^signed-off-by:"  PATCH
+	  index-format-hook resol "~b^acked-by:"       Ack
+	  index-format-hook resol "~b^reviewed-by:"    Review
+	  index-format-hook resol "~b^tested-by:"      Tested
+	set index_format="%4C %Z %[%y %b %d %H:%M] %-15.15n %-6@resol@ (%4l%?X?+%X&?) %H %s"
+	EOF
+else
+	cat >> muttrc <<-EOF
+	set index_format="%4C %Z %[%y %b %d %H:%M] %-15.15n (%4l%?X?+%X&?) %H %s"
+	EOF
+fi
+cat >> muttrc <<-EOF
 set sort=threads
 set sort_aux=last-date
 
