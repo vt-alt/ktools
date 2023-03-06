@@ -1,5 +1,8 @@
 #!/bin/bash
 
+pkg="${1:?}"
+[ -e "$pkg" ] && p=-p
+
 for i in $(rpm --querytags); do
-	rpm -qp "${1:?}" --qf "$i=%{$i:shescape}\n"
+	rpm -q $p "$pkg" --qf "$i=%{$i:shescape}\n"
 done
