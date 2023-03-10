@@ -3,7 +3,7 @@
 V() { echo "- $*" >&2; "$@"; }
 
 if [ -n "$*" ]; then
-	V git config gear.specsubst.kflavour std-def
+	V git config gear.specsubst.kflavour "$@"
 else
 	br=$(git branch --show-current)
 	branch=${br#*/}
