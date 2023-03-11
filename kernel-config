@@ -7,14 +7,22 @@ else
 	arch=x86_64
 	flavour=std-def
 	for i; do
+		ok=
 		if [ -d /ALT/$i ]; then
 			branch=$i
+			ok=branch
 		fi
 		if [ -d /ALT/$branch/files/$i ]; then
 			arch=$i
+			ok=arch
 		fi
 		if [ -e /ALT/$branch/files/$arch/RPMS/kernel-image-$i-[1-9]*.rpm ]; then
 			flavour=$i
+			ok=flavour
+		fi
+		if [ -z "$ok" ]; then
+			echo >&2 "Unknwon package selector: $i"
+			exit 2
 		fi
 	done
 	file=/ALT/$branch/files/$arch/RPMS/kernel-image-$flavour-[1-9]*.$arch.rpm
