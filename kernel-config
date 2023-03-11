@@ -1,5 +1,6 @@
 #!/bin/bash -eu
 
+show_file=
 if [ -e "${1-}" ]; then
 	file=$1
 else
@@ -10,23 +11,25 @@ else
 		ok=
 		if [ -d /ALT/$i ]; then
 			branch=$i
-			ok=branch
-		fi
-		if [ -d /ALT/$branch/files/$i ]; then
+		elif [ -d /ALT/$branch/files/$i ]; then
 			arch=$i
-			ok=arch
-		fi
-		if [ -e /ALT/$branch/files/$arch/RPMS/kernel-image-$i-[1-9]*.rpm ]; then
+		elif [ -e /ALT/$branch/files/$arch/RPMS/kernel-image-$i-[1-9]*.rpm ]; then
 			flavour=$i
-			ok=flavour
-		fi
-		if [ -z "$ok" ]; then
+		elif [ "$i" = --file ]; then
+			show_file=only
+		else
 			echo >&2 "Unknwon package selector: $i"
 			exit 2
 		fi
 	done
-	file=/ALT/$branch/files/$arch/RPMS/kernel-image-$flavour-[1-9]*.$arch.rpm
+	set +f
+	file=( /ALT/$branch/files/$arch/RPMS/kernel-image-$flavour-[1-9]*.$arch.rpm )
+	set -f
 fi
 
-[ -t 1 ] && echo >&2 $file
-rpmpeek $file bash -c 'cat boot/config-*' 2>/dev/null
+if [ -n "$show_file" ]; then
+	echo "$file"
+else
+	[ -t 1 ] && echo >&2 $file
+	rpmpeek $file bash -c 'cat boot/config-*' 2>/dev/null
+fi
