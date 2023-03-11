@@ -1,0 +1,38 @@
+#!/bin/bash
+
+set -efu -o pipefail
+
+gear_describe()
+{
+	set -- $(gear --describe --commit)
+	NAME=$1
+	VERSION=$2
+	RELEASE=$3
+}
+
+gear_describe
+FLAVOUR=${NAME#kernel-image-}
+branch=$(git branch --show-current)
+BRANCH=${branch#*/}
+
+. ~/.hasher/config
+arch=${def_target:-$(arch)}
+cd  ~/hasher/repo/$arch/RPMS.hasher
+
+rpm=$NAME-$VERSION-$RELEASE.$arch.rpm
+if [ ! -e "$rpm" ]; then
+	echo >&2 "Package $rpm not found in local repo."
+	exit 1
+fi
+rpm2=$(kernel-config --file "$arch" $BRANCH "${FLAVOUR:?}")
+rpm2bn=$(basename "$rpm2")
+
+tmp=$(mktemp -d)
+trap "rm -rf $tmp" 0
+
+kernel-config "$rpm2" > "$tmp/$rpm2bn"
+kernel-config "$rpm" > "$tmp/$rpm"
+
+cd $OLDPWD
+set -x
+scripts/diffconfig "$@" "$tmp/$rpm2bn" "$tmp/$rpm" | less
