@@ -5,6 +5,7 @@ V() { echo -e "+ \e[1;33m$@\e[m" >&2; "$@"; }
 unset commit shared kernelbot task
 force=
 kmodules=y
+runthetask=y
 for opt do
 	shift
 	case "$opt" in
@@ -15,7 +16,8 @@ for opt do
 		--share*) shared=y ;;
 		--branch=*) branch="${opt#*=}" ;;
 		--no-kmodules) unset kmodules ;;
-		*) set -- "$opt" "$@"; break ;;
+		--no-run) unset runthetask ;;
+		*) set -- "$opt" "$@"; break ;; # tags
 	esac
 done
 
@@ -61,6 +63,11 @@ for tag; do
 		msg=
 	fi
 	echo PESIGN | V ssh $approver task approve $task all
-	V ssh girar task run --fail-late ${commit+--commit} $task $msg
+	runcmd="ssh girar task run --fail-late ${commit+--commit} $task $msg"
+	if [ -v runthetask ]; then
+		V $runcmd
+	else
+		echo -e "To run: \e[1;35m$runcmd\e[m"
+	fi
 done
 
