@@ -1,3 +1,3 @@
 
 install:
-	git ls-files | xargs grep -l '^#!/bin/bash' | xargs -i ln -vrsf {} $(HOME)/bin/{}
+	git ls-files | xargs grep -l '^#!.*/bin/' | xargs -i ln -vrsf {} $(HOME)/bin/{}
