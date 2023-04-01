@@ -5,12 +5,14 @@
 
 export LC_ALL=C
 repo=Sisyphus
+unset requires
 for i; do
 	case $i in s | sisyphus) i=Sisyphus ;; esac
 	case $i in
 		-v | --verbose) verbose=y ;;
 		-j | --json) json=y ;;
-		-R | --requires) requires=y ;;
+		-R | --requires) requires= ;;
+		--requires=*) requires=${1#*=} ;;
 		--task-id) task_id=only ;;
 		--pkgname) pkgname=y ;;
 		--srcrpm) srcrpm=y ;;
@@ -93,7 +95,17 @@ elif [ -v requires ]; then
 			srpms+=( "$taskdir/build/$t/x86_64/srpm/$srpm" )
 		done
 	done
-	ssh team rpm -qRp "${srpms[@]}" | grep -Po '^^\S+' | sort -u
+	if [ -n "$requires" ]; then
+		# Soem useful tags: REQUIRENAME (same as REQUIRES), REQUIRENEVRS
+		tag=$(rpm --querytags | grep ^REQUIRE | grep -i -e "$requires" -m1 )
+		if [ -z "$tag" ]; then
+			echo >&2 "Unknown tag: $requires."
+			exit 1
+		fi
+		ssh team rpm -qp "${srpms[@]}" --qf "[%{NAME}\\\t%{$tag}\\\n]" | sort -u
+	else
+		ssh team rpm -qRp "${srpms[@]}" | grep -Po '^^\S+' | sort -u
+	fi
 elif [ -v json ]; then
 	[ -t 1 ] && print_json | less || print_json
 elif [ -v summary ]; then
