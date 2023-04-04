@@ -2,6 +2,11 @@
 
 V() { echo "- $*" >&2; "$@"; }
 
+   RED=$'\e[1;31m'
+ GREEN=$'\e[1;32m'
+YELLOW=$'\e[1;33m'
+  NORM=$'\e[m'
+
 if [ -n "$*" ]; then
 	fvnew="$*"
 else
@@ -16,12 +21,27 @@ else
 		un-def|std-def|std-pae|std-debug|next) ;;
 		*) echo >&2 "Invalid flavour $brflvr"; exit 1 ;;
 	esac
-	fvnew=$brflvr
+
+	top=$(git rev-parse --show-toplevel)
+	rtbr=$(cut -d' ' -f1 "$top/.gear/release-targets")
+	if [ "$rtbr" != "$branch" ]; then
+		echo >&2 "${RED}Warning: Branch from .gear/release-targets ($rtbr) != $branch${NORM}"
+	fi
+
+	rtfv=$(cut -d' ' -f2 "$top/.gear/release-targets")
+	if [ "$brflvr" = "next" ]; then
+		fvnew=$rtfv
+	else
+		if [ "$rtfv" != "$brflvr" ]; then
+			echo >&2 "${RED}Warning: flavour from .gear/release-targets ($rtfv) != $brflvr${NORM}"
+		fi
+		fvnew=$brflvr
+	fi
 fi
 fvold=$(git config gear.specsubst.kflavour)
 if [ "$fvold" = "$fvnew" ]; then
-	echo >&2 "Flavour is already $fvold"
+	echo >&2 "${GREEN}Flavour is already $fvold${NORM}"
 else
-	echo >&2 "Changing flavour $fvold -> $fvnew"
+	echo >&2 "${YELLOW}Changing flavour $fvold -> $fvnew${NORM}"
 	git config gear.specsubst.kflavour "$fvnew"
 fi
