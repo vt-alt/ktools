@@ -3,7 +3,7 @@
 V() { echo "- $*" >&2; "$@"; }
 
 if [ -n "$*" ]; then
-	V git config gear.specsubst.kflavour "$@"
+	fvnew="$*"
 else
 	br=$(git branch --show-current)
 	branch=${br#*/}
@@ -16,5 +16,12 @@ else
 		un-def|std-def|std-pae|std-debug|next) ;;
 		*) echo >&2 "Invalid flavour $brflvr"; exit 1 ;;
 	esac
-	V git config gear.specsubst.kflavour $brflvr
+	fvnew=$brflvr
+fi
+fvold=$(git config gear.specsubst.kflavour)
+if [ "$fvold" = "$fvnew" ]; then
+	echo >&2 "Flavour is already $fvold"
+else
+	echo >&2 "Changing flavour $fvold -> $fvnew"
+	git config gear.specsubst.kflavour "$fvnew"
 fi
