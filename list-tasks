@@ -105,7 +105,7 @@ tasks.split("\n").each do |task|
   subtasks.each do |sub_id, sub_info|
     dir = sub_info['dir']
     tag = sub_info['tag_name']
-    disapprove << sub_info['disapproved_by'] if sub_info['disapproved_by']
+    disapprove << sub_info['disapproved_by'].map{|e| e + "(#{sub_id})"} if sub_info['disapproved_by']
     if dir =~ /kernel-image/ || tag =~ /kernel-image/
         t_kernels   << tag
         @kernellist << tag if t_ok
