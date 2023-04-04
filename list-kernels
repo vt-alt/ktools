@@ -110,7 +110,14 @@ if [ -v logs ]; then
 	done
 	exit
 fi
+if [ -t 1 ]; then
+	HIGHLIGHT=$'sed -E s!/([Ss]isyphus)/!/\e[1;33m\\1\e[m/!'
+else
+	HIGHLIGHT=cat
+fi
+
 ls -ltrd -- $list \
 	| sed -E 's/^\S+\s+\S+\s+\S+\s+\S+//' \
+	| $HIGHLIGHT \
 	| grep -E --color '^|[0-9.]+-alt[^.]+'
 
