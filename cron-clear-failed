@@ -1,0 +1,28 @@
+#~/bin/bash
+set -efu
+
+export NO_PROXY='*'
+
+task=${1:?task}
+taskinfo() { curl -Ssf "https://git.altlinux.org/tasks/$task/task/$1"; }
+
+state=$(taskinfo state)
+[ "$state" = 'FAILED' ] || exit 0
+
+declare -i try=$(taskinfo try)
+declare -i iter=$(taskinfo iter)
+urls=( $(
+	for ((i=1;i<=$iter;i++)); do
+		echo "https://git.altlinux.org/tasks/$task/logs/events.$try.$i.log"
+	done
+) )
+subtasks=( $(curl -Ssf "${urls[@]}" | grep -w 'build FAILED' | grep -Po ':: \[\S+\] #\K\d+' | sort -u ||:) )
+[ -v subtasks ] || exit 0
+
+[ -e ~/.ssh-agent ] && . ~/.ssh-agent
+
+set -x
+for st in "${subtasks[@]}"; do
+	ssh girar task delsub "$task" "$st"
+done
+ssh girar task run "$task"
