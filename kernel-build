@@ -2,17 +2,18 @@
 
 V() { echo -e "+ \e[1;33m$@\e[m" >&2; "$@"; }
 
-unset commit shared kernelbot task
+unset shared kernelbot task
 force=
 kmodules=y
 runthetask=y
+commit=--test-only
 for opt do
 	shift
 	case "$opt" in
 		--kernelbot) kernelbot=y ;;
 		-f | --force) force="-f" ;;
 		--task=*) task="${opt#*=}" ;;
-		--commit) commit=y kernelbot=y ;;
+		--commit) commit=--commit kernelbot=y ;;
 		--share*) shared=y ;;
 		--branch=*) branch="${opt#*=}" ;;
 		--no-kmodules) unset kmodules ;;
@@ -54,16 +55,16 @@ for tag; do
 	flavour=${flavour%-*-alt*}
 
 	V git push $remote $tag $force
-	[ -v task ] || task=$(V ssh girar task new $branch)
-	V ssh girar task add $task repo $repo $tag
-	[ -v shared ] && V ssh girar task share $task enable
-	if [ -v kmodules ] && V ssh girar task add $task kmodules $flavour; then
+	[ -v task ] || task=$(V ssh -n girar task new $branch)
+	V ssh -n girar task add $task repo $repo $tag
+	[ -v shared ] && V ssh -n girar task share $task enable
+	if [ -v kmodules ] && V ssh -n girar task add $task kmodules $flavour; then
 		msg="-m kmodules:$tag"
 	else
 		msg=
 	fi
-	echo PESIGN | V ssh $approver task approve $task all
-	runcmd="ssh girar task run --fail-late ${commit+--commit} $task $msg"
+	echo PESIGN | V ssh -n $approver task approve $task all
+	runcmd="ssh -n girar task run --fail-late $commit $task $msg"
 	if [ -v runthetask ]; then
 		V $runcmd
 	else
