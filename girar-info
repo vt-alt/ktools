@@ -6,6 +6,7 @@
 export LC_ALL=C
 repo=Sisyphus
 unset requires
+unset all
 for i; do
 	case $i in s | sisyphus) i=Sisyphus ;; esac
 	case $i in
@@ -19,6 +20,7 @@ for i; do
 		--summary) summary=y ;;
 		--log*) logs=y ;;
 		--plan=*) plan=${1#*=} ;;
+		--all ) all=y ;;
 		[cpt][1-9] | [cp]1[0-9] | Sisyphus | c9?? ) repo=$i ;;
 		*) set -- "$@" "$i"
        	esac
@@ -89,7 +91,8 @@ elif [ -v srcrpm ]; then
 		srpm_list
 	done
 elif [ -v requires ]; then
-	for t in $(subtasks_list); do
+	[ -v all ] && stlist=$(subtasks_list) || stlist=$subtask
+	for t in $stlist; do
 		[ -v verbose ] && echo "subtask: $t"
 		for srpm in $(srpm_list); do
 			srpms+=( "$taskdir/build/$t/x86_64/srpm/$srpm" )
