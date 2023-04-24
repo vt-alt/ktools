@@ -1,0 +1,92 @@
+#!/usr/bin/python3
+
+import glob
+import json
+import os
+import re
+import requests
+import rpm
+import subprocess
+import sys
+
+assert len(os.listdir("/ALT"))
+
+
+def rpm_hdr(rpm_file):
+    ts = rpm.TransactionSet()
+    fdno = os.open(rpm_file, os.O_RDONLY)
+    hdr = ts.hdrFromFdno(fdno)
+    os.close(fdno)
+    return hdr
+
+
+def changelog_hdr(task, subtask):
+    url = f"https://git.altlinux.org/tasks/{task}/build/{subtask}/changelog"
+    res = requests.get(url)
+    evr = re.match(r".* (\S+-\S+)$", res.text, re.MULTILINE).group(1)
+    m = re.match(r"(?:(\d+):)?([^-]+)-([^-]+)", evr)
+    epoch, ver, rel = m.group(1, 2, 3)
+    hdr = rpm.hdr()
+    if epoch:
+        hdr[rpm.RPMTAG_EPOCH] = int(epoch)
+    hdr[rpm.RPMTAG_VERSION] = evr
+    hdr[rpm.RPMTAG_RELEASE] = rel
+    return hdr
+
+
+def run(args, message=None):
+    print(" ".join(["+"] + args))
+    # args.insert(0, "echo")
+    if message:
+        subprocess.run(args, check=True, input=message.encode())
+    else:
+        subprocess.check_call(args)
+
+
+def update_task(task):
+    out = subprocess.check_output(["ssh", "girar", "task", "show", "--json", task])
+    task_info = json.loads(out)
+    repo = task_info["repo"]
+    owner = task_info["owner"]
+    state = task_info["state"]
+    girar = "girar" if owner != "kernelbot" else "girarbot"
+    restart = False
+    print(f"TASK {task} in {state} from {repo} by {owner} access {girar}")
+    for ti, v in task_info["subtasks"].items():
+        if "pkgname" not in v:
+            continue
+        pkgname = v.get("pkgname", "-")
+        tag_name = v.get("tag_name", "-")
+        rebuild = v.get("rebuild_from", False)
+        ver = re.search(r"[^-]+-[^-]+$", tag_name).group(0)
+        print(f": {ti} {pkgname} {ver}")
+        if not rebuild:
+            continue
+        # /ALT/sisyphus/files/SRPMS/kernel-modules-nvidia-std-def-525.105.17-alt1.331628.1.src.rpm
+        dir = f"/ALT/{repo}/files/SRPMS/"
+        pat = re.compile(f"{re.escape(pkgname)}-[^-]+-[^-]+\.src\.rpm$")
+        srpm = [f for f in os.listdir(dir) if pat.match(f)]
+        if len(srpm) == 0:
+            continue
+        assert len(srpm), 1
+        srpm = srpm[0]
+        tv = changelog_hdr(task, ti)
+        pv = rpm_hdr(f"{dir}/{srpm}")
+        if rpm.versionCompare(tv, pv) != -1:
+            continue
+        tv_ver = tv[rpm.RPMTAG_EVR].decode("utf-8")
+        pv_ver = pv[rpm.RPMTAG_EVR].decode("utf-8")
+        print(f"-> needs update {tv_ver} < {pv_ver}")
+        run(["ssh", girar, "task", "delsub", task, ti])
+        if repo == rebuild:
+            run(["ssh", girar, "task", "add", task, "rebuild", pkgname])
+        else:
+            run(["ssh", girar, "task", "add", task, "copy", pkgname, rebuild])
+        run(["ssh", girar, "task", "approve", task, ti], "versionUpgrade\n")
+        restart = True
+    if restart:
+        run(["ssh", girar, "task", "run", task])
+
+
+for task in sys.argv[1:]:
+    update_task(task)
