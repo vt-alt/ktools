@@ -3,7 +3,8 @@
 set -euuf -o pipefail
 
 dedup=y
-unset search mode force_mode tags
+search=patchid
+unset mode force_mode tags qprefix
 if type -p neomutt >/dev/null; then
 	reader=neomutt
 else
@@ -62,6 +63,8 @@ for opt; do
 		--raw) unset dedup ;;
 		-s | --subject | --subj) search=subject ;;
 		-q | --query) search=query ;;
+		-f | --file) qprefix=dfn: ;;
+		-F | --fun*) qprefix=dfhh: ;;
 		-t | --thr*) force_mode="x=full+threads" ;;
 		-r | --res*) force_mode="z=results+only" ;;
 		-T | --tags) tags=y ;;
@@ -75,7 +78,9 @@ done
 commit=${1:?committish}
 
 if [[ "$*" =~ : ]]; then
-	: ${search:=query}
+	search=query
+elif [ -v qprefix ]; then
+	search=query
 else
 	for dir in . \
 		"$HOME/linux/torvalds" \
@@ -88,7 +93,6 @@ else
 		git cat-file -e "$commit^{commit}" 2>/dev/null && break
 	done
 fi
-: ${search:=patchid}
 
 commit_info() {
 	author=$(    git log --format=%an -n1 "$commit" --)
@@ -124,10 +128,11 @@ case "$search" in
 	query)
 		unset committer
 		query="$(perl -MURI::Escape -e 'print uri_escape($ARGV[0])' "$*")"
-		query=${query//%20/+}
+		query=${qprefix-}${query//%20/+}
 		mode="z=results+only"
 		subjfn=${query//[^[:alnum:]]/_}
-		subjre=${*//[^[:alnum:]]/.}
+		subjre=${*#*:}
+		subjre=${subjre//[^[:alnum:]]/.}
 		;;
 esac
 [ -v force_mode ] && mode=$force_mode
