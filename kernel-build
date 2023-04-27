@@ -63,7 +63,7 @@ for tag; do
 	else
 		msg=
 	fi
-	echo PESIGN | V ssh -n $approver task approve $task all
+	echo PESIGN | V ssh $approver task approve $task all
 	runcmd="ssh -n girar task run --fail-late $commit $task $msg"
 	if [ -v runthetask ]; then
 		V $runcmd
