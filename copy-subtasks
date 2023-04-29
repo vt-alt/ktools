@@ -1,0 +1,158 @@
+#!/usr/bin/python3
+
+import argparse
+import datetime
+import json
+import os
+import pprint
+import re
+import requests
+import rpm
+import subprocess
+import sys
+from colorama import Fore
+
+assert len(os.listdir("/ALT"))
+
+parser = argparse.ArgumentParser(
+    description="Copy girar subtasks from one task to another (for kernel)"
+)
+parser.add_argument("src", help="Source task")
+parser.add_argument("dst", help="Destination task")
+parser.add_argument("--run", action="store_true", help="Actually run commands")
+
+args = parser.parse_args()
+
+
+def rpm_hdr(rpm_file):
+    ts = rpm.TransactionSet()
+    fdno = os.open(rpm_file, os.O_RDONLY)
+    hdr = ts.hdrFromFdno(fdno)
+    os.close(fdno)
+    return hdr
+
+
+def changelog_hdr(task, subtask):
+    url = f"https://git.altlinux.org/tasks/{task}/build/{subtask}/changelog"
+    res = requests.get(url)
+    evr = re.match(r".* (\S+-\S+)$", res.text, re.MULTILINE).group(1)
+    m = re.match(r"(?:(\d+):)?([^-]+)-([^-]+)", evr)
+    epoch, ver, rel = m.group(1, 2, 3)
+    hdr = rpm.hdr()
+    if epoch:
+        hdr[rpm.RPMTAG_EPOCH] = int(epoch)
+    hdr[rpm.RPMTAG_VERSION] = ver
+    hdr[rpm.RPMTAG_RELEASE] = rel
+    return hdr
+
+
+def run(argz, message=None):
+    print(Fore.YELLOW + " ".join(["+"] + argz) + Fore.RESET)
+    if not args.run:
+        return
+    if message:
+        subprocess.run(argz, check=True, input=message.encode())
+    else:
+        subprocess.check_call(argz)
+
+
+out = subprocess.check_output(["ssh", "girar", "task", "show", "--json", args.src])
+with open(".src.txt", "wb") as f:
+    f.write(out)
+src = json.loads(out)
+out = subprocess.check_output(["ssh", "girar", "task", "show", "--json", args.dst])
+with open(".dst.txt", "wb") as f:
+    f.write(out)
+dst = json.loads(out)
+
+print(f"Copy {src['taskid']}/{src['repo']}/{src['state']}", end="")
+print(f" [{len(src['subtasks'])}]", end="")
+print(f" -> {dst['taskid']}/{dst['repo']}/{dst['state']}", end="")
+print(f" [{len(dst['subtasks'])}]")
+
+owner = src["owner"]
+girar = "girar" if owner != "kernelbot" else "girarbot"
+srepo = src["repo"]
+drepo = dst["repo"]
+approve = False
+
+for sti, v in src["subtasks"].items():
+    if "type" not in v:
+        # delsub'ed
+        continue
+    # Task never attempted to build does not have pkgname.
+    pkgname = v.get("pkgname", v.get("package"))
+    if any(
+        v.get("pkgname", v.get("package")) == pkgname for v in dst["subtasks"].values()
+    ):
+        print(
+            Fore.BLUE + f"  package {pkgname} already in target task, skip" + Fore.RESET
+        )
+        continue
+
+    ddir = f"/ALT/{drepo}/files/SRPMS/"
+    pat = re.compile(f"{re.escape(pkgname)}-[^-]+-[^-]+\.src\.rpm$")
+    srpm = [f for f in os.listdir(ddir) if pat.match(f)]
+    assert len(srpm) in {0, 1}
+    srpm = srpm[0] if len(srpm) == 1 else None
+
+    ttype = v["type"]
+    if ttype == "delete":
+        print(f": {sti} del={pkgname}")
+        # There is no subtask creation date so we cannot check too much.
+        if not srpm:
+            print(Fore.RED + "! Deletion of non-existent package skipped" + Fore.RESET)
+            continue
+        mtime = os.path.getmtime(ddir + srpm)
+        mtime_dt = datetime.datetime.fromtimestamp(mtime)
+        print("  - target mtime " + Fore.LIGHTCYAN_EX + str(mtime_dt) + Fore.RESET)
+        run(["ssh", girar, "task", "add", args.dst, "del", pkgname])
+    elif ttype == "repo":
+        git_dir = v["dir"]
+        if any(v.get("dir") == git_dir for v in dst["subtasks"].values()):
+            print(
+                Fore.BLUE
+                + f"  package {git_dir} already in target task, skip"
+                + Fore.RESET
+            )
+            continue
+        tag_name = v["tag_name"]
+        rebuild = v.get("rebuild_from", False)  # repo
+        ver = re.search(r"[^-]+-[^-]+$", tag_name).group(0)
+        print(f": {sti} {pkgname} {ver} {rebuild}")
+
+        # compare versions of task package and destination repo
+        if not srpm:
+            print(Fore.YELLOW + "  Destination package not found" + Fore.RESET)
+        else:
+            tv = changelog_hdr(args.src, sti)
+            pv = rpm_hdr(f"{ddir}/{srpm}")
+            tv_ver = tv[rpm.RPMTAG_EVR].decode("utf-8")
+            pv_ver = pv[rpm.RPMTAG_EVR].decode("utf-8")
+            if rpm.versionCompare(tv, pv) == -1:
+                print(
+                    Fore.LIGHTRED_EX
+                    + f"  package updated? {tv_ver} < {pv_ver}"
+                    + Fore.RESET
+                )
+                continue
+
+        if rebuild == drepo:
+            # plain rebuild, just re-add rebuild again.
+            # print("  - seems to be plain rebuild, simple re-add")
+            run(["ssh", girar, "task", "add", args.dst, "rebuild", pkgname])
+        elif rebuild:
+            # package copy, check version
+            # print(f"  - seems to be copy from {rebuild}")
+            run(["ssh", girar, "task", "add", args.dst, "copy", pkgname, rebuild])
+        else:
+            # package by a tag
+            # print("  - seems to be tagged package")
+            run(["ssh", girar, "task", "add", args.dst, git_dir + "=" + tag_name])
+    else:
+        print(Fore.RED + f"Unknown type={ttype} for subtask {sti}" + Fore.RESET)
+        exit(1)
+    approve = True
+
+if approve:
+    run(["ssh", "girarbot", "task", "approve", args.dst, "all"], "update")
