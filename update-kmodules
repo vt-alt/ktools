@@ -29,7 +29,7 @@ def changelog_hdr(task, subtask):
     hdr = rpm.hdr()
     if epoch:
         hdr[rpm.RPMTAG_EPOCH] = int(epoch)
-    hdr[rpm.RPMTAG_VERSION] = evr
+    hdr[rpm.RPMTAG_VERSION] = ver
     hdr[rpm.RPMTAG_RELEASE] = rel
     return hdr
 
