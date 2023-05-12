@@ -82,7 +82,7 @@ def update_task(task):
             run(["ssh", girar, "task", "add", task, "rebuild", pkgname])
         else:
             run(["ssh", girar, "task", "add", task, "copy", pkgname, rebuild])
-        run(["ssh", girar, "task", "approve", task, ti], "versionUpgrade\n")
+        run(["ssh", girar, "task", "approve", task, "all"], "versionUpgrade\n")
         restart = True
     if restart:
         run(["ssh", girar, "task", "run", task])
