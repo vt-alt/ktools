@@ -39,7 +39,7 @@ case $branch in
 esac
 brflvr=${br%/*}
 case $brflvr in
-	un-def|std-def|std-pae|std-debug|std-next|un-next|next) ;;
+	un-def|std-def|std-pae|std-debug|std-next|un-next|next|rt) ;;
 	*) echo >&2 "Invalid flavour $brflvr"; exit 1 ;;
 esac
 

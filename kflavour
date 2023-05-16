@@ -18,7 +18,7 @@ else
 		*) echo >&2 "Invalid repo $branch"; exit 1 ;;
 	esac
 	case $brflvr in
-		un-def|std-def|std-pae|std-debug|next) ;;
+		un-def|std-def|std-pae|std-debug|next|rt) ;;
 		*) echo >&2 "Invalid flavour $brflvr"; exit 1 ;;
 	esac
 
