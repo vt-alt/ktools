@@ -2,7 +2,7 @@
 
 V() { echo -e "+ \e[1;33m$@\e[m" >&2; "$@"; }
 
-unset shared kernelbot task
+unset shared kernelbot task disapprove
 force=
 kmodules=y
 runthetask=y
@@ -18,6 +18,7 @@ for opt do
 		--branch=*) branch="${opt#*=}" ;;
 		--no-kmodules) unset kmodules ;;
 		--no-run) unset runthetask ;;
+		--disapprove) disapprove=y ;;
 		*) set -- "$opt" "$@"; break ;; # tags
 	esac
 done
@@ -63,7 +64,11 @@ for tag; do
 	else
 		msg=
 	fi
-	echo PESIGN | V ssh $approver task approve $task all
+	if [ -v disapprove ]; then
+		echo TEST | V ssh girar task disapprove $task all
+	else
+		echo PESIGN | V ssh $approver task approve $task all
+	fi
 	runcmd="ssh -n girar task run --fail-late $commit $task $msg"
 	if [ -v runthetask ]; then
 		V $runcmd
