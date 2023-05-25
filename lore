@@ -179,6 +179,7 @@ if [ -v tags ]; then
 else
 	cat >> muttrc <<-EOF
 	set index_format="%4C %Z %[%d/%b/%y %H:%M] %-15.15n (%4l%?X?+%X&?) %H %s"
+	set index_format="%4C %Z %[%Y-%m-%d %H:%M] %-15.15n (%4l%?X?+%X&?) %H %s"
 	EOF
 fi
 cat >> muttrc <<-EOF
@@ -186,6 +187,11 @@ set sort=$sort
 set sort_aux=$sort_aux
 
 color index_flags cyan     default ~N
+color index_date blue      default "~d <1y"
+color index_date cyan      default "~d <1m"
+color index_date green     default "~d <1w"
+color index_date yellow    default "~d <1d"
+
 color hdrdefault brightblack black
 color header   yellow      black ^(From):
 color header   cyan        black ^(Subject):
