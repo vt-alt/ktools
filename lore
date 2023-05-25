@@ -5,6 +5,8 @@ set -euuf -o pipefail
 dedup=y
 search=patchid
 unset mode force_mode tags qprefix
+sort=threads
+sort_aux=last-date
 if type -p neomutt >/dev/null; then
 	reader=neomutt
 else
@@ -25,6 +27,7 @@ If argument contains ':' it's same as --query specified (no threads).
   -t, --thread     (force) return full threads (it's belong to).
   -r, --results    (force) return of matched results only (no threads).
   -T, --tags       Add -by tags for neomutt (works very slwoly.)
+  --reverse        Reverse sort order.
 
 Query language:
     s:        match within Subject  e.g. s:"a quick brown fox"
@@ -69,6 +72,7 @@ for opt; do
 		-r | --res*) force_mode="z=results+only" ;;
 		-T | --tags) tags=y ;;
 		-h | --help) show_help ;;
+		--rev*) sort=reverse-threads ;;
 		-*) echo "unknown option: $opt"; exit 1 ;;
 		*) set -- "$@" "$opt" ;;
 	esac
@@ -178,8 +182,8 @@ else
 	EOF
 fi
 cat >> muttrc <<-EOF
-set sort=threads
-set sort_aux=last-date
+set sort=$sort
+set sort_aux=$sort_aux
 
 color hdrdefault brightblack black
 color header   yellow      black ^(From):
