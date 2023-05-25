@@ -30,6 +30,15 @@ If argument contains ':' it's same as --query specified (no threads).
   --reverse        Reverse sort order.
 
 Query language:
+
+  It supports typical AND, OR, NOT, '+', '-' queries present
+  in other search engines.
+
+  We also support search prefixes to limit the scope of the
+  search to certain fields.
+
+  Prefixes supported in this installation include:
+
     s:        match within Subject  e.g. s:"a quick brown fox"
     d:        match date-time range, git "approxidate" formats supported
               Open-ended ranges such as `d:last.week..' and
@@ -53,8 +62,12 @@ Query language:
     dfpre:    match pre-image git blob ID
     dfpost:   match post-image git blob ID
     dfblob:   match either pre or post-image git blob ID
-    patchid:  match `git patch-id --stable' output [default]
+    patchid:  match `git patch-id --stable' output
     rt:       match received time, like `d:' if sender's clock was correct
+
+  Most prefixes are probabilistic, meaning they support stemming
+  and wildcards ('*').  Ranges (such as 'd:') and boolean prefixes
+  do not support stemming or wildcards.
 EOF
 	exit ${1-0}
 }
