@@ -185,6 +185,7 @@ cat >> muttrc <<-EOF
 set sort=$sort
 set sort_aux=$sort_aux
 
+color index_flags cyan     default ~N
 color hdrdefault brightblack black
 color header   yellow      black ^(From):
 color header   cyan        black ^(Subject):
@@ -227,7 +228,7 @@ if [ -v committer ]; then
 	color index_author  brightyellow default "~f '$aemail'"
 	EOF
 fi
-$reader -F muttrc -Rf $mbox
+$reader -F muttrc -f $mbox
 echo >&2 cd $tmp
 exit 1
 rm -rf "$tmp"
