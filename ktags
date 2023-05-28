@@ -1,0 +1,19 @@
+#!/bin/bash -efu
+
+for opt do
+        shift
+        case "$opt" in
+                --flavour=*) flavour="${opt#*=}" ;;
+                --repo=*) repo="${opt#*=}" ;;
+		*) echo >&2 "Unknwon option/argument: $opt"; exit 1 ;;
+        esac
+done
+
+git tag --sort=creatordate --format='%(creatordate:short) %(refname:short)' -l 'kernel-image-un-def[/-]*' |
+while read -r date tag; do
+	tags=( $(git tag --points-at "$tag" | sort -r) )
+	h=$(git show-ref --hash "${tags[@]}" | sort -u)
+
+	echo "$date ${tags[*]} $h"
+done
+
