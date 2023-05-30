@@ -7,7 +7,7 @@ skip="5.1|c[678].*|fm]1|c9m[12]|c9f1|p[567]|.*armh"
 
 branch=Sisyphus arch=x86_64
 branches= arches= packages=
-all_arch= lsopts='-ltrd' rpmpeek= lesser=''
+all_arch= lsopts='-ltrd' rpmpeek= lesser='' logs=''
 for i; do
 	[ "$i" = s ]        && i=Sisyphus
 	[ "$i" = sisyphus ] && i=Sisyphus
@@ -27,6 +27,7 @@ for i; do
 		-1|--names) lsopts= ;;
 		--peek|--rpmpeek) rpmpeek=y; lsopts= ;;
 		--less) lesser=y; lsopts= ;;
+		--log*) logs=y ;;
 		-*) echo "No option $i"; exit 1 ;;
 		*) packages+=" $i" ;;
 	esac
@@ -49,7 +50,7 @@ if [ -z "$packages" ]; then
 fi
 
 set -f
-list=
+list=()
 for package in $packages; do
 	for b in $branches; do
 		if [ -n "$all_arch" ]; then
@@ -62,31 +63,57 @@ for package in $packages; do
 			set +f
 			for i in $pat; do
 				test -e $i || continue
-				list+=" $i"
+				list+=($i)
 			done
 			set -f
 		done
 	done
 done
-[ -n "$list" ] || { echo "No match"; exit 1; }
+
+select_one() {
+	if [ ${#list[@]} -eq 0 ]; then
+		echo >&2 "No match!"
+		exit 1
+	elif [ ${#list[@]} -eq 1 ]; then
+		# No choice.
+		rpm=$list
+	else
+		local default=$(ls -1 "${list[@]}" | grep -i -m1 '/sisyphus/')
+		rpm=$(gum choose --header='Select one:' --cursor='-> ' --selected="$default" "${list[@]}")
+	fi
+}
+
+[ ${#list[@]} -gt 0 ] || { echo "No match"; exit 1; }
 if [ -n "$rpmpeek" ]; then
-	for rpm in $(ls $list | tail -1); do
-		prompt=" \[\033[1;36m\]$rpm\[\033[m\]> "
-		rpmpeek -n "$rpm" bash --rcfile <(cat ~/.bashrc; echo PS1="\"$prompt\"")
-		exit
-	done
+	select_one
+	prompt=" \[\033[1;36m\]$rpm\[\033[m\]> "
+	rpmpeek -n "$rpm" bash --rcfile <(cat ~/.bashrc; echo PS1="\"$prompt\"")
+	exit
 elif [ -n "$lesser" ]; then
-	for rpm in $(ls $list | tail -1); do
-		less "$rpm"
-		exit
-	done
+	select_one
+	echo >&2 "+ less $rpm"
+	echo
+	less "$rpm"
+	exit
+elif [ -n "$logs" ]; then
+	select_one
+	{
+		DISTTAG=$(rpm -qp "$rpm" --qf '%{DISTTAG}')
+		IFS=+. read repo task subtask _ <<< "$DISTTAG"
+		url="https://git.altlinux.org/tasks/$task/build/$subtask/$arch/log"
+		ls -l "$rpm"
+		echo >&2 "+ curl $url"
+		echo
+		curl -sS -L -f "$url"
+	} |& less
+	exit
 fi
 if [ -t 1 ]; then
 	HIGHLIGHT=$'sed -E s!/([Ss]isyphus)/!/\e[1;33m\\1\e[m/!'
 else
 	HIGHLIGHT=cat
 fi
-ls $lsopts -- $list \
+ls $lsopts -- "${list[@]}" \
 	| sed -E 's/^\S+\s+\S+\s+\S+\s+\S+//' \
 	| $HIGHLIGHT \
 	| grep -P --color '^|[^-]+-alt[^-]+(?=\.[^.]+(\.src)?\.s?rpm)'
