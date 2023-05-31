@@ -7,7 +7,7 @@ skip="5.1|c[678].*|fm]1|c9m[12]|c9f1|p[567]|.*armh"
 
 branch=Sisyphus arch=x86_64
 branches= arches= packages=
-all_arch= lsopts='-ltrd' rpmpeek= lesser='' logs='' dts=''
+all_arch= lsopts='-ltrd' rpmpeek= lesser='' logs='' dts='' show_task=''
 for i; do
 	[ "$i" = s ]        && i=Sisyphus
 	[ "$i" = sisyphus ] && i=Sisyphus
@@ -29,6 +29,7 @@ for i; do
 		--less) lesser=y; lsopts= ;;
 		--log*) logs=y ;;
 		--dts | --ver*) dts=y ;;
+		--task) show_task=y ;;
 		-*) echo "No option $i"; exit 1 ;;
 		*) packages+=" $i" ;;
 	esac
@@ -119,6 +120,12 @@ elif [ -n "$dts" ]; then
 		echo >&2 "+ curl $url"
 		curl -sS -L -f "$url" | awk 'OFS="\t" {$1=strftime("%Y-%m-%d",$1); print $0}'
 	} |& less
+	exit
+elif [ -n "$show_task" ]; then
+	select_one
+	DISTTAG=$(rpm -qp "$rpm" --qf '%{DISTTAG}')
+	IFS=+. read repo task subtask _ <<< "$DISTTAG"
+	(set -x; ssh girar task show --brief "$task")
 	exit
 fi
 if [ -t 1 ]; then
