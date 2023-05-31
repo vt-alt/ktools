@@ -8,7 +8,7 @@ skip="5.1|c[678].*|fm]1|c9m[12]|c9f1|p[567]|.*armh"
 branch=Sisyphus arch=x86_64
 branches= arches= packages=
 all_arch= lsopts='-ltrd' rpmpeek= lesser='' logs='' dts='' show_task=''
-mode='' pattern=''
+pattern='' query=''
 for i; do
 	[ "$i" = s ]        && i=Sisyphus
 	[ "$i" = sisyphus ] && i=Sisyphus
@@ -31,9 +31,17 @@ for i; do
 		--log*) logs=y ;;
 		--dts | --ver*) dts=y ;;
 		--task) show_task=y ;;
-		--ls | --list) mode=ls ;;
-		--ls=* | --list=*) mode=ls; pattern=${i#*=} ;;
-		--grep=*) pattern=${i#*=} ;;
+		--ls) query=-l ;;
+		--changelog | --configfiles | --conflicts | --docfiles | --dump | --enhances \
+		| --filesbypkg | --info | --last | --obsoletes | --provides \
+		| --recommends | --requires | --suggests | --supplements | --scripts \
+		| --state | --triggers | --triggerscripts | --lastchange | --list \
+		| --qf=* | --queryformat=*)
+			query=$i ;;
+		--ls=* | --list=*) query=-l; pattern=${i#*=} ;;
+		--grep=*)
+			# --grep= also provides 'no match' message.
+			pattern=${i#*=} ;;
 		-*) echo "No option $i"; exit 1 ;;
 		*) packages+=" $i" ;;
 	esac
@@ -131,13 +139,13 @@ elif [ -n "$show_task" ]; then
 	IFS=+. read repo task subtask _ <<< "$DISTTAG"
 	(set -x; ssh girar task show --brief "$task")
 	exit
-elif [ "$mode" = 'ls' ]; then
+elif [ -n "$query" ]; then
 	for rpm in "${list[@]}"; do
 		prefix=$(basename "$rpm")
 		repo=${rpm%%/files/*}
 		repo=${repo##*/}
 		prefix=$repo/$prefix
-		rpm -qlp -- "$rpm" |
+		rpm -qp "$query" -- "$rpm" |
 		if ! sed "s,^,$prefix: ," | grep --color=auto "$pattern"; then
 			echo "$prefix: no match"
 		fi
