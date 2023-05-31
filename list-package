@@ -8,6 +8,7 @@ skip="5.1|c[678].*|fm]1|c9m[12]|c9f1|p[567]|.*armh"
 branch=Sisyphus arch=x86_64
 branches= arches= packages=
 all_arch= lsopts='-ltrd' rpmpeek= lesser='' logs='' dts='' show_task=''
+mode='' pattern=''
 for i; do
 	[ "$i" = s ]        && i=Sisyphus
 	[ "$i" = sisyphus ] && i=Sisyphus
@@ -30,6 +31,9 @@ for i; do
 		--log*) logs=y ;;
 		--dts | --ver*) dts=y ;;
 		--task) show_task=y ;;
+		--ls | --list) mode=ls ;;
+		--ls=* | --list=*) mode=ls; pattern=${i#*=} ;;
+		--grep=*) pattern=${i#*=} ;;
 		-*) echo "No option $i"; exit 1 ;;
 		*) packages+=" $i" ;;
 	esac
@@ -126,6 +130,18 @@ elif [ -n "$show_task" ]; then
 	DISTTAG=$(rpm -qp "$rpm" --qf '%{DISTTAG}')
 	IFS=+. read repo task subtask _ <<< "$DISTTAG"
 	(set -x; ssh girar task show --brief "$task")
+	exit
+elif [ "$mode" = 'ls' ]; then
+	for rpm in "${list[@]}"; do
+		prefix=$(basename "$rpm")
+		repo=${rpm%%/files/*}
+		repo=${repo##*/}
+		prefix=$repo/$prefix
+		rpm -qlp -- "$rpm" |
+		if ! sed "s,^,$prefix: ," | grep --color=auto "$pattern"; then
+			echo "$prefix: no match"
+		fi
+	done
 	exit
 fi
 if [ -t 1 ]; then
