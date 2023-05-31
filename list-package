@@ -140,6 +140,7 @@ elif [ -n "$show_task" ]; then
 	(set -x; ssh girar task show --brief "$task")
 	exit
 elif [ -n "$query" ]; then
+	list=( $(printf "%s\n" "${list[@]}" | sort -V) )
 	for rpm in "${list[@]}"; do
 		prefix=$(basename "$rpm")
 		repo=${rpm%%/files/*}
