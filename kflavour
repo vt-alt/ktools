@@ -7,10 +7,10 @@ V() { echo "- $*" >&2; "$@"; }
 YELLOW=$'\e[1;33m'
   NORM=$'\e[m'
 
+br=$(git branch --show-current)
 if [ -n "$*" ]; then
 	fvnew="$*"
 else
-	br=$(git branch --show-current)
 	branch=${br#*/}
 	brflvr=${br%/*}
 	case $branch in
@@ -45,3 +45,4 @@ else
 	echo >&2 "${YELLOW}Changing flavour $fvold -> $fvnew${NORM}"
 	git config gear.specsubst.kflavour "$fvnew"
 fi
+git config format.subjectPrefix "PATCH $br"
