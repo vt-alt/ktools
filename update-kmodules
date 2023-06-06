@@ -11,6 +11,9 @@ import sys
 
 assert len(os.listdir("/ALT"))
 
+del os.environ["ALL_PROXY"]
+del os.environ["HTTPS_PROXY"]
+del os.environ["HTTP_PROXY"]
 
 def rpm_hdr(rpm_file):
     ts = rpm.TransactionSet()
