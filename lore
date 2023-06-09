@@ -5,6 +5,7 @@ set -euuf -o pipefail
 dedup=y
 search=patchid
 unset mode force_mode tags qprefix
+curlopts=()
 sort=threads
 sort_aux=last-date
 if type -p neomutt >/dev/null; then
@@ -85,6 +86,7 @@ for opt; do
 		-r | --res*) force_mode="z=results+only" ;;
 		-T | --tags) tags=y ;;
 		-h | --help) show_help ;;
+		--insecure) curlopts+=(--insecure) ;;
 		--rev*) sort=reverse-threads ;;
 		-*) echo "unknown option: $opt"; exit 1 ;;
 		*) set -- "$@" "$opt" ;;
@@ -157,7 +159,7 @@ esac
 tmp=$(mktemp -d --tmpdir lore.XXXXXXXXXX)
 cd "$tmp"
 echo "+ cd $tmp"
-(set -x; curl -sS -L -f "https://lore.kernel.org/all/?q=$query&x=m" -d "$mode" -o mbox.gz)
+(set -x; curl "${curlopts[@]}" -sS -L -f "https://lore.kernel.org/all/?q=$query&x=m" -d "$mode" -o mbox.gz)
 gzip -d mbox.gz
 mbox="$subjfn"
 if [ -v dedup ] && type -p formail >/dev/null; then
