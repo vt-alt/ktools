@@ -5,6 +5,7 @@ set -euuf -o pipefail
 dedup=y
 search=patchid
 unset mode force_mode tags qprefix
+muttrc=(-F muttrc)
 curlopts=()
 sort=threads
 sort_aux=last-date
@@ -87,6 +88,7 @@ for opt; do
 		-T | --tags) tags=y ;;
 		-h | --help) show_help ;;
 		--insecure) curlopts+=(--insecure) ;;
+		--no-muttrc) muttrc=() ;;
 		--rev*) sort=reverse-threads ;;
 		-*) echo "unknown option: $opt"; exit 1 ;;
 		*) set -- "$@" "$opt" ;;
@@ -249,7 +251,7 @@ if [ -v committer ]; then
 	color index_author  brightyellow default "~f '$aemail'"
 	EOF
 fi
-$reader -F muttrc -f $mbox
+$reader "${muttrc[@]}" -f $mbox
 echo >&2 cd $tmp
 exit 1
 rm -rf "$tmp"
