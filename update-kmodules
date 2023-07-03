@@ -55,6 +55,19 @@ def update_task(task):
     girar = "girar" if owner != "kernelbot" else "girarbot"
     restart = False
     print(f"TASK {task} in {state} from {repo} by {owner} access {girar}")
+    # Determine flavour.
+    for ti, v in task_info["subtasks"].items():
+        if "tag_name" in v:
+            tag_name = v["tag_name"]
+            match = re.match(r"^kernel-image-(.+)-[^-]+-alt[^-]+$", tag_name)
+            if match:
+                flavour = match.group(1)
+
+    # List all modules for this flavour.
+    dir = f"/ALT/{repo}/files/SRPMS/"
+    pat = re.compile(f"^(kernel-modules-.*-{flavour})-[^-]+-[^-]+\.[^.]+\.rpm$")
+    kmodules = [pat.match(f).group(1) for f in os.listdir(dir) if pat.match(f)]
+
     for ti, v in task_info["subtasks"].items():
         if "pkgname" not in v:
             continue
@@ -62,6 +75,8 @@ def update_task(task):
         tag_name = v.get("tag_name", "-")
         rebuild = v.get("rebuild_from", False)
         ver = re.search(r"[^-]+-[^-]+$", tag_name).group(0)
+        if pkgname in kmodules:
+            kmodules.remove(pkgname)
         print(f": {ti} {pkgname} {ver}")
         if not rebuild:
             continue
@@ -85,9 +100,16 @@ def update_task(task):
             run(["ssh", girar, "task", "add", task, "rebuild", pkgname])
         else:
             run(["ssh", girar, "task", "add", task, "copy", pkgname, rebuild])
-        run(["ssh", girar, "task", "approve", task, "all"], "versionUpgrade\n")
         restart = True
+
+    # New kmodules need adding (rebuild).
+    if kmodules:
+        for mod in kmodules:
+            run(["ssh", girar, "task", "add", task, "rebuild", mod])
+        restart = True
+
     if restart:
+        run(["ssh", girar, "task", "approve", task, "all"], "update\n")
         run(["ssh", girar, "task", "run", task])
 
 
