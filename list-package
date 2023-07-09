@@ -103,15 +103,17 @@ grab_dts() {
 	pkgname=${SOURCERPM%-*-*.*.rpm}
 	DTS_URL="http://ftp.altlinux.org/pub/distributions/archive/$REPO/index/src/${pkgname:0:1}/$pkgname/d-t-s-evr.list"
 	DTS_LIST=$(curl -sS -L -f "$DTS_URL" | awk 'OFS="\t" {$1=strftime("%Y-%m-%d",$1); print $0}')
+	DTS=$DTS_LIST
 }
 
 # Download RPM form URL into cache.
 cache_rpm() {
+	local rpm=$1
 	local tmpd=$tmp/$TASK/$SUBTASK
 	mkdir -p "$tmpd"
-	RPM="$tmpd/$choice" # output
+	RPM="$tmpd/$rpm" # output
 	if [ ! -e "$RPM" ]; then
-		URL+=$choice
+		URL+=$rpm
 		echo >&2 "$URL"
 		curl "$URL" -o "$RPM-"
 		mv "$RPM-" "$RPM"
@@ -134,15 +136,20 @@ select_one() {
 	fi
 	if [ -n "$dts" ]; then
 		grab_dts
-		export GUM_CHOOSE_SELECTED=$(printf %s "$DTS_LIST" | grep -w "$TASK")
-		DTS=$(printf %s "$DTS_LIST" | gum choose)
+		export GUM_CHOOSE_SELECTED=$(printf %s "$DTS" | grep -w "$TASK")
+		DTS=$(printf %s "$DTS" | gum choose)
 		read _ TASK SUBTASK _ <<< "$DTS"
 		[ "${1-}" = --task ] && return
 		# Download requested RPM into cache.
 		URL=https://git.altlinux.org/tasks/archive/done/_$((TASK/1024))/$TASK/build/$SUBTASK/$arch/rpms/
 		st_rpms=$(curl -s "$URL" | sed -En 's/<[^>]*>//gp' | grep -Eo '^[[:space:]][^[:space:]/]+.rpm\b')
-		choice=$(printf %s "$st_rpms" | gum choose | awk '{print$1}')
-		cache_rpm
+		if [ $(printf %s "$st_rpms" | grep -c .) -gt 1 ]; then
+			choice=$(printf %s "$st_rpms" | gum choose) 
+		else
+			choice=$st_rpms
+		fi
+		choice=$(printf %s "$choice" | awk '{print$1}')
+		cache_rpm "$choice"
 	fi
 }
 
