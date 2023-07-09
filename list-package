@@ -53,7 +53,12 @@ done
 
 gear_describe()
 {
-	set -- $(gear --describe)
+	local tag descr=$(gear --describe 2>&1)
+	if [ "$descr" = "gear: specsubst directive requires a tag" ]; then
+		tag=$(git describe --abbrev=0 --tags --exclude '*debug*')
+		descr=$(gear --describe -t "$tag")
+	fi
+	set -- $descr
 	NAME=$1
 	VERSION=$2
 	RELEASE=$3
@@ -97,7 +102,7 @@ select_one() {
 	fi
 }
 
-[ ${#list[@]} -gt 0 ] || { echo "No match"; exit 1; }
+[ ${#list[@]} -gt 0 ] || { echo "No match for '$packages'"; exit 1; }
 if [ -n "$rpmpeek" ]; then
 	select_one
 	prompt=" \[\033[1;36m\]$rpm\[\033[m\]> "
