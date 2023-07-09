@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2010,SC2155,SC2207,SC2012
 
 export GREP_COLORS="mt=01;32"
 set -eu +f
@@ -6,18 +7,18 @@ rroot=/ALT
 skip="5.1|c[678].*|fm]1|c9m[12]|c9f1|p[567]|.*armh"
 
 branch=Sisyphus arch=x86_64
-branches= arches= packages=
-all_arch= lsopts='-ltrd' rpmpeek= lesser='' logs='' dts='' show_task=''
+branches='' arches='' packages=''
+all_arch='' lsopts='-ltrd' rpmpeek='' lesser='' logs='' dts='' show_task=''
 pattern='' query=''
 for i; do
 	[ "$i" = s ]        && i=Sisyphus
 	[ "$i" = sisyphus ] && i=Sisyphus
-	if [ -d /ALT/$i ]; then
+	if [ -d "/ALT/$i" ]; then
 		branch=$i
 		branches+=" $i"
 		continue
 	fi
-	if [ -d /ALT/$branch/files/$i ]; then
+	if [ -d "/ALT/$branch/files/$i" ]; then
 		arch=$i
 		arches+=" $i"
 		continue
@@ -48,7 +49,7 @@ for i; do
 done
 
 [ -z "${branches-}" ] && branches=$(cd $rroot; ls | grep -E -vwe "$skip" | sort -fu)
-: ${flavours:=*}
+: "${flavours:=*}"
 [ -z "$arches" ] && arches="$arch noarch"
 
 gear_describe()
@@ -58,10 +59,12 @@ gear_describe()
 		tag=$(git describe --abbrev=0 --tags --exclude '*debug*')
 		descr=$(gear --describe -t "$tag")
 	fi
+	# shellcheck disable=SC2086
 	set -- $descr
 	NAME=$1
 	VERSION=$2
 	RELEASE=$3
+	export NAME VERSION RELEASE
 }
 if [ -z "$packages" ]; then
 	gear_describe
@@ -74,16 +77,16 @@ list=()
 for package in $packages; do
 	for b in $branches; do
 		if [ -n "$all_arch" ]; then
-			arches=$(ls $rroot/$b/files/ | grep -v -e - -e SRPMS -e list)
+			arches=$(ls "$rroot/$b/files/" | grep -v -e - -e SRPMS -e list)
 		fi
 		for a in $arches; do
 			r=$rroot/$b/files/$a/RPMS
-			test -d $r || continue
-			pat=$r/$package-[0-9]*-alt*.$a.rpm
+			test -d "$r" || continue
+			pat="$r/$package-[0-9]*-alt*.$a.rpm"
 			set +f
 			for i in $pat; do
-				test -e $i || continue
-				list+=($i)
+				test -e "$i" || continue
+				list+=("$i")
 			done
 			set -f
 		done
@@ -98,7 +101,7 @@ find "$tmp" -maxdepth 3 -fstype tmpfs -name '*.rpm*' -ctime +1 -delete
 
 grab_dts() {
 	DISTTAG=$(rpm -qp "$RPM" --qf '%{DISTTAG}')
-	IFS=+. read REPO TASK SUBTASK _ <<< "$DISTTAG"
+	IFS=+. read -r REPO TASK SUBTASK _ <<< "$DISTTAG"
 	SOURCERPM=$(rpm -qp "$RPM" --qf '%{SOURCERPM}')
 	pkgname=${SOURCERPM%-*-*.*.rpm}
 	DTS_URL="http://ftp.altlinux.org/pub/distributions/archive/$REPO/index/src/${pkgname:0:1}/$pkgname/d-t-s-evr.list"
@@ -129,6 +132,7 @@ select_one() {
 		exit 1
 	elif [ ${#list[@]} -eq 1 ]; then
 		# No choice.
+		# shellcheck disable=SC2128
 		RPM=$list
 	else
 		local default=$(ls -1 "${list[@]}" | grep -i -m1 '/sisyphus/')
@@ -138,12 +142,12 @@ select_one() {
 		grab_dts
 		export GUM_CHOOSE_SELECTED=$(printf %s "$DTS" | grep -w "$TASK")
 		DTS=$(printf %s "$DTS" | gum choose)
-		read _ TASK SUBTASK _ <<< "$DTS"
+		read -r _ TASK SUBTASK _ <<< "$DTS"
 		[ "${1-}" = --task ] && return
 		# Download requested RPM into cache.
 		URL=https://git.altlinux.org/tasks/archive/done/_$((TASK/1024))/$TASK/build/$SUBTASK/$arch/rpms/
 		st_rpms=$(curl -s "$URL" | sed -En 's/<[^>]*>//gp' | grep -Eo '^[[:space:]][^[:space:]/]+.rpm\b')
-		if [ $(printf %s "$st_rpms" | grep -c .) -gt 1 ]; then
+		if [ "$(printf %s "$st_rpms" | grep -c .)" -gt 1 ]; then
 			choice=$(printf %s "$st_rpms" | gum choose) 
 		else
 			choice=$st_rpms
@@ -170,7 +174,7 @@ elif [ -n "$logs" ]; then
 	{
 		if [ -z "${TASK-}" ]; then
 			DISTTAG=$(rpm -qp "$RPM" --qf '%{DISTTAG}')
-			IFS=+. read REPO TASK SUBTASK _ <<< "$DISTTAG"
+			IFS=+. read -r REPO TASK SUBTASK _ <<< "$DISTTAG"
 		fi
 		url="https://git.altlinux.org/tasks/$TASK/build/$SUBTASK/$arch/log"
 		echo >&2 "+ curl $url"
@@ -182,7 +186,7 @@ elif [ -n "$show_task" ]; then
 	select_one --task
 	if [ -z "${TASK-}" ]; then
 		DISTTAG=$(rpm -qp "$RPM" --qf '%{DISTTAG}')
-		IFS=+. read REPO TASK SUBTASK _ <<< "$DISTTAG"
+		IFS=+. read -r REPO TASK SUBTASK _ <<< "$DISTTAG"
 	fi
 	(set -x; ssh girar task show --brief "$TASK")
 	exit
@@ -201,7 +205,7 @@ elif [ -n "$query" ]; then
 	exit
 elif [ -n "$dts" ]; then
 	# Last resort - just print d-t-s-evr.list
-	dts= select_one
+	dts='' select_one
 	grab_dts
 	printf '%s\n%s' "- $DTS_URL" "$DTS_LIST" |& less
 	exit
@@ -209,8 +213,9 @@ fi
 if [ -t 1 ]; then
 	HIGHLIGHT=$'sed -E s!/([Ss]isyphus)/!/\e[1;33m\\1\e[m/!'
 else
-	HIGHLIGHT=cat
+	HIGHLIGHT='cat'
 fi
+# shellcheck disable=SC2086
 ls $lsopts -- "${list[@]}" \
 	| sed -E 's/^\S+\s+\S+\s+\S+\s+\S+//' \
 	| $HIGHLIGHT \
