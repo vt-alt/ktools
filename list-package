@@ -136,9 +136,9 @@ select_one() {
 		grab_dts
 		export GUM_CHOOSE_SELECTED=$(printf %s "$DTS_LIST" | grep -w "$TASK")
 		DTS=$(printf %s "$DTS_LIST" | gum choose)
-
-		# Download requested RPM into cache.
 		read _ TASK SUBTASK _ <<< "$DTS"
+		[ "${1-}" = --task ] && return
+		# Download requested RPM into cache.
 		URL=https://git.altlinux.org/tasks/archive/done/_$((TASK/1024))/$TASK/build/$SUBTASK/$arch/rpms/
 		st_rpms=$(curl -s "$URL" | sed -En 's/<[^>]*>//gp' | grep -Eo '^[[:space:]][^[:space:]/]+.rpm\b')
 		choice=$(printf %s "$st_rpms" | gum choose | awk '{print$1}')
@@ -159,22 +159,25 @@ elif [ -n "$lesser" ]; then
 	less "$RPM"
 	exit
 elif [ -n "$logs" ]; then
-	select_one
+	select_one --task
 	{
-		DISTTAG=$(rpm -qp "$RPM" --qf '%{DISTTAG}')
-		IFS=+. read repo task subtask _ <<< "$DISTTAG"
-		url="https://git.altlinux.org/tasks/$task/build/$subtask/$arch/log"
-		ls -l "$RPM"
+		if [ -z "${TASK-}" ]; then
+			DISTTAG=$(rpm -qp "$RPM" --qf '%{DISTTAG}')
+			IFS=+. read REPO TASK SUBTASK _ <<< "$DISTTAG"
+		fi
+		url="https://git.altlinux.org/tasks/$TASK/build/$SUBTASK/$arch/log"
 		echo >&2 "+ curl $url"
 		echo
 		curl -sS -L -f "$url"
 	} |& less
 	exit
 elif [ -n "$show_task" ]; then
-	select_one
-	DISTTAG=$(rpm -qp "$RPM" --qf '%{DISTTAG}')
-	IFS=+. read repo task subtask _ <<< "$DISTTAG"
-	(set -x; ssh girar task show --brief "$task")
+	select_one --task
+	if [ -z "${TASK-}" ]; then
+		DISTTAG=$(rpm -qp "$RPM" --qf '%{DISTTAG}')
+		IFS=+. read REPO TASK SUBTASK _ <<< "$DISTTAG"
+	fi
+	(set -x; ssh girar task show --brief "$TASK")
 	exit
 elif [ -n "$query" ]; then
 	list=( $(printf "%s\n" "${list[@]}" | sort -V) )
