@@ -68,6 +68,7 @@ if [ -z "$packages" ]; then
 	packages=$NAME
 fi
 
+# List package in all branches.
 set -f
 list=()
 for package in $packages; do
@@ -89,6 +90,18 @@ for package in $packages; do
 	done
 done
 
+grab_dts() {
+	local v=${1-}
+	DISTTAG=$(rpm -qp "$rpm" --qf '%{DISTTAG}')
+	IFS=+. read repo task subtask _ <<< "$DISTTAG"
+	SOURCERPM=$(rpm -qp "$rpm" --qf '%{SOURCERPM}')
+	name=${SOURCERPM%-*-*.*.rpm}
+	url="http://ftp.altlinux.org/pub/distributions/archive/$repo/index/src/${name:0:1}/$name/d-t-s-evr.list"
+	[ -n "$v" ] && echo >&2 "+ curl $url"
+	curl -sS -L -f "$url" | awk 'OFS="\t" {$1=strftime("%Y-%m-%d",$1); print $0}'
+}
+
+# Select one from 'list' (from all branches).
 select_one() {
 	if [ ${#list[@]} -eq 0 ]; then
 		echo >&2 "No match!"
@@ -128,15 +141,7 @@ elif [ -n "$logs" ]; then
 	exit
 elif [ -n "$dts" ]; then
 	select_one
-	DISTTAG=$(rpm -qp "$rpm" --qf '%{DISTTAG}')
-	IFS=+. read repo task subtask _ <<< "$DISTTAG"
-	SOURCERPM=$(rpm -qp "$rpm" --qf '%{SOURCERPM}')
-	name=${SOURCERPM%-*-*.*.rpm}
-	url="http://ftp.altlinux.org/pub/distributions/archive/$repo/index/src/${name:0:1}/$name/d-t-s-evr.list"
-	{
-		echo >&2 "+ curl $url"
-		curl -sS -L -f "$url" | awk 'OFS="\t" {$1=strftime("%Y-%m-%d",$1); print $0}'
-	} |& less
+	grab_dts |& less
 	exit
 elif [ -n "$show_task" ]; then
 	select_one
