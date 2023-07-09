@@ -89,19 +89,38 @@ for package in $packages; do
 		done
 	done
 done
+[ ${#list[@]} -gt 0 ] || { echo "No match for '$packages'"; exit 1; }
+
+# Package cache. Try to be mediocrely safe with deletion.
+tmp=${TMPDIR:-/tmp}/.list-package
+mkdir -p "$tmp"
+find "$tmp" -maxdepth 3 -fstype tmpfs -name '*.rpm*' -ctime +1 -delete
 
 grab_dts() {
-	local v=${1-}
 	DISTTAG=$(rpm -qp "$rpm" --qf '%{DISTTAG}')
-	IFS=+. read repo task subtask _ <<< "$DISTTAG"
+	IFS=+. read REPO TASK SUBTASK _ <<< "$DISTTAG"
 	SOURCERPM=$(rpm -qp "$rpm" --qf '%{SOURCERPM}')
-	name=${SOURCERPM%-*-*.*.rpm}
-	url="http://ftp.altlinux.org/pub/distributions/archive/$repo/index/src/${name:0:1}/$name/d-t-s-evr.list"
-	[ -n "$v" ] && echo >&2 "+ curl $url"
-	curl -sS -L -f "$url" | awk 'OFS="\t" {$1=strftime("%Y-%m-%d",$1); print $0}'
+	pkgname=${SOURCERPM%-*-*.*.rpm}
+	DTS_URL="http://ftp.altlinux.org/pub/distributions/archive/$REPO/index/src/${pkgname:0:1}/$pkgname/d-t-s-evr.list"
+	DTS_LIST=$(curl -sS -L -f "$DTS_URL" | awk 'OFS="\t" {$1=strftime("%Y-%m-%d",$1); print $0}')
 }
 
-# Select one from 'list' (from all branches).
+# Download RPM form URL into cache.
+cache_rpm() {
+	local tmpd=$tmp/$TASK/$SUBTASK
+	mkdir -p "$tmpd"
+	rpm="$tmpd/$choice" # output
+	if [ ! -e "$rpm" ]; then
+		URL+=$choice
+		echo >&2 "$URL"
+		curl "$URL" -o "$rpm-"
+		mv "$rpm-" "$rpm"
+	fi
+	# Also changes ctime, to make file fesh for the cache.
+	touch -a "$rpm"
+}
+
+# Select one from 'list' (from all branches) and from dts list.
 select_one() {
 	if [ ${#list[@]} -eq 0 ]; then
 		echo >&2 "No match!"
@@ -113,9 +132,21 @@ select_one() {
 		local default=$(ls -1 "${list[@]}" | grep -i -m1 '/sisyphus/')
 		rpm=$(gum choose --header='Select one:' --cursor='-> ' --selected="$default" "${list[@]}")
 	fi
+	if [ -n "$dts" ]; then
+		grab_dts
+		export GUM_CHOOSE_SELECTED=$(printf %s "$DTS_LIST" | grep -w "$TASK")
+		DTS=$(printf %s "$DTS_LIST" | gum choose)
+
+		# Download requested RPM into cache.
+		read _ TASK SUBTASK _ <<< "$DTS"
+		URL=https://git.altlinux.org/tasks/archive/done/_$((TASK/1024))/$TASK/build/$SUBTASK/$arch/rpms/
+		st_rpms=$(curl -s "$URL" | sed -En 's/<[^>]*>//gp' | grep -Eo '^[[:space:]][^[:space:]/]+.rpm\b')
+		choice=$(printf %s "$st_rpms" | gum choose | awk '{print$1}')
+		cache_rpm
+	fi
 }
 
-[ ${#list[@]} -gt 0 ] || { echo "No match for '$packages'"; exit 1; }
+
 if [ -n "$rpmpeek" ]; then
 	select_one
 	prompt=" \[\033[1;36m\]$rpm\[\033[m\]> "
@@ -139,10 +170,6 @@ elif [ -n "$logs" ]; then
 		curl -sS -L -f "$url"
 	} |& less
 	exit
-elif [ -n "$dts" ]; then
-	select_one
-	grab_dts |& less
-	exit
 elif [ -n "$show_task" ]; then
 	select_one
 	DISTTAG=$(rpm -qp "$rpm" --qf '%{DISTTAG}')
@@ -161,6 +188,12 @@ elif [ -n "$query" ]; then
 			echo "$prefix: no match"
 		fi
 	done
+	exit
+elif [ -n "$dts" ]; then
+	# Last resort - just print d-t-s-evr.list
+	dts= select_one
+	grab_dts
+	printf '%s\n%s' "- $DTS_URL" "$DTS_LIST" |& less
 	exit
 fi
 if [ -t 1 ]; then
