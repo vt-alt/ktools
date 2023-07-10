@@ -15,7 +15,7 @@ find "$tmp" -maxdepth 3 -fstype tmpfs -name '*.rpm*' -ctime +1 -delete
 branch=Sisyphus arch=x86_64
 branches='' arches='' packages=''
 all_arch='' lsopts='-ltrd' rpmpeek='' lesser='' logs='' dts='' show_task=''
-pattern='' query=''
+pattern='' query='' show_pkg=''
 for i; do
 	[ "$i" = s ]        && i=Sisyphus
 	[ "$i" = sisyphus ] && i=Sisyphus
@@ -38,6 +38,7 @@ for i; do
 		--log*) logs=y ;;
 		--dts | --ver*) dts=y ;;
 		--task) show_task=y ;;
+		--pkg | --packages) show_pkg=y ;;
 		--ls) query=-l ;;
 		--changelog | --configfiles | --conflicts | --docfiles | --dump | --enhances \
 		| --filesbypkg | --info | --last | --obsoletes | --provides \
@@ -148,6 +149,10 @@ select_one() {
 		# Download requested RPM into cache.
 		URL=https://git.altlinux.org/tasks/archive/done/_$((TASK/1024))/$TASK/build/$SUBTASK/$arch/rpms/
 		st_rpms=$(curl -s "$URL" | sed -En 's/<[^>]*>//gp' | grep -E '^[[:space:]][^[:space:]/]+.rpm\b')
+		if [ "${1-}" = --rpms ]; then
+			printf '%s\n' "$st_rpms"
+			return
+		fi
 		if [ "$(printf %s "$st_rpms" | grep -c .)" -gt 1 ]; then
 			choice=$(printf %s "$st_rpms" | gum choose) 
 		else
@@ -188,6 +193,9 @@ elif [ -n "$logs" ]; then
 elif [ -n "$show_task" ]; then
 	select_one --task
 	(set -x; ssh girar task show --brief "$TASK")
+	exit
+elif [ -n "$show_pkg" ]; then
+	select_one --rpms | column -t
 	exit
 elif [ -n "$query" ]; then
 	list=( $(printf "%s\n" "${list[@]}" | sort -V) )
