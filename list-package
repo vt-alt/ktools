@@ -6,6 +6,8 @@ set -eu +f
 rroot=/ALT
 skip="5.1|c[678].*|fm]1|c9m[12]|c9f1|p[567]|.*armh"
 
+[ "$TERM" = screen ] && TERM=xterm-256color
+
 branch=Sisyphus arch=x86_64
 branches='' arches='' packages=''
 all_arch='' lsopts='-ltrd' rpmpeek='' lesser='' logs='' dts='' show_task=''
