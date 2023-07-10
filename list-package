@@ -155,13 +155,14 @@ select_one() {
 		fi
 		choice=$(printf %s "$choice" | awk '{print$1}')
 		cache_rpm "$choice"
+	else
+		DISTTAG=$(rpm -qp "$RPM" --qf '%{DISTTAG}')
+		IFS=+. read -r REPO TASK SUBTASK _ <<< "$DISTTAG"
 	fi
 }
 
-
 if [ -n "$rpmpeek" ]; then
 	select_one
-	DISTTAG=$(rpm -qp "$RPM" --qf '%{DISTTAG}')
 	if [ -n "$DISTTAG" ]; then
 		rpm=${RPM#"$tmp/"}
 		[ "$rpm" != "$RPM" ] && rpm=$DISTTAG@$(basename "$RPM")
@@ -178,11 +179,6 @@ elif [ -n "$lesser" ]; then
 elif [ -n "$logs" ]; then
 	select_one --task
 	{
-		if [ -z "${TASK-}" ]; then
-			DISTTAG=$(rpm -qp "$RPM" --qf '%{DISTTAG}')
-			# shellcheck disable=SC2030
-			IFS=+. read -r REPO TASK SUBTASK _ <<< "$DISTTAG"
-		fi
 		url="https://git.altlinux.org/tasks/$TASK/build/$SUBTASK/$arch/log"
 		echo >&2 "+ curl $url"
 		echo
@@ -191,11 +187,6 @@ elif [ -n "$logs" ]; then
 	exit
 elif [ -n "$show_task" ]; then
 	select_one --task
-	# shellcheck disable=SC2031
-	if [ -z "${TASK-}" ]; then
-		DISTTAG=$(rpm -qp "$RPM" --qf '%{DISTTAG}')
-		IFS=+. read -r REPO TASK SUBTASK _ <<< "$DISTTAG"
-	fi
 	(set -x; ssh girar task show --brief "$TASK")
 	exit
 elif [ -n "$query" ]; then
