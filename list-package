@@ -7,6 +7,10 @@ rroot=/ALT
 skip="5.1|c[678].*|fm]1|c9m[12]|c9f1|p[567]|.*armh"
 
 [ "$TERM" = screen ] && TERM=xterm-256color
+# Package cache. Try to be mediocrely safe with deletion.
+tmp=${TMPDIR:-/tmp}/.list-package
+mkdir -p "$tmp"
+find "$tmp" -maxdepth 3 -fstype tmpfs -name '*.rpm*' -ctime +1 -delete
 
 branch=Sisyphus arch=x86_64
 branches='' arches='' packages=''
@@ -96,11 +100,6 @@ for package in $packages; do
 done
 [ ${#list[@]} -gt 0 ] || { echo "No match for '$packages'"; exit 1; }
 
-# Package cache. Try to be mediocrely safe with deletion.
-tmp=${TMPDIR:-/tmp}/.list-package
-mkdir -p "$tmp"
-find "$tmp" -maxdepth 3 -fstype tmpfs -name '*.rpm*' -ctime +1 -delete
-
 grab_dts() {
 	DISTTAG=$(rpm -qp "$RPM" --qf '%{DISTTAG}')
 	IFS=+. read -r REPO TASK SUBTASK _ <<< "$DISTTAG"
@@ -162,7 +161,12 @@ select_one() {
 
 if [ -n "$rpmpeek" ]; then
 	select_one
-	prompt=" \[\033[1;36m\]$RPM\[\033[m\]> "
+	DISTTAG=$(rpm -qp "$RPM" --qf '%{DISTTAG}')
+	if [ -n "$DISTTAG" ]; then
+		rpm=${RPM#"$tmp/"}
+		[ "$rpm" != "$RPM" ] && rpm=$DISTTAG@$(basename "$RPM")
+	fi
+	prompt=" \[\033[1;36m\]$rpm\[\033[m\]> "
 	rpmpeek -n "$RPM" bash --rcfile <(cat ~/.bashrc; echo PS1="\"$prompt\"")
 	exit
 elif [ -n "$lesser" ]; then
