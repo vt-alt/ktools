@@ -41,7 +41,7 @@ for i; do
 		--log*) logs=y ;;
 		--dts | --ver*) dts=y ;;
 		--task) show_task=y ;;
-		--pkg | --packages) show_pkg=y ;;
+		-p | --pkg | --packages) show_pkg=y ;;
 		--ls) query=-l ;;
 		--fzf) SELECTOR='fzf --no-sort --tac --height=~100%' ;;
 		--changelog | --configfiles | --conflicts | --docfiles | --dump | --enhances \
@@ -156,7 +156,7 @@ select_one() {
 		URL=https://git.altlinux.org/tasks/archive/done/_$((TASK/1024))/$TASK/build/$SUBTASK/$arch/rpms/
 		st_rpms=$(gum spin -- curl -sSf "$URL" | sed -En 's/<[^>]*>//gp' | grep -E '^[[:space:]][^[:space:]/]+.rpm\b')
 		if [ "${1-}" = --rpms ]; then
-			printf '%s\n' "$st_rpms"
+			printf '%s\n' "$st_rpms" | column -t
 			return
 		fi
 		if [ "$(printf %s "$st_rpms" | grep -c .)" -gt 1 ]; then
@@ -201,8 +201,21 @@ elif [ -n "$show_task" ]; then
 	(set -x; ssh girar task show --brief "$TASK")
 	exit
 elif [ -n "$show_pkg" ]; then
-	select_one --rpms | column -t
-	exit
+	select_one --rpms
+	if [ -z "$dts" ]; then
+		SOURCERPM=$(rpm -qp "$RPM" --qf '%{SOURCERPM}')
+		srcname=${SOURCERPM%-*-*.src.rpm}
+		root=$rroot/$REPO/files
+		SRC_LIST=$root/list/src.list
+		list=( $(awk -v "R=$root/" "\$1~/^$srcname\$/ {print R\"SRPMS/\"\$3}" "$SRC_LIST") )
+		BIN_LIST=$root/list/bin.list
+		archpat="(${arches//[[:space:]]/|})"
+		list+=( $(awk -v "R=$root/" "\$5~/^$srcname-[^-]+-[^-]+$/ && \$3~/^$archpat\$/ {print R\$3\"/RPMS/\"\$4}" "$BIN_LIST") )
+		# Fallthgrough to the ls'er.
+	else
+		# Displayed from http by select_one
+		exit
+	fi
 elif [ -n "$query" ]; then
 	if [ -n "$dts" ]; then
 		select_one
