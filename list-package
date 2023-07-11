@@ -17,6 +17,7 @@ branch=Sisyphus arch=x86_64
 branches='' arches='' packages=''
 all_arch='' lsopts='-ltrd' rpmpeek='' lesser='' logs='' dts='' show_task=''
 pattern='' query='' show_pkg=''
+SELECTOR='gum choose'
 for i; do
 	[ "$i" = s ]        && i=Sisyphus
 	[ "$i" = sisyphus ] && i=Sisyphus
@@ -41,6 +42,7 @@ for i; do
 		--task) show_task=y ;;
 		--pkg | --packages) show_pkg=y ;;
 		--ls) query=-l ;;
+		--fzf) SELECTOR='fzf --no-sort --tac --height=~100%' ;;
 		--changelog | --configfiles | --conflicts | --docfiles | --dump | --enhances \
 		| --filesbypkg | --info | --last | --obsoletes | --provides \
 		| --recommends | --requires | --suggests | --supplements | --scripts \
@@ -146,7 +148,7 @@ select_one() {
 	if [ -n "$dts" ]; then
 		grab_dts
 		export GUM_CHOOSE_SELECTED=$(printf %s "$DTS" | grep -w "$TASK")
-		DTS=$(printf %s "$DTS" | gum choose)
+		DTS=$(printf %s "$DTS" | $SELECTOR)
 		read -r _ TASK SUBTASK _ <<< "$DTS"
 		[ "${1-}" = --task ] && return
 		# Download requested RPM into cache.
@@ -157,7 +159,7 @@ select_one() {
 			return
 		fi
 		if [ "$(printf %s "$st_rpms" | grep -c .)" -gt 1 ]; then
-			choice=$(printf %s "$st_rpms" | gum choose) 
+			choice=$(printf %s "$st_rpms" | $SELECTOR) 
 		else
 			choice=$st_rpms
 		fi
