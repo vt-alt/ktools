@@ -203,12 +203,20 @@ elif [ -n "$show_pkg" ]; then
 	select_one --rpms | column -t
 	exit
 elif [ -n "$query" ]; then
+	if [ -n "$dts" ]; then
+		select_one
+		list=("$RPM")
+	fi
 	list=( $(printf "%s\n" "${list[@]}" | sort -V) )
 	for rpm in "${list[@]}"; do
 		prefix=$(basename "$rpm")
-		repo=${rpm%%/files/*}
-		repo=${repo##*/}
-		prefix=$repo/$prefix
+		if [ -z "$RPM" ]; then
+			repo=${rpm%%/files/*}
+			repo=${repo##*/}
+			prefix=$repo/$prefix
+		else
+			prefix=$REPO@$prefix
+		fi
 		rpm -qp "$query" -- "$rpm" |
 		if ! sed "s,^,$prefix: ," | grep --color=auto "$pattern"; then
 			echo "$prefix: no match"
