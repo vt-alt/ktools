@@ -7,6 +7,7 @@ rroot=/ALT
 skip="5.1|c[678].*|fm]1|c9m[12]|c9f1|p[567]|.*armh"
 
 [ "$TERM" = screen ] && export COLORTERM=true
+export GUM_SPIN_SHOW_OUTPUT=yes GUM_SPIN_SPINNER=minidot
 
 # Package cache. Try to be mediocrely safe with deletion.
 tmp=${TMPDIR:-/tmp}/.list-package
@@ -112,7 +113,7 @@ grab_dts() {
 	SOURCERPM=$(rpm -qp "$RPM" --qf '%{SOURCERPM}')
 	pkgname=${SOURCERPM%-*-*.*.rpm}
 	DTS_URL="http://ftp.altlinux.org/pub/distributions/archive/$REPO/index/src/${pkgname:0:1}/$pkgname/d-t-s-evr.list"
-	DTS_LIST=$(curl -sS -L -f "$DTS_URL" | awk 'OFS="\t" {$1=strftime("%Y-%m-%d",$1); print $0}')
+	DTS_LIST=$(curl -sSf -L "$DTS_URL" | awk 'OFS="\t" {$1=strftime("%Y-%m-%d",$1); print $0}')
 	DTS=$DTS_LIST
 }
 
@@ -125,7 +126,7 @@ cache_rpm() {
 	if [ ! -e "$RPM" ]; then
 		URL+=$rpm
 		echo >&2 "$URL"
-		curl "$URL" -o "$RPM-"
+		gum spin -- curl -sSf "$URL" -o "$RPM-"
 		mv "$RPM-" "$RPM"
 	fi
 	# Also changes ctime, to make file fesh for the cache.
@@ -153,7 +154,7 @@ select_one() {
 		[ "${1-}" = --task ] && return
 		# Download requested RPM into cache.
 		URL=https://git.altlinux.org/tasks/archive/done/_$((TASK/1024))/$TASK/build/$SUBTASK/$arch/rpms/
-		st_rpms=$(curl -s "$URL" | sed -En 's/<[^>]*>//gp' | grep -E '^[[:space:]][^[:space:]/]+.rpm\b')
+		st_rpms=$(gum spin -- curl -sSf "$URL" | sed -En 's/<[^>]*>//gp' | grep -E '^[[:space:]][^[:space:]/]+.rpm\b')
 		if [ "${1-}" = --rpms ]; then
 			printf '%s\n' "$st_rpms"
 			return
@@ -192,7 +193,7 @@ elif [ -n "$logs" ]; then
 		url="https://git.altlinux.org/tasks/$TASK/build/$SUBTASK/$arch/log"
 		echo >&2 "+ curl $url"
 		echo
-		curl -sS -L -f "$url"
+		gum spin -- curl -sSf -L "$url"
 	} |& less
 	exit
 elif [ -n "$show_task" ]; then
