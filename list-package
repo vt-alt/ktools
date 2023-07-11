@@ -142,6 +142,10 @@ select_one() {
 		# No choice.
 		# shellcheck disable=SC2128
 		RPM=$list
+	elif [ -n "$all_arch" ] && [ -n "$show_pkg" ] && [ -z "$dts" ]; then
+		# Corner case: we need just some rpm for meta-info.
+		# shellcheck disable=SC2128
+		RPM=$list
 	else
 		local default=$(ls -1 "${list[@]}" | grep -i -m1 '/sisyphus/')
 		RPM=$(gum choose --header='Select one:' --cursor='-> ' --selected="$default" "${list[@]}")
@@ -209,7 +213,7 @@ elif [ -n "$show_pkg" ]; then
 		SRC_LIST=$root/list/src.list
 		list=( $(awk -v "R=$root/" "\$1~/^$srcname\$/ {print R\"SRPMS/\"\$3}" "$SRC_LIST") )
 		BIN_LIST=$root/list/bin.list
-		archpat="(${arches//[[:space:]]/|})"
+		[ -z "$all_arch" ] && archpat="(${arches//[[:space:]]/|})" || archpat=".*"
 		list+=( $(awk -v "R=$root/" "\$5~/^$srcname-[^-]+-[^-]+$/ && \$3~/^$archpat\$/ {print R\$3\"/RPMS/\"\$4}" "$BIN_LIST") )
 		# Fallthgrough to the ls'er.
 	else
