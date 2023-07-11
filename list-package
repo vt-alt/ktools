@@ -228,7 +228,7 @@ elif [ -n "$query" ]; then
 	list=( $(printf "%s\n" "${list[@]}" | sort -V) )
 	for rpm in "${list[@]}"; do
 		prefix=$(basename "$rpm")
-		if [ -z "$RPM" ]; then
+		if [ -z "${RPM-}" ]; then
 			repo=${rpm%%/files/*}
 			repo=${repo##*/}
 			prefix=$repo/$prefix
