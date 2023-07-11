@@ -74,6 +74,8 @@ gear_describe()
 	RELEASE=$3
 	export NAME VERSION RELEASE
 }
+
+packages=${packages# }
 if [ -z "$packages" ]; then
 	gear_describe
 	packages=$NAME
