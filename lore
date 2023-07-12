@@ -1,6 +1,11 @@
 #!/bin/bash
+#
+# lore.kernel.org commit-or-search to Mutt reader
+#
+# Copyright (c) 2023 Vitaly Chikunov <vt@altlinux.org>
+# SPDX-License-Identifier: GPL-2.0-only
 
-set -euuf -o pipefail
+set -euf -o pipefail
 
 dedup=y
 search=patchid
