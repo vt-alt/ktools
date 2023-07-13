@@ -7,7 +7,7 @@ force=
 kmodules=y
 runthetask=y
 commit=--test-only
-push_branch=y
+unset push_branch
 for opt do
 	shift
 	case "$opt" in
@@ -20,6 +20,7 @@ for opt do
 		--no-kmodules) unset kmodules ;;
 		--no-run) unset runthetask ;;
 		--disapprove) disapprove=y ;;
+		--branch) push_branch=y ;;
 		--no-branch) unset push_branch ;;
 		*) set -- "$opt" "$@"; break ;; # tags
 	esac
