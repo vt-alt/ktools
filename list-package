@@ -65,10 +65,16 @@ done
 
 gear_describe()
 {
-	local tag descr=$(gear --describe 2>&1)
+	local tag='' descr=$(gear --describe 2>&1)
 	if [ "$descr" = "gear: specsubst directive requires a tag" ]; then
 		tag=$(git describe --abbrev=0 --tags --exclude '*debug*')
-		descr=$(gear --describe -t "$tag")
+	elif [ "$descr" = "gear: No specfiles found" ]; then
+		tag=$(git tag -l --sort=creatordate '*-alt*' | tail -1)
+	fi
+	[ -n "$tag" ] && descr=$(gear --describe -t "$tag")
+	if [[ "$descr" =~ gear: ]]; then
+		echo "Error: $descr"
+		exit 1
 	fi
 	# shellcheck disable=SC2086
 	set -- $descr
