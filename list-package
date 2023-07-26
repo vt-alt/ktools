@@ -50,6 +50,7 @@ for i; do
 		| --state | --triggers | --triggerscripts | --lastchange | --list \
 		| --qf=* | --queryformat=*)
 			query=$i ;;
+		-L ) query=--lastchange ;;
 		--disttag) query='--qf=%{DISTTAG}' ;;
 		--ls=* | --list=*) query=-l; pattern=${i#*=} ;;
 		--grep=*)
