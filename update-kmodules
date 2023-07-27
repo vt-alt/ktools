@@ -68,6 +68,11 @@ def update_task(task):
     pat = re.compile(f"^(kernel-modules-.*-{flavour})-[^-]+-[^-]+\.[^.]+\.rpm$")
     kmodules = [pat.match(f).group(1) for f in os.listdir(dir) if pat.match(f)]
 
+    # List deletion subtasks to skip readdings.
+    subtasks = task_info["subtasks"]
+    deletions = [value.get('package') for value in subtasks.values() if value.get('type') == 'delete']
+    kmodules = list(set(kmodules) - set(deletions))
+
     for ti, v in task_info["subtasks"].items():
         if "pkgname" not in v:
             continue
@@ -79,6 +84,8 @@ def update_task(task):
             kmodules.remove(pkgname)
         print(f": {ti} {pkgname} {ver}")
         if not rebuild:
+            continue
+        if pkgname in deletions:
             continue
         # /ALT/sisyphus/files/SRPMS/kernel-modules-nvidia-std-def-525.105.17-alt1.331628.1.src.rpm
         dir = f"/ALT/{repo}/files/SRPMS/"
