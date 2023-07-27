@@ -74,7 +74,20 @@ def update_task(task):
     kmodules = list(set(kmodules) - set(deletions))
 
     for ti, v in task_info["subtasks"].items():
+        if "type" not in v:
+            # 'delsub'ed subtask.
+            continue
+        if v["type"] != "repo":
+            continue
+        # If subtask is never built 'pkgname' is unknown.
         if "pkgname" not in v:
+            m = re.match(r"^/gears/./(.*)\.git$", v.get("dir"))
+            if m:
+                pkgname = m.group(1)
+                print(f": skip {ti} {pkgname} no pkgname")
+                # Still need to avoid adding rebuild.
+                if pkgname in kmodules:
+                    kmodules.remove(pkgname)
             continue
         pkgname = v.get("pkgname", "-")
         tag_name = v.get("tag_name", "-")
@@ -111,6 +124,7 @@ def update_task(task):
 
     # New kmodules need adding (rebuild).
     if kmodules:
+        print(f"- Adding missing kmodules {kmodules}")
         for mod in kmodules:
             run(["ssh", girar, "task", "add", task, "rebuild", mod])
         restart = True
