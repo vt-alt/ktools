@@ -130,7 +130,8 @@ tasks.split("\n").each do |task|
   end
   t_color = case t_state
             when "EPERM", "DONE", "TESTED" then GREEN
-            when "FAILED", "FAILING" then RED
+            when "FAILED" then RED
+            when "FAILING" then MAGEN
             when "POSTPONED", "AWAITING" then BLUE
             else CYAN
             end
