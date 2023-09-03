@@ -39,7 +39,7 @@ for i in "${list[@]}"; do
 	rpm -qp "$i" ${@:--R} > $tmp/$i
 	touch -r "$i" $tmp/$i
 
-	r=$(set +f; ls /ALT/sisyphus/files/*/RPMS/$name-+([^-])-+([^-])$rpmarch)
+	r=$(set +f; ls /ALT/sisyphus/files/*/RPMS/$name-+([^-])-+([^-])$rpmarch 2>/dev/null ||:)
 	if [ -e "$r" ]; then
 		rr=$(basename $r)
 		rpm -qp "$r" ${@:--R} > $tmp/$rr
@@ -47,9 +47,12 @@ for i in "${list[@]}"; do
 	else
 		rr=/dev/null
 	fi
+	if [ -v STRIP ] && [ -s $tmp/$rr ]; then
+		sed -i "s!$STRIP!!g" $tmp/$rr
+	fi
 	(
 		cd $tmp
-		colordiff -u "$rr" "$i"  | sed 's/^/\t/' || :
+		${DIFF-colordiff -u} "$rr" "$i"  | sed 's/^/\t/' || :
 	)
 	sep=$'\n'
 done
