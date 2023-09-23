@@ -31,10 +31,12 @@ if [ -v kernelbot ]; then
 	repo=/people/kernelbot/packages/kernel-image
 	approver=girarbot
 	push_branch=y
+	girar=girarbot
 else
 	remote=gitery
 	repo=kernel-image
 	approver=girar
+	girar=girar
 fi
 br=$(git branch --show-current)
 [ -n "${branch-}" ] || branch=${br#*/}
@@ -60,20 +62,20 @@ for tag; do
 	flavour=${flavour%-*-alt*}
 
 	V git push $remote $tag $force
-	[ -v task ] || task=$(V ssh -n girar task new $branch)
-	V ssh -n girar task add $task repo $repo $tag
-	[ -v shared ] && V ssh -n girar task share $task enable
-	if [ -v kmodules ] && V ssh -n girar task add $task kmodules $flavour; then
+	[ -v task ] || task=$(V ssh -n $girar task new $branch)
+	V ssh -n $girar task add $task repo $repo $tag
+	[ -v shared ] && V ssh -n $girar task share $task enable
+	if [ -v kmodules ] && V ssh -n $girar task add $task kmodules $flavour; then
 		msg="-m kmodules:$tag"
 	else
 		msg=
 	fi
 	if [ -v disapprove ]; then
-		echo TEST | V ssh girar task disapprove $task all
+		echo TEST | V ssh $girar task disapprove $task all
 	else
 		echo PESIGN | V ssh $approver task approve $task all
 	fi
-	runcmd="ssh -n girar task run --fail-late $commit $task $msg"
+	runcmd="ssh -n $girar task run --fail-late $commit $task $msg"
 	if [ -v runthetask ]; then
 		V $runcmd
 	else
