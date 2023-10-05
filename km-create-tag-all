@@ -1,0 +1,23 @@
+#!/bin/bash
+
+set -efuo pipefail
+
+cd $(git rev-parse --show-toplevel)
+
+gear_describe() {
+	set -- $(gear --describe --disable-specsubst)
+	NAME=$1
+	VERSION=$2
+	RELEASE=$3
+}
+
+gear_describe
+# kernel-modules-lkrg-@kflavour@
+KMOD=${NAME#kernel-modules-}
+KMOD=${KMOD%-@kflavour@}
+echo "Module ${KMOD:?Unknown module name}"
+
+while read -r flavour arches; do
+	[ -n "$flavour" ] || continue
+	(set -x; km-create-tag "$flavour" "$KMOD" "$@")
+done < .gear/km-karch
