@@ -78,11 +78,28 @@ else
 	echo >&2 "- Branch $br not needs pushing to gitery."
 fi
 
-[ -v task ] || task=$(V ssh -n girar task new "$branch")
+if [ -v task ]; then
+	task_show=$(ssh girar task show --brief "$task")
+else
+	task=$(V ssh -n girar task new "$branch")
+	task_show=
+fi
+
+remove_subtask() {
+	local task_sub subtask
+	#  600:kernel-modules.git=sisyphus/kernel-modules-lkrg-std-def-0.9.7-alt1
+	repo_short=$(basename "$repo")
+	task_sub=$(echo "$task_show" | grep -w -F "$repo_short=$tag" ||:)
+	[ -n "$task_sub" ] || return
+	subtask=${task_sub%%:*}
+	subtask=${subtask##[[:space:]]}
+	V ssh -n girar task delsub "$task" "$subtask"
+}
 
 worked=
 for tag in $(git tag --points-at @ "$branch/kernel-modules-$module-*"); do
 	V git push gitery "$tag" $force
+	remove_subtask
 	V ssh -n girar task add "$task" repo "$repo" "$tag"
 	worked=y
 done
