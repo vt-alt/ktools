@@ -1,8 +1,30 @@
 #!/bin/bash
 
 set -efuo pipefail
+V() { echo -e "+ \e[1;33m$@\e[m" >&2; "$@"; }
 
 cd $(git rev-parse --show-toplevel)
+
+repo=packages/kernel-modules.git
+commit=--test-only
+force=
+branch=sisyphus
+unset build task branch runthetask
+
+for opt do
+	shift
+	case "$opt" in
+		--build) build=y ;;
+		-f | --force) force="-f" ;;
+		--task=*) task="${opt#*=}"; build=y ;;
+		--commit) commit=--commit ;;
+		--branch=*) branch="${opt#*=}" ;;
+		--no-run) unset runthetask ;;
+		--run) runthetask=y ;;
+		--disapprove) disapprove=y ;;
+		*) set -- "$opt" "$@"; break ;; # tags
+	esac
+done
 
 gear_describe() {
 	set -- $(gear --describe --disable-specsubst)
@@ -12,12 +34,68 @@ gear_describe() {
 }
 
 gear_describe
+release=${RELEASE%%.%*}
 # kernel-modules-lkrg-@kflavour@
-KMOD=${NAME#kernel-modules-}
-KMOD=${KMOD%-@kflavour@}
-echo "Module ${KMOD:?Unknown module name}"
+module=${NAME#kernel-modules-}
+module=${module%-@kflavour@}
+echo "Module: ${module:?Unknown module name}"
+
+br=$(git branch --show-current)
+if [ -v branch ]; then
+	branch_from="user requested"
+else
+	if [[ $br =~ ^template/(.*)/(.*)$ ]]; then
+		brmod=${BASH_REMATCH[1]}
+		branch=${BASH_REMATCH[2]}
+		branch_from="from current branch name"
+		if [ "$module" != "$brmod" ]; then
+			echo >&2 "Module $module does not match module from branch name $brmod"
+			exit 1
+		fi
+	else
+		branch=sisyphus
+		branch_from="default"
+	fi
+fi
+echo "Repo: $branch ($branch_from)"
 
 while read -r flavour arches; do
 	[ -n "$flavour" ] || continue
-	(set -x; km-create-tag "$flavour" "$KMOD" "$@")
+	tagname="$branch/kernel-modules-$module-$flavour-$VERSION-$release"
+	already_at_top=$(git tag --points-at @ "$tagname")
+	if [ -n "$already_at_top" ]; then
+		echo >&2 "- tag $tagname is already at the top."
+	else
+		(set -x; km-create-tag "$flavour" "$module" $force)
+	fi
 done < .gear/km-karch
+
+[ -v build ] || exit 0
+
+if [ -z "$(git branch -l --points-at "gitery/$br")" ]; then
+	V git push gitery "$br" $force
+else
+	echo >&2 "- Branch $br not needs pushing to gitery."
+fi
+
+[ -v task ] || task=$(V ssh -n girar task new "$branch")
+
+worked=
+for tag in $(git tag --points-at @ "$branch/kernel-modules-$module-*"); do
+	V git push gitery "$tag" $force
+	V ssh -n girar task add "$task" repo "$repo" "$tag"
+	worked=y
+done
+if [ -z "$worked" ]; then
+	echo >&2 "- Nothing done."
+	exit
+fi
+if [ -v disapprove ]; then
+	echo 'TEST' | V ssh girar task disapprove "$task" all
+fi
+runcmd="ssh -n girar task run --fail-late $commit $task"
+if [ -v runthetask ]; then
+	V $runcmd
+else
+	echo -e "To run: \e[1;35m$runcmd\e[m"
+fi
