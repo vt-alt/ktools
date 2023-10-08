@@ -1,0 +1,20 @@
+#!/bin/bash -efu
+
+gear_describe() {
+	set -- $(gear --describe --commit)
+	export name=$1 version=$2 release=$3
+}
+gear_describe
+
+prefix=$(git rev-parse --show-prefix)
+{
+       	hsh-run -- bash -c "$(cat)" |
+		tar xvf -
+} <<EOF
+	set -e
+	cd /usr/src/RPM/BUILD/"$name-$version"
+	cd kernel-source-* 2>/dev/null ||:
+	cd ./"$prefix"
+	tar cfo - $*
+EOF
+
