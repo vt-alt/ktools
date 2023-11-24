@@ -1,0 +1,20 @@
+#!/bin/bash -eu
+
+[ ! -v MANPAGER ] && export MANPAGER="less -R --use-color -Dd+y -Du+c"
+
+shopt -s nullglob
+
+: ${repo:=sisyphus}
+: ${arch:=$HOSTTYPE}
+
+label=$(cat /ALT/$repo/{$arch,noarch}/base/contents_index \
+	| grep "^/usr/share/man/man.*$1" \
+	| fzf -1)
+read file pkgname <<<$label
+for arch in $arch noarch; do
+	dir=/ALT/$repo/files/$arch/RPMS
+	pkg=( "$dir"/"$pkgname"-[0-9]*-alt*."$arch".rpm )
+	if [ -v pkg ]; then
+		exec rpmpeek "$pkg" man ".$file"
+	fi
+done
