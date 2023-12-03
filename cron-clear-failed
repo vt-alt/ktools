@@ -16,13 +16,20 @@ urls=( $(
 		echo "https://git.altlinux.org/tasks/$task/logs/events.$try.$i.log"
 	done
 ) )
-subtasks=( $(curl -Ssf "${urls[@]}" | grep -w 'build FAILED' | grep -Po ':: \[\S+\] #\K\d+' | sort -u ||:) )
+subtasks=( $(curl -Ssf "${urls[@]}" | grep -v 'kernel-image' | grep -w 'build FAILED' | grep -Po ':: \[\S+\] #\K\d+' | sort -u ||:) )
 [ -v subtasks ] || exit 0
 
-[ -e ~/.ssh-agent ] && . ~/.ssh-agent
+owner=$(curl -Ssf "https://git.altlinux.org/tasks/$task/task/owner")
+case "$owner" in
+	vt)		girar=girar ;;
+	kernelbot)	girar=girarbot ;;
+	*) echo "Unknown task owner=$owner" >&2; exit 1 ;;
+esac
+
+[ -e ~/.ssh-agent ] && . ~/.ssh-agent >/dev/null
 
 set -x
 for st in "${subtasks[@]}"; do
-	ssh girar task delsub "$task" "$st"
+	ssh -n "$girar" -- task delsub "$task" "$st"
 done
-ssh girar task run "$task"
+ssh -n "$girar" -- task run --fail-late --test-only "$task"
