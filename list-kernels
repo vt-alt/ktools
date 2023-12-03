@@ -50,7 +50,7 @@ for i; do
 		--config*) configs= ;;
 		--grep=*)  configs="${i#*=}" ;;
 		--grep)    configs=; grep_mode=y; break ;;
-		--all-arch*) all_arch=y ;;
+		-a | --all-arch*) all_arch=y ;;
 		--log*) logs=y ;;
 		-*) echo "No option $i"; exit 1 ;;
 	esac
