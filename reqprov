@@ -29,6 +29,8 @@ trap "rm -rf $tmp" 0
 export QUOTING_STYLE=shell-escape
 sep=
 
+[ "$#" -eq 0 ] && echo "Default comparison is -R (--requires)"
+
 shopt -s extglob
 for i in "${list[@]}"; do
 	name=${i%-*-*}
