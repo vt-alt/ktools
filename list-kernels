@@ -23,7 +23,7 @@ for i; do
 	shift
 	[ "$i" = sisyphus ] && i=Sisyphus
 	[ "$i" = s ] && i=Sisyphus
-	[ "$i" = def ] && flavours+=" std-def un-def std-pae std-debug"
+	[ "$i" = def ] && flavours+=" std-def un-def"
 	if [ -d "/ALT/$i" ]; then
 		branch=$i
 		branches+=" $i"
