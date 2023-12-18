@@ -17,7 +17,7 @@ find "$tmp" -maxdepth 3 -fstype tmpfs -name '*.rpm*' -ctime +1 -delete
 branch=Sisyphus arch=x86_64
 branches='' arches='' packages=''
 all_arch='' lsopts='-ltrd' rpmpeek='' lesser='' logs='' dts='' show_task=''
-pattern='' query='' show_pkg=''
+pattern='' query='' show_pkg='' srpms=''
 SELECTOR='gum choose'
 for i; do
 	[ "$i" = s ]        && i=Sisyphus
@@ -33,6 +33,7 @@ for i; do
 		continue
 	fi
 	case "$i" in
+		--src|--srpm*) srpms=y ;;
 		-a|--all-arch*) all_arch=y ;;
 		--full-time) lsopts+=" $i" ;;
 		-1|--names) lsopts= ;;
@@ -111,15 +112,35 @@ for package in $packages; do
 			done
 			set -f
 		done
+		if [ -n "$srpms" ]; then
+			r=$rroot/$b/files/SRPMS
+			pat="$r/$package-[0-9]*-alt*.src.rpm"
+			set +f
+			for i in $pat; do
+				test -e "$i" || continue
+				list+=("$i")
+			done
+			set -f
+		fi
 	done
 done
 [ ${#list[@]} -gt 0 ] || { echo "No match for '$packages'"; exit 1; }
 
 grab_dts() {
 	DISTTAG=$(rpm -qp "$RPM" --qf '%{DISTTAG}')
-	IFS=+. read -r REPO TASK SUBTASK _ <<< "$DISTTAG"
-	SOURCERPM=$(rpm -qp "$RPM" --qf '%{SOURCERPM}')
-	pkgname=${SOURCERPM%-*-*.*.rpm}
+	if [ "$DISTTAG" == '(none)' ]; then
+		BUILDHOST=$(rpm -qp "$RPM" --qf '%{BUILDHOST}')
+		REPO=${BUILDHOST##*-}
+		REPO=${REPO%.hasher.altlinux.org}
+	else
+		IFS=+. read -r REPO TASK SUBTASK _ <<< "$DISTTAG"
+	fi
+	if [[ "$RPM" =~ \.src\.rpm$ ]]; then
+		pkgname=$(rpm -qp "$RPM" --qf '%{N}')
+	else
+		SOURCERPM=$(rpm -qp "$RPM" --qf '%{SOURCERPM}')
+		pkgname=${SOURCERPM%-*-*.*.rpm}
+	fi
 	DTS_URL="http://ftp.altlinux.org/pub/distributions/archive/$REPO/index/src/${pkgname:0:1}/$pkgname/d-t-s-evr.list"
 	DTS_LIST=$(curl -sSf -L "$DTS_URL" | awk 'OFS="\t" {$1=strftime("%Y-%m-%d",$1); print $0}' | column -t)
 	DTS=$DTS_LIST
@@ -160,7 +181,7 @@ select_one() {
 	fi
 	if [ -n "$dts" ]; then
 		grab_dts
-		export GUM_CHOOSE_SELECTED=$(printf %s "$DTS" | grep -w "$TASK")
+		export GUM_CHOOSE_SELECTED=$(printf %s "$DTS" | grep -w "${TASK-}")
 		DTS=$(printf %s "$DTS" | $SELECTOR)
 		read -r _ TASK SUBTASK _ <<< "$DTS"
 		[ "${1-}" = --task ] && return
@@ -180,7 +201,13 @@ select_one() {
 		cache_rpm "$choice"
 	else
 		DISTTAG=$(rpm -qp "$RPM" --qf '%{DISTTAG}')
-		IFS=+. read -r REPO TASK SUBTASK _ <<< "$DISTTAG"
+		if [ "$DISTTAG" == '(none)' ]; then
+			BUILDHOST=$(rpm -qp "$RPM" --qf '%{BUILDHOST}')
+			REPO=${BUILDHOST##*-}
+			REPO=${REPO%.hasher.altlinux.org}
+		else
+			IFS=+. read -r REPO TASK SUBTASK _ <<< "$DISTTAG"
+		fi
 	fi
 }
 
