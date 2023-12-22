@@ -58,7 +58,7 @@ def obsoleted_repo(repo, tag, pkgname = nil)
   pkginrepopath = pkgs.first
   pkginrepobn   = File.basename(pkginrepopath)
   pkginrepover  = pkginrepobn[(pkgname.size + 1)..-1].sub(/\.x86_64\.rpm$/, '')
-  cmp = `rpmvercmp #{pkgver} #{pkginrepover}`.to_i
+  cmp = `rpmevrcmp #{pkgver} #{pkginrepover}`.to_i
   #  1: pkgver > pkginrepover
   # -1: pkgver < pkginrepover
 end
