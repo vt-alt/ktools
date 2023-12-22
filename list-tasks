@@ -45,9 +45,13 @@ if @cache
   FileUtils.mkdir_p(CACHE)
 end
 
-def obsoleted_repo(repo, tag)
-  pkgname = tag.sub(/-[^-]+-[^-]+$/, '')
-  pkgver  = tag[(pkgname.size + 1)..-1]
+def obsoleted_repo(repo, tag, pkgname = nil)
+  if pkgname
+    pkgver = tag
+  else
+    pkgname = tag.sub(/-[^-]+-[^-]+$/, '')
+    pkgver  = tag[(pkgname.size + 1)..-1]
+  end
   mask = "/ALT/#{repo}/files/x86_64/RPMS/#{pkgname}-*.x86_64.rpm"
   pkgs = Dir.glob(mask).reject {|e| e =~ /-debuginfo|-checkinstall/}
   return nil if pkgs.empty?
@@ -116,6 +120,8 @@ tasks.split("\n").each do |task|
     elsif dir =~ /kernel-modules/ || tag =~ /kernel-modules/
         t_modules << tag
     else
+        pkgname = File.basename(dir, '.git')
+        t_obsolete1 << obsoleted_repo(t_repo, tag, pkgname)
         t_other << tag
     end
   end
