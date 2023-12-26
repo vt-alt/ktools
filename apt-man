@@ -9,7 +9,7 @@ shopt -s nullglob
 
 label=$(cat /ALT/$repo/{$arch,noarch}/base/contents_index \
 	| grep "^/usr/share/man/man.*$1" \
-	| fzf -1)
+	| fzf)
 read file pkgname <<<$label
 for arch in $arch noarch; do
 	dir=/ALT/$repo/files/$arch/RPMS
