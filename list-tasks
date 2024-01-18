@@ -52,8 +52,13 @@ def obsoleted_repo(repo, tag, pkgname = nil)
     pkgname = tag.sub(/-[^-]+-[^-]+$/, '')
     pkgver  = tag[(pkgname.size + 1)..-1]
   end
-  mask = "/ALT/#{repo}/files/x86_64/RPMS/#{pkgname}-*.x86_64.rpm"
-  pkgs = Dir.glob(mask).reject {|e| e =~ /-debuginfo|-checkinstall/}
+  for mask in [
+      "/ALT/#{repo}/files/x86_64/RPMS/#{pkgname}-*.rpm",
+      "/ALT/#{repo}/files/SRPMS/#{pkgname}-*.rpm"
+  ] do
+    pkgs = Dir.glob(mask).select {|e| e =~ %r{.*/#{Regexp.quote(pkgname)}-[^-]+-[^.]+\.[^.]+\.rpm}}
+    break unless pkgs.empty?
+  end
   return nil if pkgs.empty?
   pkginrepopath = pkgs.first
   pkginrepobn   = File.basename(pkginrepopath)
