@@ -125,7 +125,7 @@ tasks.split("\n").each do |task|
     elsif dir =~ /kernel-modules/ || tag =~ /kernel-modules/
         t_modules << tag
     else
-        pkgname = File.basename(dir, '.git')
+        pkgname = sub_info['pkgname'] || File.basename(dir, '.git')
         t_obsolete1 << obsoleted_repo(t_repo, tag, pkgname)
         t_other << tag
     end
