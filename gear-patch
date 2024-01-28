@@ -1,0 +1,71 @@
+#!/bin/bash -efu
+
+HEAD=@
+
+export LANG=C LC_ALL=C
+
+  BRIGHT=$'\e[1m'
+     RED=$'\e[1;31m'
+  _GREEN=$'\e[32m'
+   GREEN=$'\e[1;32m'
+  YELLOW=$'\e[1;33m'
+    BLUE=$'\e[1;34m'
+ MAGENTA=$'\e[1;35m'
+   _CYAN=$'\e[36m'
+    CYAN=$'\e[1;36m'
+   WHITE=$'\e[1;37m'
+    NORM=$'\e[m'
+export BRIGHT RED GREEN YELLOW BLUE MAGENTA CYAN WHITE NORM
+
+fatal() {
+	printf >&2 "${RED}%s${NORM}\n" "$*"
+	exit 1
+}
+
+while [ $# -gt 0 ]; do
+	opt=$1
+	case "$opt" in
+		--head=*) HEAD=${opt#*=} ;;
+		-*) fatal "Unknown option: $opt" ;;
+		*) break ;;
+	esac
+	shift
+done
+
+list_patch_ids() {
+	local ref=${1-@}
+
+	git ls-tree --name-only "$ref" | grep '\.patch$' \
+	| while read f; do
+		read patchid cid <<<"$(git show "$ref":"$f" | git patch-id --stable)"
+		read sha1sid _   <<<"$(git show "$ref":"$f" | sha1sum -)"
+		[ -n "$patchid" ] && patchid="P-$patchid" || patchid=S-$sha1sid
+		printf '%s\t%s\n' "$patchid" "$f"
+	done
+}
+
+compare() {
+	local n=$1 p=$2 a=$3 b=$4 i x
+	comm -"$n" <(echo "$a" | cut -f1) <(echo "$b" | cut -f1) |
+	while read i; do
+		for x in "$a" "$b"; do
+			echo -n " "$(echo "$x" | grep -Poe "$i\K.*" || echo -)
+		done
+		echo
+	done
+}
+
+diff_patch_sets() {
+	local a=$(list_patch_ids "$1" | sort)
+	local b=$(list_patch_ids "$2" | sort)
+	compare 23 '-' "$a" "$b"
+	compare 12 '.' "$a" "$b"
+	compare 13 '+' "$a" "$b"
+}
+
+mode="$1"; shift
+case "$mode" in
+	list) list_patch_ids "$1" ;;
+	diff) diff_patch_sets "$1" "$2" | column -t ;;
+	*) fatal "Mode not specified"
+esac
