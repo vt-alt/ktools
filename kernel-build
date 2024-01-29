@@ -7,7 +7,7 @@ force=
 kmodules=y
 runthetask=y
 commit=--test-only
-unset push_branch
+unset push_branch unset_push_branch
 for opt do
 	shift
 	case "$opt" in
@@ -21,7 +21,7 @@ for opt do
 		--no-run) unset runthetask ;;
 		--disapprove) disapprove=y ;;
 		--branch) push_branch=y ;;
-		--no-branch) unset push_branch ;;
+		--no-branch) unset_push_branch=y ;;
 		*) set -- "$opt" "$@"; break ;; # tags
 	esac
 done
@@ -38,6 +38,8 @@ else
 	approver=girar
 	girar=girar
 fi
+[ -v unset_push_branch ] && unset push_branch
+
 br=$(git branch --show-current)
 [ -n "${branch-}" ] || branch=${br#*/}
 case $branch in
