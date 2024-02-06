@@ -65,7 +65,7 @@ def update_task(task):
 
     # List all modules for this flavour.
     dir = f"/ALT/{repo}/files/SRPMS/"
-    pat = re.compile(f"^(kernel-modules-.*-{flavour})-[^-]+-[^-]+\.[^.]+\.rpm$")
+    pat = re.compile(f"^(kernel-modules-.*-{flavour})-[^-]+-[^-]+\\.[^.]+\\.rpm$")
     kmodules = [pat.match(f).group(1) for f in os.listdir(dir) if pat.match(f)]
 
     # List deletion subtasks to skip readdings.
@@ -102,7 +102,7 @@ def update_task(task):
             continue
         # /ALT/sisyphus/files/SRPMS/kernel-modules-nvidia-std-def-525.105.17-alt1.331628.1.src.rpm
         dir = f"/ALT/{repo}/files/SRPMS/"
-        pat = re.compile(f"{re.escape(pkgname)}-[^-]+-[^-]+\.src\.rpm$")
+        pat = re.compile(f"{re.escape(pkgname)}-[^-]+-[^-]+\\.src\\.rpm$")
         srpm = [f for f in os.listdir(dir) if pat.match(f)]
         if len(srpm) == 0:
             continue
