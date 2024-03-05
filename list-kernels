@@ -100,7 +100,7 @@ if [ -v configs ]; then
 		prefix=$package-${prefix##*"$package"-}
 		prefix=${prefix%.rpm}
 		if [ -v grep_mode ]; then
-			if ! kernel-config $i | sed "s,^,$branch/$prefix:," | grep --color=auto -i "$@"; then
+			if ! kernel-config $i | sed "s,^,$branch/$prefix:," | grep -P --color=auto -i "$@"; then
 				echo "$branch/$prefix:${RED}no match${NORM}"
 			fi
 		else
