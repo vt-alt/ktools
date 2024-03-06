@@ -56,7 +56,7 @@ def obsoleted_repo(repo, tag, pkgname = nil)
       "/ALT/#{repo}/files/x86_64/RPMS/#{pkgname}-*.rpm",
       "/ALT/#{repo}/files/SRPMS/#{pkgname}-*.rpm"
   ] do
-    pkgs = Dir.glob(mask).select {|e| e =~ %r{.*/#{Regexp.quote(pkgname)}-[^-]+-[^.]+\.[^.]+\.rpm}}
+    pkgs = Dir.glob(mask).select {|e| e =~ %r{.*/#{Regexp.quote(pkgname)}-[^-]+-[^-]+\.[^.]+\.rpm}}
     break unless pkgs.empty?
   end
   return nil if pkgs.empty?
