@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Really git blame output format is crazy and not customizable.
+
+  GREEN=$'\e[0;32m'
+   BLUE=$'\e[1;34m'
+MAGENTA=$'\e[0;35m'
+   NORM=$'\e[m'
+
+git grep --color=never -n "$@" \
+| while IFS=: read -r i j k; do
+	while read -r q w; do
+		case "$q" in
+			????????????????????????????????????????) sha1=$q ;;
+			author)      author=$w ;;
+			author-mail) auemail=$w ;;
+			author-time) autime=$w ;;
+			committer)      committer=$w ;;
+			committer-mail) ctemail=$w ;;
+			committer-time) cttime=$w ;;
+			author-tz|committer-tz|summary|previous|filename) continue ;;
+			[[:space:]]*) line=$w ;;
+		esac
+	done < <(git blame -p  -L"$j,$j" -- "$i")
+	printf -v au '%.16s' "($author)"
+	printf "${BLUE}%.10s${NORM} ${GREEN}%16s${NORM} ${BLUE}%(%F)T${NORM} | %s\n" "$sha1" "$au" "$autime" "${MAGENTA}$i${NORM}:${GREEN}$j${NORM}: $k"
+done | grep --color=always "$@"
