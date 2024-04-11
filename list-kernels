@@ -24,6 +24,9 @@ for i; do
 	[ "$i" = sisyphus ] && i=Sisyphus
 	[ "$i" = s ] && i=Sisyphus
 	[ "$i" = def ] && flavours+=" std-def un-def 6.7"
+	if [ "$i" = c ]; then
+		i=$(set +f; cd /ALT; ls -d c*)
+	fi
 	if [ -d "/ALT/$i" ]; then
 		branch=$i
 		branches+=" $i"
