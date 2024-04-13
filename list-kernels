@@ -23,7 +23,7 @@ for i; do
 	shift
 	[ "$i" = sisyphus ] && i=Sisyphus
 	[ "$i" = s ] && i=Sisyphus
-	[ "$i" = def ] && flavours+=" std-def un-def 6.7"
+	[ "$i" = def ] && flavours+=" std-def un-def 6.?"
 	if [ "$i" = c ]; then
 		i=$(set +f; cd /ALT; ls -d c*)
 	fi
