@@ -31,7 +31,7 @@ sep=
 
 [ "$#" -eq 0 ] && echo "Default comparison is -R (--requires)"
 
-# Use --filesbypkg to compare file lists.
+# Use --fileclass to compare file lists.
 sed_things() {
 	local r=$1 t=$2
 	if [ -v SEDVER ]; then
