@@ -34,11 +34,11 @@ sep=
 # Use --filesbypkg to compare file lists.
 sedver() {
 	local r=$1 t=$2
-	if [ -n "${SEDVER-}" ]; then
+	if [ -v SEDVER ]; then
 		sort -o "$t" "$t"
 		V=$(rpm -qp "$r" --qf '%{V}' | sed 's/\./\\./g')
 		R=$(rpm -qp "$r" --qf '%{R}' | sed 's/\./\\./g')
-		sed -Ei "s/$V(-$R)?/VERSION-RELEASE/g" $t
+		sed -Ei "s/($SEDVER-)?$V(-$SEDVER)?(-$R)?/VERSION-RELEASE/g" $t
 	fi
 }
 
