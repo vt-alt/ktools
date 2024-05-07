@@ -46,6 +46,10 @@ shopt -s extglob
 for i in "${list[@]}"; do
 	name=${i%-*-*}
 	printf "%s= %s =\n" "$sep" "$name"
+	if [ -v SKIPDEBUGINFO ] && [[ "$name" =~ debuginfo ]]; then
+		echo skipped
+		continue
+	fi
 	rpmvrel=${i%.*.*}
 	rpmarch=${i#"$rpmvrel"}
 
