@@ -12,8 +12,8 @@ gear_describe()
 
 gear_describe
 
-. ~/.hasher/config
-cd  ~/hasher/repo/${def_target:-$(arch)}/RPMS.hasher
+eval "$(hsh --printenv | grep -e '^def_repo=' -e '^workdir=')"
+cd  "$def_repo/${def_target:-$(arch)}/RPMS.hasher"
 
 list=()
 for i in $(set +f; echo *.rpm); do
