@@ -32,13 +32,16 @@ sep=
 [ "$#" -eq 0 ] && echo "Default comparison is -R (--requires)"
 
 # Use --filesbypkg to compare file lists.
-sedver() {
+sed_things() {
 	local r=$1 t=$2
 	if [ -v SEDVER ]; then
 		sort -o "$t" "$t"
 		V=$(rpm -qp "$r" --qf '%{V}' | sed 's/\./\\./g')
 		R=$(rpm -qp "$r" --qf '%{R}' | sed 's/\./\\./g')
-		sed -Ei "s/($SEDVER-)?$V(-$SEDVER)?(-$R)?/VERSION-RELEASE/g" $t
+		sed -Ei "s/($SEDVER-)?$V(-$SEDVER)?(-$R)?/VERSION-RELEASE/g" "$t"
+	fi
+	if [ -v SKIPMATCH ]; then
+		sed -Ei "/$SKIPMATCH/d" "$t"
 	fi
 }
 
@@ -54,14 +57,14 @@ for i in "${list[@]}"; do
 	rpmarch=${i#"$rpmvrel"}
 
 	rpm -qp "$i" ${@:--R} > $tmp/$i
-	sedver "$i" "$tmp/$i"
+	sed_things "$i" "$tmp/$i"
 	touch -r "$i" $tmp/$i
 
 	r=$(set +f; ls /ALT/${REPO-sisyphus}/files/*/RPMS/$name-+([^-])-+([^-])$rpmarch 2>/dev/null ||:)
 	if [ -e "$r" ]; then
 		rr=$(basename $r)
 		rpm -qp "$r" ${@:--R} > $tmp/$rr
-		sedver "$r" "$tmp/$rr"
+		sed_things "$r" "$tmp/$rr"
 		touch -r "$r" $tmp/$rr
 	else
 		rr=/dev/null
