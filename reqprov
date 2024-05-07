@@ -70,4 +70,4 @@ for i in "${list[@]}"; do
 		${DIFF-colordiff -u} "$rr" "$i"  | sed 's/^/\t/' || :
 	)
 	sep=$'\n'
-done
+done |& less
