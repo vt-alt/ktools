@@ -4,7 +4,7 @@ set -efu -o pipefail
 
 gear_describe()
 {
-	set -- $(gear --describe)
+	set -- $(gear --describe --commit 2>/dev/null)
 	NAME=$1
 	VERSION=$2
 	RELEASE=$3
