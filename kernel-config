@@ -1,4 +1,21 @@
-#!/bin/bash -eu
+#!/bin/bash
+
+set -eu
+fatal() {
+	printf >&2 "Error: %s\n" "$*"
+	exit 1
+}
+
+while [ $# -gt 0 ]; do
+        opt=$1
+        case "$opt" in
+                --cache) unset NO_CACHE ;;
+                --no-cache) NO_CACHE=y ;;
+                -*) fatal "Unknown option: $opt" ;;
+                *) break ;;
+        esac
+        shift
+done
 
 show_file=
 if [ -e "${1-}" ]; then
@@ -27,9 +44,29 @@ else
 	set -f
 fi
 
+rpmpeek_config() {
+	local file=$1
+	rpmpeek "$file" bash -c 'cat boot/config-*' 2>/dev/null
+}
+
 if [ -n "$show_file" ]; then
 	echo "$file"
 else
 	[ -t 1 ] && echo >&2 $file
-	rpmpeek $file bash -c 'cat boot/config-*' 2>/dev/null
+	if [ -z "${NO_CACHE-}" ]; then
+		cachedir="$HOME/.cache/kernel-config"
+		realfile=$(realpath "$file")
+		cachefile="$cachedir/$realfile"
+		if [ -e "$cachefile" ]; then
+			cat "$cachefile"
+			exit
+		fi
+		mkdir -p $(dirname "$cachefile")
+		touch "$cachedir/.nobackup"
+		rpmpeek_config "$realfile" > "$cachefile-"
+		mv "$cachefile-" "$cachefile"
+		cat "$cachefile"
+	else
+		rpmpeek_config "$file"
+	fi
 fi
