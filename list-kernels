@@ -18,7 +18,7 @@ package=kernel-image
 branch=Sisyphus arch=x86_64 flavour=std-def
 branches= flavours= arches=
 all_arch=
-unset logs configs grep_mode
+unset logs configs grep_mode query
 for i; do
 	shift
 	[ "$i" = sisyphus ] && i=Sisyphus
@@ -56,6 +56,12 @@ for i; do
 		--no-cache) export NO_CACHE=y ;;
 		-a | --all-arch*) all_arch=y ;;
 		--log*) logs=y ;;
+		--changelog | --configfiles | --conflicts | --docfiles | --dump | --enhances \
+		| --filesbypkg | --info | --last | --obsoletes | --provides \
+		| --recommends | --requires | --suggests | --supplements | --scripts \
+		| --state | --triggers | --triggerscripts | --lastchange | --list \
+		| --qf=* | --queryformat=*)
+			query=$i ;;
 		-*) echo "No option $i"; exit 1 ;;
 	esac
 done
@@ -110,6 +116,14 @@ if [ -v configs ]; then
 		else
 			kernel-config $i | sed "s,^,$branch/$prefix:,"
 		fi
+	done
+	exit
+fi
+if [ -v query ]; then
+	list=$(echo $list | tr ' ' '\n' | sort)
+	for rpm in $list; do
+		bn=$(basename "$rpm")
+		rpm -qp "$rpm" $query | sed "s/^/$bn\t/"
 	done
 	exit
 fi
