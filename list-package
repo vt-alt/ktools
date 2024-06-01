@@ -16,9 +16,10 @@ find "$tmp" -maxdepth 3 -fstype tmpfs -name '*.rpm*' -ctime +1 -delete
 
 branch=Sisyphus arch=x86_64
 branches='' arches='' packages=''
-all_arch='' lsopts='-ltrd' rpmpeek='' lesser='' logs='' dts='' show_task=''
+all_arch='' lsopts='-ltrd' rpmpeek='' lesser='' logs='' dts=''
 pattern='' query='' show_pkg='' srpms=''
 SELECTOR='gum choose'
+unset show_task
 for i; do
 	[ "$i" = s ]        && i=Sisyphus
 	[ "$i" = sisyphus ] && i=Sisyphus
@@ -41,7 +42,8 @@ for i; do
 		--less) lesser=y; lsopts= ;;
 		--log*) logs=y ;;
 		--dts | --ver*) dts=y ;;
-		--task) show_task=y ;;
+		--task) show_task=--brief ;;
+		--task-full) show_task= ;;
 		-p | --pkg | --packages) show_pkg=y ;;
 		--ls) query=-l ;;
 		--fzf) SELECTOR='fzf --no-sort --tac --height=~100%' ;;
@@ -235,9 +237,9 @@ elif [ -n "$logs" ]; then
 		gum spin -- curl -sSf -L "$url"
 	} |& less
 	exit
-elif [ -n "$show_task" ]; then
+elif [ -v show_task ]; then
 	select_one --task
-	(set -x; ssh girar task show --brief "$TASK")
+	(set -x; ssh girar task show $show_task "$TASK")
 	exit
 elif [ -n "$show_pkg" ]; then
 	select_one --rpms
