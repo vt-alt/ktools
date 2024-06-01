@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set +o posix
+if [ "$1" ]; then
+  echo "$1"
+else
+  git remote
+fi | while read remote; do
+  git retry ls-remote --tags --refs $remote \
+  | grep -v -f <(git show-ref --tags -s) \
+  | sed "s!\$!\\t$remote!"
+done
