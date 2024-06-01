@@ -1,0 +1,69 @@
+#!/bin/bash
+
+# Also, see https://watch.altlinux.org/pub/watch/by-acl/vt.txt
+
+set -efu
+
+t=$(mktemp)
+a=$(mktemp)
+
+if [ -z "$*" ]; then
+	set --                 libsodium xsecurelock file simde zig ltp                 \
+		editorconfig-vim blake2 blake3 dwarves tig honggfuzz libpfm  delta	\
+		kpatch        tmux stgit quilt shadowsocks-rust shadowsocks-libev	\
+		kcptun libdeflate sslscan xapian-bindings iotop-c pgpdump xtail		\
+		         liboqs openssh forkstat unit liburing rr          tinyssh	\
+		stress-ng kernel-shark libtraceevent libtracefs trace-cmd libbpf	\
+		capnproto neomutt sbsigntools bcc              codespell stalld		\
+		                              makedumpfile          blktrace		\
+		fossology sysstat crash gum libkdumpfile psmisc moreutils       	\
+		rt-tests yara aide fsverity-utils bpftrace burp ima-evm-utils		\
+		tuned wget simdjson fscrypt fscryptctl fio       kvmtool ubdsrv libnbd	\
+		musl klibc toybox               ugrep vgrep vim-plugin-ale nbdkit	\
+		drgn dropbear            libseccomp busybox cbonsai certspotter lowdown	\
+		tiv CImg cbmc      uftrace just etckeeper autorestic resticprofile	\
+		restic gitui git-absorb webhook rustic bin-marcosnils bzip3		\
+		libcpucycles libmceliece libntirpc nfs-ganesha gperftools coccinelle	\
+		yajl
+fi
+for i in "$@"; do
+	# echo >&2 "$i"
+	cd $HOME/src
+	cd $i
+	n=$(printf %-15s $i:)
+	origin=
+	watchfile=
+	if [ -d .git/refs/remotes/upstream ]; then
+		origin=upstream
+	elif [ -d .git/refs/remotes/origin ]; then
+		origin=origin
+	else
+		set +f
+		for watchfile in .gear/"$i"*.watch "$i"*.watch .gear/autobuild.watch .gear/*.watch *.watch ; do
+			[ -e "$watchfile" ] && break
+			watchfile=
+		done
+		set -f
+	fi
+	if [ -n "$origin" ]; then
+		if [ $i = kernel-image-rt ]; then
+			new-tags rt | cut -f1-2 | grep -P 'v5.10.*rt\d+$'
+		else
+			new-tags $origin | grep -v -e -beta -e oss-fuzz
+		fi | sed "s/^/$n /" > $t
+	elif [ -n "$watchfile" ]; then
+		rpm-uscan --report | tail -1 | sed "s/^/$n /" > $t
+	else
+		echo "$n unknown watching method" > $t
+	fi
+	if [ -t 0 ]; then cat $t; fi
+	cat $t >> $a
+	if [ ! -t 1 ]; then sleep 11; fi
+done
+if [ ! -t 0 -a -s "$a" ]; then
+	sort "$a" -o "$a"
+	count=$(wc -l < $a)
+	names=$(cut -d: -f1 $a | sort -u | tr '\n' ' ')
+	column -t < $a | mail -s "new-tags ($count) $names" vt@altlinux.org
+fi
+rm -f -- $t $a
