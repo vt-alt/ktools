@@ -234,7 +234,7 @@ elif [ -n "$logs" ]; then
 		url="https://git.altlinux.org/tasks/$TASK/build/$SUBTASK/$arch/log"
 		echo >&2 "+ curl $url"
 		echo
-		gum spin -- curl -sSf -L "$url"
+		curl -sSf -L "$url"
 	} |& less
 	exit
 elif [ -v show_task ]; then
