@@ -18,7 +18,7 @@ package=kernel-image
 branch=Sisyphus arch=x86_64 flavour=std-def
 branches= flavours= arches=
 all_arch=
-unset logs configs grep_mode query rpmpeek
+unset logs configs grep_mode query rpmpeek include
 for i; do
 	shift
 	[ "$i" = sisyphus ] && i=Sisyphus
@@ -63,6 +63,9 @@ for i; do
 		| --qf=* | --queryformat=*)
 			query=$i ;;
 		--peek) rpmpeek=y; break ;;
+		--checkinstall) include=checkinstall ;;
+		--debuginfo) include=debuginfo ;;
+		--other) include='*' ;;
 		-*) echo "No option $i"; exit 1 ;;
 	esac
 done
@@ -84,13 +87,13 @@ for b in $branches; do
 		for a in $arches; do
 			r=$rroot/$b/files/$a/RPMS
 			test -d $r || continue
-			pat=$r/$package-$f-[0-9]*-alt*.$a.rpm
+			pat=$r/$package-$f${include+"-$include"}-[0-9]*-alt*.$a.rpm
 			set +f
 			for i in $pat; do
 				test -e $i || continue
 				flv=${i##*"$package"-}
 				flv=${flv%%-[0-9]*}
-				[[ $flv =~ debuginfo|domU|checkinstall ]] && continue
+				[ ! -v include ] && [[ $flv =~ debuginfo|domU|checkinstall ]] && continue
 				list+=" $i"
 			done
 			set -f
