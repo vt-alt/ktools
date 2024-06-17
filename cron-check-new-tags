@@ -21,7 +21,7 @@ if [ -z "$*" ]; then
 		tuned wget simdjson fscrypt fscryptctl fio       kvmtool ubdsrv libnbd	\
 		musl klibc toybox               ugrep vgrep vim-plugin-ale nbdkit	\
 		drgn dropbear            libseccomp busybox cbonsai certspotter lowdown	\
-		tiv CImg cbmc      uftrace just etckeeper autorestic resticprofile	\
+		tiv      cbmc      uftrace just etckeeper autorestic resticprofile	\
 		restic gitui git-absorb webhook rustic bin-marcosnils bzip3		\
 		libcpucycles libmceliece libntirpc nfs-ganesha gperftools coccinelle	\
 		yajl shunit2
