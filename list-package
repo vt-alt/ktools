@@ -21,6 +21,7 @@ pattern='' query='' show_pkg='' srpms=''
 SELECTOR='gum choose'
 unset show_task
 for i; do
+	shift
 	[ "$i" = s ]        && i=Sisyphus
 	[ "$i" = sisyphus ] && i=Sisyphus
 	if [ -d "/ALT/$i" ]; then
@@ -38,7 +39,7 @@ for i; do
 		-a|--all-arch*) all_arch=y ;;
 		--full-time) lsopts+=" $i" ;;
 		-1|--names) lsopts= ;;
-		--peek|--rpmpeek) rpmpeek=y; lsopts= ;;
+		--peek|--rpmpeek) rpmpeek=y; lsopts=; break ;;
 		--less) lesser=y; lsopts= ;;
 		--log*) logs=y ;;
 		--dts | --ver*) dts=y ;;
@@ -219,8 +220,7 @@ if [ -n "$rpmpeek" ]; then
 		rpm=${RPM#"$tmp/"}
 		[ "$rpm" != "$RPM" ] && rpm=$DISTTAG@$(basename "$RPM")
 	fi
-	prompt=" \[\033[1;36m\]$rpm\[\033[m\]> "
-	rpmpeek -n "$RPM" bash --rcfile <(cat ~/.bashrc; echo PS1="\"$prompt\"")
+	(set -x; rpmpeek -n "$RPM" "$@")
 	exit
 elif [ -n "$lesser" ]; then
 	select_one
