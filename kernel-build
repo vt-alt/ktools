@@ -59,6 +59,10 @@ else
 	set -- $(git tag --points-at @)
 fi
 [ -v push_branch ] && V git push $remote $br $force
+if [ $# -eq 0 ]; then
+	echo >&2 "No tags. Run kernel-tag?"
+	exit 1
+fi
 for tag; do
 	flavour=${tag#kernel-image-}
 	flavour=${flavour%-*-alt*}
