@@ -2,6 +2,7 @@
 
 export GREP_COLORS="mt=01;32"
 set -eu +f -o pipefail
+shopt -s extglob
 rroot=/mnt/space/mirror
 skip="5.1|c[678].*|c9[fm]1|c9m2|c9f1|p[5678]|.*armh"
 skip="5.1|c[678].*|fm]1|c9m[12]|c9f1|p[567]|.*armh"
@@ -23,7 +24,7 @@ for i; do
 	shift
 	[ "$i" = sisyphus ] && i=Sisyphus
 	[ "$i" = s ] && i=Sisyphus
-	[ "$i" = def ] && flavours+=" std-def un-def rt 6.?"
+	[ "$i" = def ] && flavours+=" std-def un-def rt +([[:digit:]]).+([[:digit:]])"
 	if [ "$i" = c ]; then
 		i=$(set +f; cd /ALT; ls -d c*)
 	fi
@@ -38,7 +39,7 @@ for i; do
 		continue
 	fi
 	case $i in
-		std-def|std-debug|std-pae|un-def|rt|kvm|std-kvm|xenomai|centos|ovz-el|ovz-el7|mp|[[:digit:]].[[:digit:]])
+		std-def|std-debug|std-pae|un-def|rt|kvm|std-kvm|xenomai|centos|ovz-el|ovz-el7|mp|+([[:digit:]]).+([[:digit:]]))
 			flavours+=" $i"
 			continue
 			;;

@@ -1,5 +1,6 @@
 #!/bin/bash -efu
 
+shopt -s extglob
 V() { echo -e "+ \e[1;33m$@\e[m" >&2; "$@"; }
 
 unset shared kernelbot task disapprove
@@ -48,7 +49,7 @@ case $branch in
 esac
 brflvr=${br%/*}
 case $brflvr in
-	un-def|std-def|std-pae|std-debug|std-next|un-next|next|rt|[[:digit:]].[[:digit:]]|[[:digit:]].[[:digit:]][[:digit:]]) ;;
+	un-def|std-def|std-pae|std-debug|std-next|un-next|next|rt|+([[:digit:]]).+([[:digit:]])) ;;
 	*) echo >&2 "Invalid flavour $brflvr"; exit 1 ;;
 esac
 
