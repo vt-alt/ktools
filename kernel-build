@@ -53,6 +53,14 @@ case $brflvr in
 	*) echo >&2 "Invalid flavour $brflvr"; exit 1 ;;
 esac
 
+tests=$(git log --oneline --author=altlinux -i --grep=test "$remote/$br..")
+if [ -n "$tests" ]; then
+	echo "$tests" | sed 's/^/\t(test) /'
+	echo >&2 "Test build, do not push branch, do not add kmodules."
+	unset push_branch
+	unset kmodules
+fi
+
 # Set tags to build.
 if [ "$*" ]; then
 	set "$@"
