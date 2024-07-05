@@ -95,6 +95,8 @@ for tag; do
 		V $runcmd
 	else
 		echo -e "To run: \e[1;35m$runcmd\e[m"
+		unset task
 	fi
 done
 
+[ -z "$task" ] || exec task-tail "$task"
