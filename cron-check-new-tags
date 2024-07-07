@@ -11,7 +11,7 @@ if [ -z "$*" ]; then
 	set --                 libsodium xsecurelock file simde zig ltp                 \
 		editorconfig-vim blake2 blake3 dwarves tig honggfuzz libpfm  delta	\
 		kpatch        tmux stgit quilt shadowsocks-rust shadowsocks-libev	\
-		kcptun libdeflate sslscan xapian-bindings iotop-c pgpdump xtail		\
+		       libdeflate sslscan xapian-bindings iotop-c pgpdump xtail		\
 		         liboqs openssh forkstat unit liburing rr          tinyssh	\
 		stress-ng kernel-shark libtraceevent libtracefs trace-cmd libbpf	\
 		capnproto neomutt sbsigntools bcc              codespell stalld		\
