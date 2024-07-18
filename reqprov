@@ -29,7 +29,11 @@ trap "rm -rf $tmp" 0
 export QUOTING_STYLE=shell-escape
 sep=
 
-[ "$#" -eq 0 ] && echo "Default comparison is -R (--requires)"
+if [ "$#" -eq 0 ]; then
+       SKIPDEBUGINFO=1
+       set -- --fileclass
+       echo "Default comparison is $* with SKIPDEBUGINFO=1"
+fi
 
 # Use --fileclass to compare file lists.
 sed_things() {
