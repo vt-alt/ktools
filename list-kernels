@@ -71,7 +71,7 @@ for i; do
 	esac
 done
 
-[ -z "${branches-}" ] && branches=$(cd $rroot; ls | grep -E -vwe "$skip")
+[ -z "${branches-}" ] && branches=$(cd $rroot; dirname */noarch | grep -E -vwe "$skip")
 : ${flavours:=*}
 [ -z "$arches" ] && arches=$arch
 
