@@ -1,0 +1,170 @@
+#!/bin/bash
+set -efu
+
+fetch=y
+list_commits=
+apply_commits=
+push_to_remote=
+push_dry=
+pattern=
+pickedline=
+signedoff=
+for opt do
+        shift
+        case "$opt" in
+                --no-fetch) unset fetch ;;
+		--list) list_commits=y ;;
+		--apply | --pick) apply_commits=y ;;
+		--push) push_to_remote=y ;;
+		--dry-run) push_dry=-n ;;
+		--grep=*) pattern=${opt#*=} ;;
+		-x) pickedline=-x ;;
+		-s) signedoff=-s ;;
+		-*) echo >&2 "Unknown option: $opt"; exit 1 ;;
+                *) set -- "$@" "$opt";;
+        esac
+done
+
+V() { echo -e "+ \e[1;33m$*\e[m" >&2; "$@"; }
+
+branches=$(grep -Po '(?<=--branch)\s+\S+' "$HOME/src/kernelbot-bin/kernel-list" | grep -e "$pattern")
+
+cd "$HOME/src/kernel-image"
+if ! git diff --quiet ||
+   ! git diff --quiet --cached; then
+	echo >&2 "Work tree is unclean."
+	exit 1
+fi
+
+for commit; do
+	if ! git rev-parse "$commit" &>/dev/null; then
+		echo >&2 "Incomprehensible commitish '$commit'."
+		exit 1
+	fi
+	git log --pretty=format:'%h %ad %s (%an)%d' --date=short --no-walk "$commit"
+done
+
+[ -z "$list_commits" ] || exit
+
+# NB: Fetch may clean notes if note's fetch url starts with '+'.
+[ -v fetch ] && V git fetch kernelbot
+
+cb=$(git branch --show-current)
+readonly cb
+_atexit() {
+	if [ "$cb" != "$(git branch --show-current)" ]; then
+		echo >&2 "Exiting..."
+		V git switch -q -f "$cb"
+	fi
+}
+trap _atexit 0
+
+# Push (without a force) if we can fast-forward a remote in sync to local branch.
+needs_push() {
+	local l=${1-"@"} r=${2-"@{u}"}
+	git merge-base --is-ancestor "$r" "$l" && ! git merge-base --is-ancestor "$l" "$r"
+}
+
+printf '\n== %s ==\n' "$(date)" >>.log
+
+declare -i notes=0
+pushes=()
+for lbr in $branches; do
+	printf ':: %16s ' "$lbr"
+	kbr=kernelbot/$lbr
+	# Determine which branch is ahead what.
+	if git merge-base --is-ancestor "$kbr" "$lbr"; then
+		# local branch is ahead or equal to kernelbot, so
+		# kernelbot is not ahead of the local branch.
+		if git merge-base --is-ancestor "$lbr" "$kbr"; then
+			# In synd with remote.
+			printf '='
+		else
+			# Local branch is ahead.
+			printf '+'
+		fi
+	elif git merge-base --is-ancestor "$lbr" "$kbr"; then
+		# kernelbot is ahead of local branch, we should ff
+		git switch -f -q -C "$lbr" "$kbr"
+		printf '-'
+	else
+		# Diverged or independent branches.
+		printf '! diverged: %s\n' "$(git branch -v -l "$lbr")"
+		continue
+	fi
+
+	list=()
+	for commit; do
+		limit=$(git rev-list --no-walk "$commit" | tail)~
+		n=$(git rev-list --no-walk "$commit" | wc -l)
+
+		cherry=$(git cherry "$lbr" "$commit" "$limit")
+		picked=$(  echo "$cherry" | grep -c '^- ' ||:)
+		unpicked=$(echo "$cherry" | grep -c '^+ ' ||:)
+		case "$picked:$unpicked" in
+			0:0)  state=skip ;;
+			"$n:0") state=picked ;;
+			*:0)  state=picked-mismatch-$picked-$n ;;
+			"0:$n") state=unpicked; list+=("$commit") ;;
+			0:*)  state=unpicked-mismatch-$unpicked-$n ;;
+			*)  state=mixed-$picked-$unpicked-$n ;;
+		esac
+
+		printf ' %s' "$state"
+	done
+
+	if [ ${#list[@]} -ne 0 ]; then
+		printf ' -> '
+		git switch -q -f "$lbr"
+
+		# Reverse need_push.
+		if needs_push "@{u}" @; then
+			printf 'ff'
+			git merge -q --ff-only
+			printf '=ok '
+		fi
+
+		for commit in "${list[@]}"; do
+			if [ -n "$apply_commits" ]; then
+				if git cherry-pick $signedoff $pickedline "$commit" >>.log 2>&1; then
+					result=applied
+					if git notes list "$commit" &>/dev/null; then
+						git notes copy "$commit" @
+						result+='+notes'
+						notes+=1
+					fi
+				else
+					result=CONFLICT
+				fi
+			else
+				# Only test.
+				if git cherry-pick -n "$commit" >>.log 2>&1; then
+					result=clean
+				else
+					result=FAILURE
+				fi
+			fi
+
+			printf '%s' "$result"
+		done
+
+		if ! git diff --quiet ||
+		   ! git diff --quiet --cached; then
+			   git reset -q --hard
+		fi
+	fi
+
+	if needs_push "$lbr" "$kbr"; then
+		printf ' => pushable'
+		pushes+=("$lbr")
+	fi
+	printf '\n'
+done
+
+if [ -n "$push_to_remote" ] && [ ${#pushes[@]} -ne 0 ]; then
+	V git push $push_dry kernelbot "${pushes[@]}" refs/notes/commits
+fi
+
+if [ "$cb" != "$(git branch --show-current)" ]; then
+	V git switch -q "$cb"
+fi
