@@ -5,7 +5,6 @@ cd "$HOME/src/kernel-image"
 
 fetch=y
 list_commits=
-apply_commits=
 push_to_remote=
 push_dry=
 pattern=
@@ -15,12 +14,14 @@ fzf=
 all=
 commits=
 describe=
+pick=
 for opt do
         shift
         case "$opt" in
                 --no-fetch) unset fetch ;;
 		--list) list_commits=y ;;
-		--apply | --pick) apply_commits=y ;;
+		--apply | --pick) pick=apply ;;
+		--check) pick=check ;;
 		--push) push_to_remote=y ;;
 		--dry-run) push_dry=-n ;;
 		--grep=*) pattern=${opt#*=} ;;
@@ -142,7 +143,7 @@ for lbr in $branches; do
 		printf ' %s' "$state"
 	done
 
-	if [ ${#list[@]} -ne 0 ]; then
+	if [ -n "$pick" ] && [ ${#list[@]} -ne 0 ]; then
 		printf ' -> '
 		git switch -q -f "$lbr"
 
@@ -154,7 +155,7 @@ for lbr in $branches; do
 		fi
 
 		for commit in "${list[@]}"; do
-			if [ -n "$apply_commits" ]; then
+			if [ "$pick" = "apply" ]; then
 				if git cherry-pick $signedoff $pickedline "$commit" >>.log 2>&1; then
 					result=applied
 					if git notes list "$commit" &>/dev/null; then
