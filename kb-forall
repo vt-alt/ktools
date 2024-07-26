@@ -13,6 +13,8 @@ pickedline=
 signedoff=
 fzf=
 all=
+commits=
+describe=
 for opt do
         shift
         case "$opt" in
@@ -26,6 +28,8 @@ for opt do
 		-s) signedoff=-s ;;
 		--fzf) fzf=y ;;
 		--all) all=y ;;
+		--commits) commits=y ;;
+		--describe) describe=y; commits=y ;;
 		-*) echo >&2 "Unknown option: $opt"; exit 1 ;;
                 *) set -- "$@" "$opt";;
         esac
@@ -126,6 +130,15 @@ for lbr in $branches; do
 			*)  state=mixed-$picked-$unpicked-$n ;;
 		esac
 
+		if [ "$state" = picked ] && [ -n "$commits" ]; then
+			patchid=$(git show "$commit" | git patch-id)
+			target=$(git log -p "$lbr" | git patch-id | grep "${patchid% *}" -m1)
+			if [ -z "$describe" ]; then
+				state="[${target#* }]"
+			else
+				state=[$(git describe --contains "${target#* }" 2>/dev/null || echo 'picked')]
+			fi
+		fi
 		printf ' %s' "$state"
 	done
 
