@@ -1,6 +1,8 @@
 #!/bin/bash
 set -efu
 
+cd "$HOME/src/kernel-image"
+
 fetch=y
 list_commits=
 apply_commits=
@@ -9,6 +11,8 @@ push_dry=
 pattern=
 pickedline=
 signedoff=
+fzf=
+all=
 for opt do
         shift
         case "$opt" in
@@ -20,6 +24,8 @@ for opt do
 		--grep=*) pattern=${opt#*=} ;;
 		-x) pickedline=-x ;;
 		-s) signedoff=-s ;;
+		--fzf) fzf=y ;;
+		--all) all=y ;;
 		-*) echo >&2 "Unknown option: $opt"; exit 1 ;;
                 *) set -- "$@" "$opt";;
         esac
@@ -27,9 +33,19 @@ done
 
 V() { echo -e "+ \e[1;33m$*\e[m" >&2; "$@"; }
 
-branches=$(grep -Po '(?<=--branch)\s+\S+' "$HOME/src/kernelbot-bin/kernel-list" | grep -e "$pattern")
+listfile=.git/kb-forall-branches
+branches=$(grep -Po '(?<=--branch)\s+\S+' "$HOME/src/kernelbot-bin/kernel-list")
+if [ -z "$all" ] && [ -z "$fzf" ] && [ -e "$listfile" ]; then
+	branches=$(cat "$listfile")
+	# shellcheck disable=SC2086
+	echo "Using --fzf preselected branches:" $branches
+fi
+if [ -n "$fzf" ]; then
+	branches=$(echo "$branches" | fzf -m)
+	echo "$branches" > "$listfile"
+fi
+[ -z "$pattern" ] || branches=$(echo "$branches" | grep -e "$pattern")
 
-cd "$HOME/src/kernel-image"
 if ! git diff --quiet ||
    ! git diff --quiet --cached; then
 	echo >&2 "Work tree is unclean."
