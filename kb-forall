@@ -38,7 +38,8 @@ done
 
 V() { echo -e "+ \e[1;33m$*\e[m" >&2; "$@"; }
 
-listfile=.git/kb-forall-branches
+mkdir -p .git/kb
+listfile=.git/kb/branches
 branches=$(grep -Po '(?<=--branch)\s+\S+' "$HOME/src/kernelbot-bin/kernel-list")
 if [ -z "$all" ] && [ -z "$fzf" ] && [ -e "$listfile" ]; then
 	branches=$(cat "$listfile")
@@ -46,12 +47,12 @@ if [ -z "$all" ] && [ -z "$fzf" ] && [ -e "$listfile" ]; then
 	echo "Using --fzf preselected branches:" $branches
 fi
 
-picksfile=.git/kb-picks.txt
+picksfile=.git/kb/picks
 if [ -n "$fzf" ]; then
 	touch "$picksfile"
 
 	# Add notes from previous runs.
-	notefile="$listfile~notes"
+	notefile="$listfile.notes"
 	true > "$notefile"
 	for br in $branches; do
 		rev=$(git rev-parse "$br")
