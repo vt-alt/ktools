@@ -45,9 +45,27 @@ if [ -z "$all" ] && [ -z "$fzf" ] && [ -e "$listfile" ]; then
 	# shellcheck disable=SC2086
 	echo "Using --fzf preselected branches:" $branches
 fi
+
+picksfile=.git/kb-picks.txt
 if [ -n "$fzf" ]; then
-	branches=$(echo "$branches" | fzf -m)
+	touch "$picksfile"
+
+	# Add notes from previous runs.
+	notefile="$listfile~notes"
+	true > "$notefile"
+	for br in $branches; do
+		rev=$(git rev-parse "$br")
+		note=
+		for commit in "$@"; do
+			info=$(grep -Po "(?<=^$rev $commit ).*" "$picksfile" | tail -1)
+			note+=" <${info:-?}>"
+		done
+		printf '%16s %s\n' "$br" "$note" >> "$notefile"
+	done
+
+	branches=$(set -o pipefail; fzf --tac -m < "$notefile" | awk '{print$1}')
 	echo "$branches" > "$listfile"
+	rm "$notefile"
 fi
 [ -z "$pattern" ] || branches=$(echo "$branches" | grep -e "$pattern")
 
@@ -113,6 +131,7 @@ for lbr in $branches; do
 		printf '! diverged: %s\n' "$(git branch -v -l "$lbr")"
 		continue
 	fi
+	rev=$(git rev-parse "$lbr")
 
 	list=()
 	for commit; do
@@ -141,6 +160,8 @@ for lbr in $branches; do
 			fi
 		fi
 		printf ' %s' "$state"
+
+		printf '%s %s %s\n' "$rev" "$commit" "$state" >> "$picksfile"
 	done
 
 	if [ -n "$pick" ] && [ ${#list[@]} -ne 0 ]; then
@@ -155,6 +176,7 @@ for lbr in $branches; do
 		fi
 
 		for commit in "${list[@]}"; do
+			newrev=$rev
 			if [ "$pick" = "apply" ]; then
 				if git cherry-pick $signedoff $pickedline "$commit" >>.log 2>&1; then
 					result=applied
@@ -163,6 +185,7 @@ for lbr in $branches; do
 						result+='+notes'
 						notes+=1
 					fi
+					newrev=$(git rev-parse @)
 				else
 					result=CONFLICT
 				fi
@@ -174,8 +197,9 @@ for lbr in $branches; do
 					result=FAILURE
 				fi
 			fi
-
 			printf '%s' "$result"
+
+			printf '%s %s %s\n' "$newrev" "$commit" "$result" >> "$picksfile"
 		done
 
 		if ! git diff --quiet ||
