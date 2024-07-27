@@ -20,6 +20,7 @@ branch=Sisyphus arch=x86_64 flavour=std-def
 branches= flavours= arches=
 all_arch=
 unset logs configs grep_mode query rpmpeek include
+unset aptcachecmd
 for i; do
 	shift
 	[ "$i" = sisyphus ] && i=Sisyphus
@@ -67,6 +68,8 @@ for i; do
 		--checkinstall) include=checkinstall ;;
 		--debuginfo) include=debuginfo ;;
 		--other) include='*' ;;
+		--whatdepends |	--depends | --showpkg | --showsrc | --show | --policy | --pkgnames)
+		       	aptcachecmd=${i#--} ;;
 		-*) echo "No option $i"; exit 1 ;;
 	esac
 done
@@ -152,6 +155,27 @@ if [ -v logs ]; then
 			echo : $i task=$task subtask=$subtask arch=$arch
 			curl -sS -L -f "https://git.altlinux.org/tasks/$task/build/$subtask/$arch/log"
 		} | less -K || exit
+	done
+	exit
+fi
+if [ -v aptcachecmd ]; then
+	list=$(echo $list | tr ' ' '\n' | sort)
+	sep=
+	for rpm in $list; do
+		echo -n "$sep"
+		bn=$(basename "$rpm")
+		DISTTAG=$(rpm -qp --qf "%{DISTTAG}" "$rpm")
+		EVR=$(rpm -qp --qf "%{EVR}" "$rpm")
+		PKG="${bn%-*-*}#$EVR:$DISTTAG"
+		# Unable to determine `@UNIXTIME` from the RPM
+		pkgname=$(apt-cache pkgnames "$PKG")
+		if [ -n "$pkgname" ]; then
+			# Also skip noisy lines with pkgnames (for whatdepends).
+			(set -x; apt-cache "$aptcachecmd" "$pkgname") | grep -Ev '^\s{6}'
+		else
+			echo >&2 "Package $PKG not found in apt-cache."
+		fi
+		sep=$'\n'
 	done
 	exit
 fi
