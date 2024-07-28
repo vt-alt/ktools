@@ -1,0 +1,147 @@
+#!/bin/bash
+# Release current kernel
+# shellcheck disable=SC1091
+
+# shellcheck source=/usr/bin/gear-utils-sh-functions
+. gear-utils-sh-functions
+set -efu
+
+export TZ=UTC LANG=C LC_ALL=C
+
+fatal() {
+	echo >&2 "Error: $*"
+	exit 1
+}
+
+fetch=
+commit=y
+for opt do
+        shift
+        case "$opt" in
+                --no-fetch) unset fetch ;;
+		--no-commit) commit= ;;
+		-*) fatal "Unknown option: $opt" ;;
+                *) set -- "$@" "$opt";;
+        esac
+done
+
+V() { echo -e "+ \e[1;33m$*\e[m" >&2; "$@"; }
+
+if ! git diff --quiet ||
+   ! git diff --quiet --cached; then
+	fatal "Work tree is unclean."
+fi
+
+topcommit=$(git log -1 --pretty='format:%s')
+[[ $topcommit =~ ^([[:digit:]]+:)?[[:digit:].]+-alt ]] && fatal "Last commit is already release commit: $topcommit"
+
+# NB: Fetch may clean notes if note's fetch url starts with '+'.
+[ -v fetch ] && V git fetch kernelbot
+
+top_alt=$(git describe --abbrev=0 --first-parent --match='*alt*')
+topmost=$(git describe --abbrev=0)
+n=$(git rev-list --first-parent "$top_alt.." | wc -l)
+if [ "$n" -eq 0 ]; then
+	echo ":: Nothing to do, top tag is $top_alt."
+	exit
+else
+	echo ":: Have $n commits since last -alt tag: $top_alt"
+	git log --oneline --first-parent "$top_alt.."
+fi
+
+export disable_specsubst=1
+chdir_to_toplevel
+guess_specfile # sets '$specfile'
+export specfile
+
+gear_describe() {
+	# shellcheck disable=SC2046
+	set -- $(gear --describe --disable-specsubst)
+	export name=$1 version=$2 release=$3
+}
+gear_describe
+
+update=
+if [ "$topmost" = "$top_alt" ]; then
+	echo ":: This should be a new Release (top tag is -alt tag)."
+	update=release
+else
+	echo ":: This should be a new Version (another tag is above -alt tag)."
+	if [[ "$topmost" =~ [[:digit:]]+(\.[[:digit:]]+)+ ]]; then
+		ver=${BASH_REMATCH[0]}
+		echo ":: Guessed version $ver from tag '$topmost'."
+	else
+		fatal "Unable to determine version from tag '$topmost'."
+	fi
+	cmp=$(rpmvercmp "$ver" "$version")
+	case "$cmp" in
+		0)	fatal "Guessed version $ver is same as package version $version, bail out."
+			;;
+		-1)	fatal "Guessed version $ver is lesser than package version $version, bail out."
+			;;
+		1)	echo ":: New version $ver > $version, good."
+	esac
+	update=version
+fi
+
+cr=$'\n'
+changelog=
+
+release=
+if [ "$update" = release ]; then
+	release=increment
+elif [ "$update" = version ]; then
+	V=$(grep '^Version:' "$specfile")
+	if [[ $V =~ %kernel_base_version%kernel_sublevel ]]; then
+		[[ $ver =~ [[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+ ]] || fatal "Invalid version format '$ver'."
+		major=${ver%.*}
+		minor=${ver##*.}
+		sed -iE "/^%define kernel_base_version/s/[[:digit:]].*/$major/" "$specfile"
+		sed -iE "/^%define kernel_sublevel/s/[[:digit:]].*/$minor/" "$specfile"
+	else
+		fatal "Unknown version format: '$V'"
+	fi
+	tag_date=$(git log -1 --pretty=format:%cd --date=format:%Y-%m-%d "$topmost")
+	changelog="- Update to $topmost ($tag_date)."
+	release=reset
+fi
+if [ -n "$release" ]; then
+	R=$(grep '^Release:' "$specfile")
+	[[ $R =~ (alt0\.[^.]+\.|alt)([1-9][[:digit:]]*)(.*) ]] || fatal "Unparsable '$R'."
+	left=${BASH_REMATCH[1]}
+	rel=${BASH_REMATCH[2]}
+	right=${BASH_REMATCH[3]}
+	if [ "$release" = reset ]; then
+		br=$(git branch --show-current)
+		if [[ $br =~ ^c[[:digit:]]+f([[:digit:]]+)$ ]]; then
+			nrel=${BASH_REMATCH[1]}
+			[ "$rel" = "$nrel" ] || echo ":: Special type of release reset to $nrel."
+		else
+			nrel=1
+		fi
+	else
+		nrel=$((rel+1))
+	fi
+	sed -iE "/^Release:/s/alt.*/$left$nrel$right/" "$specfile"
+fi
+
+notes_changelog=$(git log --pretty='format:%N' "$top_alt".. | grep -e '^- ' -e '^  ' ||:)
+other_changelog=$(git log --pretty='format:%s' "$top_alt".. | sed 's/.*/- &./')
+if [ -n "$notes_changelog" ]; then
+	[ -z "$changelog" ] || changelog+="$cr"
+	changelog+="$notes_changelog"
+elif [ -z "$changelog" ]; then
+	# Need to append something.
+	if [ -n "$other_changelog" ]; then
+		changelog+="$other_changelog"
+	fi
+fi
+
+[ -n "$changelog" ] || fatal "Changelog is empty."
+echo "$changelog" | cat -nv
+if echo "$changelog" | grep -qE '^-?\s*$'; then
+	fatal "Changelog contains empty lines."
+fi
+safe-add-changelog -e "$changelog" "$specfile"
+[ -n "$commit" ] || exit
+V gear-commit -a --no-edit
