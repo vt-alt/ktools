@@ -28,6 +28,7 @@ end
 GetoptLong.new(
   ['--cache',           GetoptLong::NO_ARGUMENT],
   ['--user',            GetoptLong::REQUIRED_ARGUMENT],
+  ['--repo',            GetoptLong::REQUIRED_ARGUMENT],
   ['--verbose',         GetoptLong::NO_ARGUMENT],
 ).each do |opt, arg|
   case opt
@@ -35,6 +36,8 @@ GetoptLong.new(
     @cache = true
   when '--user'
     @user = arg
+  when '--repo'
+    @repo = arg
   when '--verbose'
     @verbose = true
   end
@@ -87,7 +90,8 @@ def run(cmd)
   t
 end
 
-tasks = run("ssh girar task ls --brief --user=#{@user}")
+repoopt=@repo? "--repo=#{@repo}" : nil
+tasks = run("set -x; ssh girar task ls --brief --user=#{@user} #{repoopt}")
 @kernellist = []
 tasks.split("\n").each do |task|
   id, _ = task.split(' ', 2)
