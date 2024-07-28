@@ -226,7 +226,7 @@ for lbr in $branches; do
 					result=FAILURE
 				fi
 			fi
-			printf '%s' "$result"
+			printf ' %s' "$result"
 
 			printf '%s %s %s\n' "$newrev" "$commit" "$result" >> "$picksfile"
 		done
