@@ -182,10 +182,13 @@ for lbr in $branches; do
 		printf ' %s' "$desc"
 		if [ "$show_tags" = "log" ] && [ "$n" -gt 0 ]; then
 			unset n
-			echo ' --'
+			echo ' -log-'
 			git log --oneline --first-parent "$topmost..$lbr"
 			# Kludgy.
-			[ ${#list[@]} -ne 0 ] || continue
+			if [ ${#list[@]} -eq 0 ]; then
+			       echo
+			       continue
+			fi
 		fi
 		unset n
 	fi
