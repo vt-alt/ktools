@@ -235,7 +235,7 @@ for lbr in $branches; do
 	fi
 
 	if needs_push "$lbr" "$kbr"; then
-		printf ' => pushable'
+		printf ' | pushable'
 		pushes+=("$lbr")
 	fi
 	printf '\n'
