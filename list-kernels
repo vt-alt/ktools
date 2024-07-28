@@ -5,7 +5,7 @@ set -eu +f -o pipefail
 shopt -s extglob
 rroot=/mnt/space/mirror
 skip="5.1|c[678].*|c9[fm]1|c9m2|c9f1|p[5678]|.*armh"
-skip="5.1|c[678].*|fm]1|c9m[12]|c9f1|p[567]|.*armh"
+skip="5.1|c[678].*|fm]1|c9m[12]|c9f1|p[5678]|.*armh"
 
 if [ -t 1 ]; then
    RED=$'\e[1;31m'
