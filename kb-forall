@@ -51,7 +51,9 @@ if [ -z "$all" ] && [ -z "$fzf" ] && [ -e "$listfile" ]; then
 fi
 
 picksfile=.git/kb/picks
-if [ -n "$fzf" ]; then
+if [ -n "$fzf" ] && [ -n "$all" ]; then
+	rm "$listfile"
+elif [ -n "$fzf" ]; then
 	touch "$picksfile"
 
 	# Add notes from previous runs.
