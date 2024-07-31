@@ -1,0 +1,61 @@
+#!/bin/bash
+# shellcheck disable=SC2086
+set -efu
+
+force=
+edit=
+tig=
+log=
+logopt=
+for opt do
+        shift
+        case "$opt" in
+                --force | -f) force=-f ;;
+		--edit) edit=y ;;
+		--tig) tig=y ;;
+		--log) log=y ;;
+		-p) logopt+=" $opt" ;;
+		-*) echo >&2 "Unknown option: $opt"; exit 1 ;;
+                *) set -- "$@" "$opt";;
+        esac
+done
+
+V() { echo -e "+ \e[1;33m$*\e[m" >&2; "$@"; }
+
+changeligize() {
+	for s; do
+		echo "- $s." | fmt -t | sed -E 's/^[[:space:]]+/  /'
+	done
+}
+
+ref=$(git notes get-ref)
+if [ -n "$tig" ]; then
+	tig "$ref" "$@"
+	exit
+elif [ -n "$log" ]; then
+	git log $logopt "$ref" "$@"
+	exit
+fi
+
+for commit; do
+	subject=$(git log --format=%s -n1 "$commit")
+	note=$(changeligize "$subject")
+	if [ -n "$edit" ]; then
+		git notes edit "$commit"
+		continue
+	fi
+	if git notes list "$commit" &>/dev/null; then
+		oldnote=$(git notes show)
+		if [ "$note" = "$oldnote" ]; then
+			echo >&2 "Note alreade set the same for '$commit': $note"
+			continue
+		else
+			echo >&2 "Already other note on commit '$commit', --force to override."
+			echo >&2"- $oldnote"
+			echo >&2"+ $note"
+			continue
+		fi
+	fi
+	git notes add -m "$note" "$commit"
+	echo "$commit: $note"
+done
