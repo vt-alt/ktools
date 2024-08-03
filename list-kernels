@@ -1,5 +1,6 @@
 #!/bin/bash
 
+export LC_ALL=C
 export GREP_COLORS="mt=01;32"
 set -eu +f -o pipefail
 shopt -s extglob
