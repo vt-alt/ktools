@@ -24,4 +24,4 @@ git grep --color=never -n "$@" \
 	done < <(git blame -p  -L"$j,$j" -- "$i")
 	printf -v au '%.16s' "($author)"
 	printf "${BLUE}%.10s${NORM} ${GREEN}%16s${NORM} ${BLUE}%(%F)T${NORM} | %s\n" "$sha1" "$au" "$autime" "${MAGENTA}$i${NORM}:${GREEN}$j${NORM}: $k"
-done | grep --color=always "$@"
+done | grep -P --color=always -e "$1|"
