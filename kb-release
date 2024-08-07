@@ -113,9 +113,10 @@ if [ -n "$release" ]; then
 	right=${BASH_REMATCH[3]}
 	if [ "$release" = reset ]; then
 		br=$(git branch --show-current)
-		if [[ $br =~ ^c[[:digit:]]+f([[:digit:]]+)$ ]]; then
+		if [[ $br =~ /c[[:digit:]]+f([[:digit:]]+)$ ]]; then
 			nrel=${BASH_REMATCH[1]}
-			[ "$rel" = "$nrel" ] || echo ":: Special type of release reset to $nrel."
+			right=
+			echo ":: Special type of release reset to $nrel (because of $br)."
 		else
 			nrel=1
 		fi
