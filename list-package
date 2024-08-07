@@ -20,7 +20,7 @@ branches='' arches='' packages=''
 all_arch='' lsopts='-ltrd' rpmpeek='' lesser='' logs='' dts=''
 pattern='' query='' show_pkg='' srpms=''
 SELECTOR='gum choose'
-unset show_task
+unset show_task aptcache
 for i; do
 	shift
 	[ "$i" = s ]        && i=Sisyphus
@@ -58,6 +58,8 @@ for i; do
 		-L ) query=--lastchange ;;
 		--disttag) query='--qf=%{DISTTAG}' ;;
 		--ls=* | --list=*) query=-l; pattern=${i#*=} ;;
+		--whatdepends |	--depends | --showpkg | --showsrc | --show | --policy | --pkgnames)
+			aptcache=${i#--} ;;
 		--grep=*)
 			# --grep= also provides 'no match' message.
 			pattern=${i#*=} ;;
@@ -278,6 +280,20 @@ elif [ -n "$query" ]; then
 		if ! sed "s,^,$prefix: ," | grep --color=auto "$pattern"; then
 			echo "$prefix: no match"
 		fi
+	done
+	exit
+elif [ -v aptcache ]; then
+	if [ -n "$dts" ]; then
+		select_one
+		list=("$RPM")
+	fi
+	list=( $(printf "%s\n" "${list[@]}" | sort -V) )
+	sep=
+	for rpm in "${list[@]}"; do
+		echo -n "$sep"
+		NAME=$(rpm -qp --qf "%{NAME}" "$rpm")
+		(set -x; apt-cache "$aptcache" "$NAME") | grep -Ev '^\s{6}'
+		sep=$'\n'
 	done
 	exit
 elif [ -n "$dts" ]; then
