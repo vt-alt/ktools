@@ -22,6 +22,7 @@ branches= flavours= arches=
 all_arch=
 unset logs configs grep_mode query rpmpeek include
 unset aptcachecmd
+unset verbose
 for i; do
 	shift
 	[ "$i" = sisyphus ] && i=Sisyphus
@@ -52,6 +53,7 @@ for i; do
 		continue
 	fi
 	case "$i" in
+		-v | --verbose) verbose=y ;;
 		--package=*) package="${i#*=}" ;;
 		--config*) configs= ;;
 		--grep=*)  configs="${i#*=}" ;;
@@ -79,8 +81,10 @@ done
 : ${flavours:=*}
 [ -z "$arches" ] && arches=$arch
 
-# echo "branches: $branches"
-# echo "flavours: $flavours"
+if [ -v verbose ]; then
+	echo >&2 "branches: $branches"
+	echo >&2 "flavours: $flavours"
+fi
 
 set -f
 list=
