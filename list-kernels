@@ -28,8 +28,10 @@ for i; do
 	[ "$i" = sisyphus ] && i=Sisyphus
 	[ "$i" = s ] && i=Sisyphus
 	[ "$i" = def ] && flavours+=" std-def un-def rt +([[:digit:]]).+([[:digit:]])"
-	if [ "$i" = c ]; then
-		i=$(set +f; cd /ALT; ls -d c*)
+	if [[ "$i" =~ ^c[[:digit:]]*$ ]]; then
+		i=$(set +f; cd /ALT; ls -d "$i"*)
+		branches+=" $i"
+		continue
 	fi
 	if [ -d "/ALT/$i" ]; then
 		branch=$i
