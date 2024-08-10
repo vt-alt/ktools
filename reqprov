@@ -12,6 +12,12 @@ gear_describe()
 
 gear_describe
 
+if [ -v EVR ]; then
+	SRPM="$NAME-$EVR"
+else
+	SRPM="$NAME-$VERSION-$RELEASE"
+fi
+
 eval "$(hsh --printenv | grep -e '^def_repo=' -e '^workdir=')"
 cd  "$def_repo/${def_target:-$(arch)}/RPMS.hasher"
 
@@ -20,9 +26,14 @@ for i in $(set +f; echo *.rpm); do
 	SOURCERPM=$(rpm -qp --qf '%{SOURCERPM}' "$i")
 	SRCNAME=${SOURCERPM%-*-*}
 	SRCVREL=${SOURCERPM%.*.*}
-	[ "$NAME-$VERSION-$RELEASE" = "$SRCVREL" ] || continue
+	[ "$SRPM" = "$SRCVREL" ] || continue
 	list+=( "$i" )
 done
+
+if [ ${#list[@]} -eq 0 ]; then
+	echo >&2 "No matching $SRPM RPMs are found in $PWD, try setting EVR= or building."
+	exit 1
+fi
 
 tmp=$(mktemp -d)
 trap "rm -rf $tmp" 0
