@@ -16,6 +16,7 @@ commits=
 describe=
 pick=
 show_tags=
+allow_diverged=
 for opt do
         shift
         case "$opt" in
@@ -34,6 +35,7 @@ for opt do
 		--describe) describe=y; commits=y ;;
 		--tag | --tags) show_tags=tags ;;
 		--log | --logs) show_tags=log ;;
+		--allow-diverged) allow_diverged=y ;;
 		-*) echo >&2 "Unknown option: $opt"; exit 1 ;;
                 *) set -- "$@" "$opt";;
         esac
@@ -132,6 +134,8 @@ for lbr in $branches; do
 		# kernelbot is ahead of local branch, we should ff
 		git switch -f -q -C "$lbr" "$kbr"
 		printf '<ff>'
+	elif [ -n "$allow_diverged" ]; then
+		printf '<diverged>'
 	else
 		# Diverged or independent branches.
 		printf '! diverged: %s\n' "$(git branch -v -l "$lbr")"
