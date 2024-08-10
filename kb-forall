@@ -137,6 +137,15 @@ for lbr in $branches; do
 		printf '! diverged: %s\n' "$(git branch -v -l "$lbr")"
 		continue
 	fi
+
+	ubr=$(git for-each-ref --format='%(upstream:short)' "refs/heads/$lbr")
+	if [ -z "$ubr" ]; then
+		printf ' @{u}'
+		git branch -q --set-upstream-to "$kbr" "$lbr"
+	elif [ "$ubr" != "$kbr" ]; then
+		printf ' [%s?]' "$ubr"
+	fi
+
 	rev=$(git rev-parse "$lbr")
 
 	list=()
