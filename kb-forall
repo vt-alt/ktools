@@ -131,7 +131,7 @@ for lbr in $branches; do
 	elif git merge-base --is-ancestor "$lbr" "$kbr"; then
 		# kernelbot is ahead of local branch, we should ff
 		git switch -f -q -C "$lbr" "$kbr"
-		printf '-'
+		printf '<ff>'
 	else
 		# Diverged or independent branches.
 		printf '! diverged: %s\n' "$(git branch -v -l "$lbr")"
