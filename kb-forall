@@ -219,10 +219,10 @@ for lbr in $branches; do
 			newrev=$rev
 			if [ "$pick" = "apply" ]; then
 				if git cherry-pick $signedoff $pickedline "$commit" >>.log 2>&1; then
-					result=applied
+					result=$(git rev-parse --short @)
 					if git notes list "$commit" &>/dev/null; then
 						git notes copy "$commit" @
-						result+='+notes'
+						result+='+note'
 						notes+=1
 					fi
 					newrev=$(git rev-parse @)
