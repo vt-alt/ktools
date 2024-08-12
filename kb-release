@@ -73,17 +73,23 @@ else
 	else
 		fatal "Unable to determine version from tag '$topmost'."
 	fi
+	if [[ $name =~ ^kernel-image- ]] && [[ "$topmost" =~ ^v[[:digit:]]+\.[[:digit:]]+-rc[[:digit:]]+$ ]]; then
+		ver+=".0"
+		echo ":: Kernel release candidate, normalize version to $ver"
+	fi
 	cmp=$(rpmvercmp "$ver" "$version")
 	case "$cmp" in
-		0)	fatal "Guessed version $ver is same as package version $version, bail out."
+		0)	echo ":: Guessed version $ver is same as package version $version."
+			update=release
 			;;
 		-1)	fatal "Guessed version $ver is lesser than package version $version, bail out."
 			;;
 		1)	echo ":: New version $ver > $version, good."
+			update=version
 	esac
-	update=version
 fi
 
+tag_date=$(git log -1 --pretty=format:%cd --date=format:%Y-%m-%d "$topmost")
 cr=$'\n'
 changelog=
 
@@ -101,17 +107,23 @@ elif [ "$update" = version ]; then
 	else
 		fatal "Unknown version format: '$V'"
 	fi
-	tag_date=$(git log -1 --pretty=format:%cd --date=format:%Y-%m-%d "$topmost")
 	changelog="- Update to $topmost ($tag_date)."
 	release=reset
 fi
 if [ -n "$release" ]; then
 	R=$(grep '^Release:' "$specfile")
-	[[ $R =~ (alt0\.[^.]+\.|alt)([1-9][[:digit:]]*)(.*) ]] || fatal "Unparsable '$R'."
+	[[ $R =~ (alt0\.[^.]+\.|alt0\.rc|alt)([1-9][[:digit:]]*)(.*) ]] || fatal "Unparsable '$R'."
 	left=${BASH_REMATCH[1]}
 	rel=${BASH_REMATCH[2]}
 	right=${BASH_REMATCH[3]}
-	if [ "$release" = reset ]; then
+	if [[ $topmost =~ -rc([[:digit:]]+)$ ]]; then
+		left=alt0.rc
+		nrel=${BASH_REMATCH[1]}
+		right=
+		echo ":: Release candidate type of release reset to $nrel (because of $topmost)."
+		changelog="- Update to $topmost ($tag_date)."
+		unset release
+	elif [ "$release" = reset ]; then
 		br=$(git branch --show-current)
 		if [[ $br =~ /c[[:digit:]]+f([[:digit:]]+)$ ]]; then
 			nrel=${BASH_REMATCH[1]}
