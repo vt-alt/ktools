@@ -86,10 +86,14 @@ for tag; do
 	else
 		msg=
 	fi
+	case $branch in
+		sisyphus) subtask=100 ;;
+		*)	  subtask=all ;;
+	esac
 	if [ -v disapprove ]; then
-		echo TEST | V ssh $girar task disapprove $task all
+		echo TEST | V ssh $girar task disapprove $task $subtask
 	else
-		echo PESIGN | V ssh $approver task approve $task all
+		echo PESIGN | V ssh $approver task approve $task $subtask
 	fi
 	runcmd="ssh -n $girar task run --fail-late $commit $task $msg"
 	if [ -v runthetask ]; then
