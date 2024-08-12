@@ -9,6 +9,12 @@ YELLOW=$'\e[1;33m'
   NORM=$'\e[m'
 
 br=$(git branch --show-current)
+
+unset tagging
+if [ "${1-}" = --tag ]; then
+	tagging=y
+	shift
+fi
 if [ -n "$*" ]; then
 	fvnew="$*"
 else
@@ -47,3 +53,12 @@ else
 	git config gear.specsubst.kflavour "$fvnew"
 fi
 git config format.subjectPrefix "PATCH $br"
+
+if [ -v tagging ]; then
+	tags=$(git tag --points-at @ "kernel-image-$fvnew-*")
+	if [ -n "$tags" ]; then
+		echo >&2 "Already have tags for flavour $fvnew: ${GREEN}$tags${NORM}"
+	else
+		(set -x; kernel-tag "$fvnew")
+	fi
+fi
