@@ -128,7 +128,7 @@ for lbr in $branches; do
 			printf '='
 		else
 			# Local branch is ahead.
-			printf '+'
+			printf '+%s' "$(git rev-list --count "$kbr..$lbr")"
 		fi
 	elif git merge-base --is-ancestor "$lbr" "$kbr"; then
 		# kernelbot is ahead of local branch, we should ff
