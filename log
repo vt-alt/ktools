@@ -1,0 +1,20 @@
+#!/bin/bash
+set -eu
+# shellcheck disable=SC2012,SC2207,SC2016
+files=($(ls -1tr "log"* |
+	fzf \
+	--no-sort \
+	--tac \
+	--multi \
+	--highlight-line \
+	--preview-window=80% \
+	--preview='head -$((LINES/2-1)) {}; echo ...; tail -$((LINES/2)) {}'))
+if [ ${#files[@]} -eq 0 ]; then
+	exit
+elif [ ${#files[@]} -eq 1 ]; then
+	# To show the filename in prompt.
+	less "${files[@]}"
+else
+	# This may be used to grep selected logs.
+	head -n-0 "${files[@]}" | less
+fi
