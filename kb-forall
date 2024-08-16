@@ -17,6 +17,7 @@ describe=
 pick=
 show_tags=
 allow_diverged=
+stable=
 for opt do
         shift
         case "$opt" in
@@ -36,6 +37,7 @@ for opt do
 		--tag | --tags) show_tags=tags ;;
 		--log | --logs) show_tags=log ;;
 		--allow-diverged) allow_diverged=y ;;
+		--stable | --stable-rc) stable=${opt#--} ;;
 		-*) echo >&2 "Unknown option: $opt"; exit 1 ;;
                 *) set -- "$@" "$opt";;
         esac
@@ -45,7 +47,18 @@ V() { echo -e "+ \e[1;33m$*\e[m" >&2; "$@"; }
 
 mkdir -p .git/kb
 listfile=.git/kb/branches
-branches=$(grep -Po '(?<=--branch)\s+\S+' "$HOME/src/kernelbot-bin/kernel-list")
+if [ -n "$stable" ]; then
+	unset fetch
+	branches=$(
+		git branch -lr --sort=-creatordate --format='%(refname:short) %(creatordate:relative)' "$stable/*" |
+		grep -v -e 'year' -e 'month' |
+		cut -d' ' -f1
+	)
+	remote=$stable
+else
+	branches=$(grep -Po '(?<=--branch)\s+\S+' "$HOME/src/kernelbot-bin/kernel-list")
+	remote=kernelbot
+fi
 if [ -z "$all" ] && [ -z "$fzf" ] && [ -e "$listfile" ]; then
 	branches=$(cat "$listfile")
 	# shellcheck disable=SC2086
@@ -76,6 +89,15 @@ elif [ -n "$fzf" ]; then
 	rm "$notefile"
 fi
 [ -z "$pattern" ] || branches=$(echo "$branches" | grep -e "$pattern")
+
+if [ -z "$branches" ]; then
+	echo >&2 "No branches selected, try --fzf, --all, or --stable"
+	exit 1
+fi
+declare -i branch_width=0
+for br in $branches; do
+	[[ branch_width -gt ${#br} ]] || branch_width=${#br}
+done
 
 if ! git diff --quiet ||
    ! git diff --quiet --cached; then
@@ -117,10 +139,14 @@ printf '\n== %s ==\n' "$(date)" >>.log
 declare -i notes=0
 pushes=()
 for lbr in $branches; do
-	printf ':: %16s ' "$lbr"
-	kbr=kernelbot/$lbr
-	# Determine which branch is ahead what.
-	if git merge-base --is-ancestor "$kbr" "$lbr"; then
+	printf ':: %*s ' "$branch_width" "$lbr"
+	kbr=$remote/$lbr
+	if [ -e ".git/refs/remotes/$lbr" ]; then
+		# Already on remote branch.
+		kbr=$lbr
+		# Date is useful to know actual staleness of the branch.
+		printf '{%s}' "$(git log --no-walk --pretty=%cd --date=short "$lbr")"
+	elif git merge-base --is-ancestor "$kbr" "$lbr"; then
 		# local branch is ahead or equal to kernelbot, so
 		# kernelbot is not ahead of the local branch.
 		if git merge-base --is-ancestor "$lbr" "$kbr"; then
@@ -142,12 +168,15 @@ for lbr in $branches; do
 		continue
 	fi
 
-	ubr=$(git for-each-ref --format='%(upstream:short)' "refs/heads/$lbr")
-	if [ -z "$ubr" ]; then
-		printf ' @{u}'
-		git branch -q --set-upstream-to "$kbr" "$lbr"
-	elif [ "$ubr" != "$kbr" ]; then
-		printf ' [%s?]' "$ubr"
+	if [ "$lbr" != "$kbr" ]; then
+		# Set upstream for non-remote branches.
+		ubr=$(git for-each-ref --format='%(upstream:short)' "refs/heads/$lbr")
+		if [ -z "$ubr" ]; then
+			printf ' @{u}'
+			git branch -q --set-upstream-to "$kbr" "$lbr"
+		elif [ "$ubr" != "$kbr" ]; then
+			printf ' [%s?]' "$ubr"
+		fi
 	fi
 
 	rev=$(git rev-parse "$lbr")
@@ -252,7 +281,7 @@ for lbr in $branches; do
 		fi
 	fi
 
-	if needs_push "$lbr" "$kbr"; then
+	if [ "$lbr" != "$kbr" ] && needs_push "$lbr" "$kbr"; then
 		printf ' | pushable'
 		pushes+=("$lbr")
 	fi
@@ -260,7 +289,7 @@ for lbr in $branches; do
 done
 
 if [ -n "$push_to_remote" ] && [ ${#pushes[@]} -ne 0 ]; then
-	V git push $push_dry kernelbot "${pushes[@]}" refs/notes/commits
+	V git push $push_dry "$remote" "${pushes[@]}" refs/notes/commits
 fi
 
 if [ "$cb" != "$(git branch --show-current)" ]; then
