@@ -260,7 +260,13 @@ for lbr in $branches; do
 					fi
 					newrev=$(git rev-parse @)
 				else
-					result=CONFLICT
+					result=unknown
+					if ! git diff --quiet; then
+						result=CONFLICT
+					elif git diff --cached --quiet; then
+						result=empty
+					fi
+					git cherry-pick --abort 2>/dev/null
 				fi
 			else
 				# Only test.
