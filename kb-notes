@@ -45,7 +45,7 @@ for commit; do
 		continue
 	fi
 	if git notes list "$commit" &>/dev/null; then
-		oldnote=$(git notes show)
+		oldnote=$(git notes show "$commit")
 		if [ "$note" = "$oldnote" ]; then
 			echo >&2 "Note alreade set the same for '$commit': $note"
 			continue
