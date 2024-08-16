@@ -140,25 +140,25 @@ declare -i notes=0
 pushes=()
 for lbr in $branches; do
 	printf ':: %*s ' "$branch_width" "$lbr"
-	kbr=$remote/$lbr
+	rbr=$remote/$lbr
 	if [ -e ".git/refs/remotes/$lbr" ]; then
 		# Already on remote branch.
-		kbr=$lbr
+		rbr=$lbr
 		# Date is useful to know actual staleness of the branch.
 		printf '{%s}' "$(git log --no-walk --pretty=%cd --date=short "$lbr")"
-	elif git merge-base --is-ancestor "$kbr" "$lbr"; then
+	elif git merge-base --is-ancestor "$rbr" "$lbr"; then
 		# local branch is ahead or equal to kernelbot, so
 		# kernelbot is not ahead of the local branch.
-		if git merge-base --is-ancestor "$lbr" "$kbr"; then
+		if git merge-base --is-ancestor "$lbr" "$rbr"; then
 			# In synd with remote.
 			printf '='
 		else
 			# Local branch is ahead.
-			printf '+%s' "$(git rev-list --count "$kbr..$lbr")"
+			printf '+%s' "$(git rev-list --count "$rbr..$lbr")"
 		fi
-	elif git merge-base --is-ancestor "$lbr" "$kbr"; then
+	elif git merge-base --is-ancestor "$lbr" "$rbr"; then
 		# kernelbot is ahead of local branch, we should ff
-		git switch -f -q -C "$lbr" "$kbr"
+		git switch -f -q -C "$lbr" "$rbr"
 		printf '<ff>'
 	elif [ -n "$allow_diverged" ]; then
 		printf '<diverged>'
@@ -168,13 +168,13 @@ for lbr in $branches; do
 		continue
 	fi
 
-	if [ "$lbr" != "$kbr" ]; then
+	if [ "$lbr" != "$rbr" ]; then
 		# Set upstream for non-remote branches.
 		ubr=$(git for-each-ref --format='%(upstream:short)' "refs/heads/$lbr")
 		if [ -z "$ubr" ]; then
 			printf ' @{u}'
-			git branch -q --set-upstream-to "$kbr" "$lbr"
-		elif [ "$ubr" != "$kbr" ]; then
+			git branch -q --set-upstream-to "$rbr" "$lbr"
+		elif [ "$ubr" != "$rbr" ]; then
 			printf ' [%s?]' "$ubr"
 		fi
 	fi
@@ -281,7 +281,7 @@ for lbr in $branches; do
 		fi
 	fi
 
-	if [ "$lbr" != "$kbr" ] && needs_push "$lbr" "$kbr"; then
+	if [ "$lbr" != "$rbr" ] && needs_push "$lbr" "$rbr"; then
 		printf ' | pushable'
 		pushes+=("$lbr")
 	fi
