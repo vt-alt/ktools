@@ -265,7 +265,11 @@ for lbr in $branches; do
 			else
 				# Only test.
 				if git cherry-pick -n "$commit" >>.log 2>&1; then
-					result=clean
+					if git diff --cached --quiet ; then
+						result=redundant
+					else
+						result=clean
+					fi
 				else
 					result=FAILURE
 				fi
