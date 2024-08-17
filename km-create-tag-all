@@ -90,7 +90,7 @@ remove_subtask() {
 	#  600:kernel-modules.git=sisyphus/kernel-modules-lkrg-std-def-0.9.7-alt1
 	repo_short=$(basename "$repo")
 	task_sub=$(echo "$task_show" | grep -w -F "$repo_short=$tag" ||:)
-	[ -n "$task_sub" ] || return
+	[ -n "$task_sub" ] || return 0
 	subtask=${task_sub%%:*}
 	subtask=${subtask##[[:space:]]}
 	V ssh -n girar task delsub "$task" "$subtask"
@@ -99,7 +99,7 @@ remove_subtask() {
 worked=
 for tag in $(git tag --points-at @ "$branch/kernel-modules-$module-*"); do
 	V git push gitery "$tag" $force
-	remove_subtask
+	[ -z "$task_show" ] || remove_subtask
 	V ssh -n girar task add "$task" repo "$repo" "$tag"
 	worked=y
 done
