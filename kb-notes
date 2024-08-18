@@ -36,6 +36,10 @@ elif [ -n "$log" ]; then
 	git log $logopt "$ref" "$@"
 	exit
 fi
+if [ $# -eq 0 ]; then
+	echo >&2 "Nothing done, specify commit id to add a note, for example '@'."
+	exit 1
+fi
 
 for commit; do
 	subject=$(git log --format=%s -n1 "$commit")
