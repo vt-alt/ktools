@@ -18,9 +18,11 @@ pick=
 show_tags=
 allow_diverged=
 stable=
+onto=
 for opt do
         shift
         case "$opt" in
+		--onto) onto="$1"; shift ;;
                 --no-fetch) unset fetch ;;
 		--list) list_commits=y ;;
 		--apply | --pick) pick=apply ;;
@@ -51,7 +53,11 @@ readonly cb
 
 mkdir -p .git/kb
 listfile=.git/kb/branches
-if [ -n "$stable" ]; then
+if [ -n "$onto" ]; then
+	branches="$onto"
+	remote=
+	fzf=
+elif [ -n "$stable" ]; then
 	unset fetch
 	branches=$(
 		git branch -lr --sort=-creatordate --format='%(refname:short) %(creatordate:relative)' "$stable/*" |
@@ -66,7 +72,7 @@ else
 		branches="$cb$CR$branches"
 	remote=kernelbot
 fi
-if [ -z "$all" ] && [ -z "$fzf" ] && [ -e "$listfile" ]; then
+if [ -z "$onto" ] && [ -z "$all" ] && [ -z "$fzf" ] && [ -e "$listfile" ]; then
 	branches=$(cat "$listfile")
 	# shellcheck disable=SC2086
 	echo "Using --fzf preselected branches:" $branches
@@ -144,8 +150,15 @@ printf '\n== %s ==\n' "$(date)" >>.log
 declare -i notes=0
 pushes=()
 for lbr in $branches; do
+	case "$lbr" in
+		HEAD | @) lbr=$(git branch --show-current) ;;
+       	esac
 	printf ':: %*s ' "$branch_width" "$lbr"
-	rbr=$remote/$lbr
+	if [ -z "$remote" ]; then
+		rbr="$(git config "branch.$lbr.remote")/$lbr"
+	else
+		rbr=$remote/$lbr
+	fi
 	if [ -e ".git/refs/remotes/$lbr" ]; then
 		# Already on remote branch.
 		rbr=$lbr
