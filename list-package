@@ -18,7 +18,7 @@ find "$tmp" -maxdepth 3 -fstype tmpfs -name '*.rpm*' -ctime +1 -delete
 branch=Sisyphus arch=x86_64
 branches='' arches='' packages=''
 all_arch='' lsopts='-ltrd' rpmpeek='' lesser='' logs='' dts=''
-pattern='' query='' show_pkg='' srpms=''
+pattern='' query='' show_pkg='' srpms='' bat=''
 SELECTOR='gum choose'
 unset show_task aptcache
 for i; do
@@ -49,6 +49,7 @@ for i; do
 		-p | --pkg | --packages) show_pkg=y ;;
 		--ls) query=-l ;;
 		--fzf) SELECTOR='fzf --no-sort --tac --height=~100%' ;;
+		--bat) bat=y ;;
 		--changelog | --configfiles | --conflicts | --docfiles | --dump | --enhances \
 		| --filesbypkg | --info | --last | --obsoletes | --provides \
 		| --recommends | --requires | --suggests | --supplements | --scripts \
@@ -231,6 +232,12 @@ elif [ -n "$lesser" ]; then
 	echo >&2 "+ less $RPM"
 	echo
 	less "$RPM"
+	exit
+elif [ -n "$bat" ]; then
+	select_one
+	f=$(rpm -qvlp -- "$RPM" | fzf +s --tac)
+	f=${f##* }
+	rpmpeek "$RPM" bat "${f#/}"
 	exit
 elif [ -n "$logs" ]; then
 	select_one --task
