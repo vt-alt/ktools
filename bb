@@ -11,6 +11,8 @@ type -p ts >/dev/null ||
 [ -e kernel-image.spec ] && kflavour
 sync
 
+mkdir -p "${TMPDIR:-/tmp}/hasher"
+
 L=log.$(date +%F_%R)
 ln -sf "$L" -T log
 {
