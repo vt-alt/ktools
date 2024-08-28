@@ -6,7 +6,7 @@ cd "$HOME/src/kernel-image"
 fetch=y
 list_commits=
 push_to_remote=
-push_dry=
+dryrun=
 pattern=
 pickedline=
 signedoff=
@@ -19,6 +19,7 @@ show_tags=
 allow_diverged=
 stable=
 onto=
+reset=
 for opt do
         shift
         case "$opt" in
@@ -27,8 +28,9 @@ for opt do
 		--list) list_commits=y ;;
 		--apply | --pick) pick=apply ;;
 		--check) pick=check ;;
+		--reset) reset=y ;;
 		--push) push_to_remote=y ;;
-		--dry-run) push_dry=-n ;;
+		--dry | --dry-run) dryrun=-n ;;
 		--grep=*) pattern=${opt#*=} ;;
 		-x) pickedline=-x ;;
 		-s) signedoff=-s ;;
@@ -171,8 +173,16 @@ for lbr in $branches; do
 			# In synd with remote.
 			printf '='
 		else
+			cnt=$(git rev-list --count "$rbr..$lbr")
 			# Local branch is ahead.
-			printf '+%s' "$(git rev-list --count "$rbr..$lbr")"
+			if [ -n "$reset" ]; then
+				printf '<reset:-%s>' "$cnt"
+				[ -z "$dryrun" ] &&
+				       	git switch -f -q -C "$lbr" "$rbr"
+			else
+				printf '+%s' "$cnt"
+			fi
+			unset cnt
 		fi
 	elif git merge-base --is-ancestor "$lbr" "$rbr"; then
 		# kernelbot is ahead of local branch, we should ff
@@ -325,7 +335,7 @@ for lbr in $branches; do
 done
 
 if [ -n "$push_to_remote" ] && [ ${#pushes[@]} -ne 0 ]; then
-	V git push $push_dry "$remote" "${pushes[@]}" refs/notes/commits
+	V git push $dryrun "$remote" "${pushes[@]}" refs/notes/commits
 fi
 
 if [ "$cb" != "$(git branch --show-current)" ]; then
