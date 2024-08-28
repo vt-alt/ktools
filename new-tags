@@ -2,11 +2,13 @@
 
 set +o posix
 if [ "$1" ]; then
-  echo "$1"
+	echo "$1"
 else
-  git remote
-fi | while read remote; do
-  git retry ls-remote --tags --refs $remote \
-  | grep -v -f <(git show-ref --tags -s) \
-  | sed "s!\$!\\t$remote!"
+	git remote
+fi | while read -r remote; do
+	if ! git retry ls-remote --tags --refs "$remote"; then
+		echo >&2 "error on $PWD:$remote"
+	fi |
+	grep -v -f <(git show-ref --tags -s) |
+	sed "s!\$!\\t$remote!"
 done
