@@ -186,8 +186,10 @@ for lbr in $branches; do
 		fi
 	elif git merge-base --is-ancestor "$lbr" "$rbr"; then
 		# kernelbot is ahead of local branch, we should ff
+		cnt=$(git rev-list --count "$lbr..$rbr")
+		printf '<ff:+%s>' "$cnt"
 		git switch -f -q -C "$lbr" "$rbr"
-		printf '<ff>'
+		unset cnt
 	elif [ -n "$allow_diverged" ]; then
 		printf '<diverged>'
 	else
