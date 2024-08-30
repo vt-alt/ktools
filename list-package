@@ -148,8 +148,8 @@ grab_dts() {
 		SOURCERPM=$(rpm -qp "$RPM" --qf '%{SOURCERPM}')
 		pkgname=${SOURCERPM%-*-*.*.rpm}
 	fi
-	DTS_URL="http://ftp.altlinux.org/pub/distributions/archive/$REPO/index/src/${pkgname:0:1}/$pkgname/d-t-s-evr.list"
-	DTS_LIST=$(curl -sSf -L "$DTS_URL" | awk 'OFS="\t" {$1=strftime("%Y-%m-%d",$1); print $0}' | column -t)
+	DTS_FILE="/ALT/repo/$REPO/index/src/${pkgname:0:1}/$pkgname/d-t-s-evr.list"
+	DTS_LIST=$(awk 'OFS="\t" {$1=strftime("%Y-%m-%d",$1); print $0}' "$DTS_FILE" | column -t)
 	DTS=$DTS_LIST
 }
 
@@ -307,7 +307,7 @@ elif [ -n "$dts" ]; then
 	# Last resort - just print d-t-s-evr.list
 	dts='' select_one
 	grab_dts
-	printf '%s\n' "- $DTS_URL" >&2
+	printf '%s\n' "- $DTS_FILE" >&2
 	printf '%s\n' "$DTS_LIST" |& less
 	exit
 fi
