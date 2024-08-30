@@ -59,8 +59,23 @@ else
 fi
 echo "Repo: $branch ($branch_from)"
 
-while read -r flavour arches; do
-	[ -n "$flavour" ] || continue
+if [ $# -eq 0 ]; then
+	if [ ! -e .gear/km-karch ]; then
+		echo >&2 "No .gear/km-karch and argument list is empty."
+		exit 1
+	fi
+	while read -r flavour _; do
+		[ -n "$flavour" ] || continue
+		[ "$flavour" != '*' ] || continue
+		set -- "$@" "$flavour"
+	done < .gear/km-karch
+fi
+if [ $# -eq 0 ]; then
+	echo >&2 "No flavours to tag."
+	exit 1
+fi
+
+for flavour; do
 	tagname="$branch/kernel-modules-$module-$flavour-$VERSION-$release"
 	already_at_top=$(git tag --points-at @ "$tagname")
 	if [ -n "$already_at_top" ]; then
@@ -68,7 +83,7 @@ while read -r flavour arches; do
 	else
 		(set -x; km-create-tag "$flavour" "$module" $force)
 	fi
-done < .gear/km-karch
+done
 
 [ -v build ] || exit 0
 
