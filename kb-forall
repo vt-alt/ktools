@@ -157,7 +157,7 @@ for lbr in $branches; do
        	esac
 	printf ':: %*s ' "$branch_width" "$lbr"
 	if [ -z "$remote" ]; then
-		rbr="$(git config "branch.$lbr.remote")/$lbr"
+		rbr="$(git config "branch.$lbr.remote")/$lbr" || unset rbr
 	else
 		rbr=$remote/$lbr
 	fi
@@ -166,6 +166,9 @@ for lbr in $branches; do
 		rbr=$lbr
 		# Date is useful to know actual staleness of the branch.
 		printf '{%s}' "$(git log --no-walk --pretty=%cd --date=short "$lbr")"
+	elif [ ! -e ".git/refs/heads/$lbr" ]; then
+		echo "- branch does not exist"
+		continue
 	elif git merge-base --is-ancestor "$rbr" "$lbr"; then
 		# local branch is ahead or equal to kernelbot, so
 		# kernelbot is not ahead of the local branch.
