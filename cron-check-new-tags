@@ -24,7 +24,7 @@ if [ -z "$*" ]; then
 		tiv      cbmc      uftrace just etckeeper autorestic resticprofile	\
 		restic gitui git-absorb webhook rustic bin-marcosnils bzip3		\
 		libcpucycles libmceliece libntirpc nfs-ganesha gperftools coccinelle	\
-		yajl shunit2
+		yajl shunit2 rasdaemon
 fi
 for i in "$@"; do
 	# echo >&2 "$i"
