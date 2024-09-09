@@ -20,7 +20,7 @@ branches='' arches='' packages=''
 all_arch='' lsopts='-ltrd' rpmpeek='' lesser='' logs='' dts=''
 pattern='' query='' show_pkg='' srpms='' bat=''
 SELECTOR='gum choose'
-unset show_task aptcache
+unset show_task aptcache spec
 for i; do
 	shift
 	[ "$i" = s ]        && i=Sisyphus
@@ -37,6 +37,7 @@ for i; do
 	fi
 	case "$i" in
 		--src|--srpm*) srpms=y ;;
+		--spec) spec=y; srpms=only ;;
 		-a|--all-arch*) all_arch=y ;;
 		--full-time) lsopts+=" $i" ;;
 		-1|--names) lsopts= ;;
@@ -108,6 +109,17 @@ for package in $packages; do
 		if [ -n "$all_arch" ]; then
 			arches=$(ls "$rroot/$b/files/" | grep -v -e - -e SRPMS -e list)
 		fi
+		if [ -n "$srpms" ]; then
+			r=$rroot/$b/files/SRPMS
+			pat="$r/$package-[0-9]*-alt*.src.rpm"
+			set +f
+			for i in $pat; do
+				test -e "$i" || continue
+				list+=("$i")
+			done
+			set -f
+			[ "$srpms" != only ] || continue
+		fi
 		for a in $arches; do
 			r=$rroot/$b/files/$a/RPMS
 			test -d "$r" || continue
@@ -119,16 +131,6 @@ for package in $packages; do
 			done
 			set -f
 		done
-		if [ -n "$srpms" ]; then
-			r=$rroot/$b/files/SRPMS
-			pat="$r/$package-[0-9]*-alt*.src.rpm"
-			set +f
-			for i in $pat; do
-				test -e "$i" || continue
-				list+=("$i")
-			done
-			set -f
-		fi
 	done
 done
 [ ${#list[@]} -gt 0 ] || { echo "No match for '$packages'"; exit 1; }
@@ -309,6 +311,12 @@ elif [ -n "$dts" ]; then
 	grab_dts
 	printf '%s\n' "- $DTS_FILE" >&2
 	printf '%s\n' "$DTS_LIST" |& less
+	exit
+elif [ -v spec ]; then
+	select_one
+	specfile=$(rpm -q --qf '[-%{FILEFLAGS:fflags} %{FILENAMES}\n]' -p "$RPM" | grep '^\S*s')
+	specfile=${specfile#* }
+	rpmpeek "$RPM" cat "$specfile" | view +'set ft=spec' -
 	exit
 fi
 if [ -t 1 ]; then
