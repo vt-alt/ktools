@@ -1,0 +1,44 @@
+#!/bin/bash
+set -eu +f
+
+export LC_ALL=C
+export GREP_COLORS="mt=1;32"
+export GIT_GREP_COLOR=(-c "color.grep.match=green bold")
+
+[ -t 1 ] && color=--color=always || color=
+_color=$color
+
+unset update
+_grep=grep
+_setx=:
+for opt do
+        shift
+        case "$opt" in
+		--update) update=y ;;
+		--blame) _grep=blame-grep; _color= ;;
+		-v) _setx="set -x" ;;
+		-*) echo >&2 "unknown option: $opt"; exit 1 ;;
+                *) set -- "$@" "$opt";;
+        esac
+done
+
+cd ~/linux
+while read -r root dir; do
+	cd ~/linux/"$root"
+	if [ -v update ]; then
+		figlet -t "$root"
+		if [ -d .git ]; then
+			(set -x; git pull --rebase)
+			git l -1
+		else
+			echo -e >&2 "\e[1;31m- $PWD is not a git repository.\e[m"
+		fi
+		continue
+	fi
+	if [ -d .git ]; then
+		($_setx; git "${GIT_GREP_COLOR[@]}" "$_grep" $_color "$@" -- $dir)
+	else
+		grep $color "$@" -r $dir
+	fi | sed "s:^:$root | :" | sed -E '/is not set/s/\x1b\[1;32m/\x1b\[1;33m/g'
+
+done < ".kgrep.conf"
