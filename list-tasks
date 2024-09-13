@@ -43,6 +43,8 @@ GetoptLong.new(
   end
 end
 
+@user = ARGV.pop unless ARGV.empty?
+
 CACHE = ENV['HOME'] + '/.cache/list-tasks'
 if @cache
   FileUtils.mkdir_p(CACHE)
