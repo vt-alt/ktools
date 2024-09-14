@@ -46,7 +46,11 @@ fi
 
 rpmpeek_config() {
 	local file=$1
-	rpmpeek "$file" bash -c 'cat boot/config-*' 2>/dev/null
+	gum spin \
+		--title="Extracting $1" \
+		--show-output \
+		--show-error -- \
+		rpmpeek "$file" bash -c 'cat boot/config-*'
 }
 
 if [ -n "$show_file" ]; then
