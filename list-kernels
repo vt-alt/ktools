@@ -126,7 +126,7 @@ if [ -v configs ]; then
 		prefix=${prefix%.rpm}
 		if [ -v grep_mode ]; then
 			[ -t 1 ] || unset GREP_COLORS
-			if ! kernel-config $i |
+			if ! { kernel-config $i || kill $$; } |
 			       	sed "s,^,$branch/$prefix:," |
 			       	grep -P --color${GREP_COLORS+=always} -i "$@" |
 				sed -E '/is not set/s/\x1b\[01;32m/\x1b\[1;33m/g'; then
