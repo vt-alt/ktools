@@ -73,9 +73,14 @@ else
 	else
 		fatal "Unable to determine version from tag '$topmost'."
 	fi
-	if [[ $name =~ ^kernel-image- ]] && [[ "$topmost" =~ ^v[[:digit:]]+\.[[:digit:]]+-rc[[:digit:]]+$ ]]; then
-		ver+=".0"
-		echo ":: Kernel release candidate, normalize version to $ver"
+	if [[ $name =~ ^kernel-image- ]]; then
+		if [[ "$topmost" =~ ^v[[:digit:]]+\.[[:digit:]]+-rc[[:digit:]]+$ ]]; then
+			ver+=".0"
+			echo ":: Kernel release candidate, normalize version to $ver"
+		elif [[ "$topmost" =~ ^v[[:digit:]]+\.[[:digit:]]+$ ]]; then
+			ver+=".0"
+			echo ":: Kernel mainline release, normalize version to $ver"
+		fi
 	fi
 	cmp=$(rpmvercmp "$ver" "$version")
 	case "$cmp" in
@@ -116,7 +121,13 @@ if [ -n "$release" ]; then
 	left=${BASH_REMATCH[1]}
 	rel=${BASH_REMATCH[2]}
 	right=${BASH_REMATCH[3]}
-	if [[ $topmost =~ -rc([[:digit:]]+)$ ]]; then
+	if [[ $topmost =~ ^v[[:digit:]]+\.[[:digit:]]+$ ]]; then
+		left=alt1
+		nrel=
+		echo ":: Release (mainline) reset to $left (because of $topmost)."
+		changelog="- Update to $topmost ($tag_date) release."
+		unset release
+	elif [[ $topmost =~ -rc([[:digit:]]+)$ ]]; then
 		left=alt0.rc
 		nrel=${BASH_REMATCH[1]}
 		right=
