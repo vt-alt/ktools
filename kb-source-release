@@ -1,0 +1,165 @@
+#!/bin/bash
+set -efu
+
+export TZ=UTC LANG=C LC_ALL=C
+
+fatal() {
+	echo >&2 "Error: $*"
+	exit 1
+}
+V() { echo -e "+ \e[1;33m$*\e[m" >&2; "$@"; }
+
+kernelbot=y
+torvalds=y
+for opt do
+        shift
+        case "$opt" in
+                --no-kernelbot) unset kernelbot ;;
+                --no-torvalds) unset torvalds ;;
+                --no-fetch) unset kernelbot torvalds ;;
+		-*) fatal "Unknown option: $opt" ;;
+                *) set -- "$@" "$opt";;
+        esac
+done
+
+toplevel=$(git rev-parse --show-toplevel)
+cd "$toplevel"
+
+if ! git diff --quiet ||
+   ! git diff --quiet --cached; then
+	fatal "Work tree is unclean."
+fi
+
+[ -v kernelbot ] && V git fetch kernelbot
+[ -v torvalds ] && V git fetch --tags torvalds
+
+# Latest tag on torvalds branch
+mainline=$(git describe --abbrev=0 --tags --match 'v*' -- torvalds/master)
+echo >&2 ":: Topmost mainline tag: $mainline"
+[[ "$mainline" =~ ^v([[:digit:]]+\.[[:digit:]]+)$ ]] ||
+	fatal "Mainline tag does not match a release: $mainline"
+version=${BASH_REMATCH[1]}
+branch=source-$version/sisyphus
+
+if [ -e .git/refs/heads/"$branch" ]; then
+	echo ":: Branch $branch already exists, skip creation."
+	V git checkout "$branch"
+else
+	V git checkout -b "$branch" "$mainline"
+fi
+
+topmost=$(git describe --abbrev=0 --match 'v*')
+[ "$topmost" = "$mainline" ] || fatal "Latest tag in branch ($topmost) does not match mainline tag ($mainline)"
+
+head_tag=$(git tag --points-at @)
+if [ "$head_tag" = "$topmost" ]; then
+	# We are on tagged commit, need to verify the tag.
+	verify_cmd="git verify-tag $head_tag"
+	printf 'ALT: %s\n\n' "$verify_cmd" > .git/GIT_VERIFY_OUTPUT
+	if $verify_cmd &>> .git/GIT_VERIFY_OUTPUT; then
+		sed -i '2,$s/^/  /' .git/GIT_VERIFY_OUTPUT
+		V git commit -s --allow-empty -F .git/GIT_VERIFY_OUTPUT
+	else
+		cat .git/GIT_VERIFY_OUTPUT
+		fatal "Verification failed."
+	fi
+else
+	echo >&2 ":: Last commit is not mainline tagged commit, no need to verify a tag."
+fi
+
+# Determine previous kernel release.
+latest_kernel_source=$(
+	gum spin --show-output --show-error -- \
+		curl -Y0 -Ssf "https://git.altlinux.org/gears/k/" |
+		grep -Po '(?<=href="/gears/k/kernel-source-)[\d.]+(?=\.git")' |
+	       	sort -V |
+		tail -1
+	)
+echo "Latest known kernel-soruce package is $latest_kernel_source"
+
+weak=$(printf '%s\n' "$version" "$latest_kernel_source" | sort -V | head -1)
+[ "$weak" != "$version" ] ||
+	fatal "It seems that version $version is not need to be packaged."
+
+main_tags=$(git tag --list --sort=creatordate 'v*.*' | grep -Px 'v\d+\.\d+' | tail -2)
+{ read -r prev
+  read -r last; } <<< "$main_tags"
+
+[ "$last" = "$mainline" ] ||
+	fatal "Latest release tag ($last) is not $mainline (from mainline)"
+[ "$prev" = "v$latest_kernel_source" ] ||
+	fatal "Previous known release ($prev) is not v$latest_kernel_source (from latest kernel-source)"
+
+prev=${prev#v}
+gears_source_prev=gears/source-$prev
+if [ -e .git/refs/remotes/"$gears_source_prev" ]; then
+	echo ":: Remote $gears_source_prev already exists."
+else
+	V git remote add -f "$gears_source_prev" "gitery:/gears/k/kernel-source-$prev"
+fi
+
+# Copy gear and spec from source-6.10/sisyphus
+[ -e .git/refs/remotes/"$gears_source_prev"/sisyphus ] ||
+	fatal "Sisyphus branch for $gears_source_prev not found."
+
+specfile=kernel-source.spec
+
+# Record used commands.
+REC() {
+	local a b
+	a=$(git diff-index @ | b2sum -)
+	printf '++ \e[1;34m%s\e[m\n' "$*" >&2
+	printf '  %s\n' "$*" >> .git/KB_COMMANDS
+	"$@"
+	b=$(git diff-index @ | b2sum -)
+	if [ "$a" = "$b" ]; then
+		fatal "Last command ($*) did not change anything in the index."
+	fi
+}
+
+# Restore files from previous release.
+copying_action='ALT: Copy gear and spec from'
+copied=$(git log --oneline --grep "$copying_action" "$mainline"..)
+
+if [ -n "$copied" ]; then
+	echo ":: Previous gear and spec seems to be already applied, skipping."
+else
+	prev_br=$gears_source_prev/sisyphus
+	printf '%s %s\n\n' "$copying_action" "$prev_br" > .git/KB_COMMANDS
+	REC git checkout -f "$prev_br" -- .gear "$specfile"
+	REC sed -i "s/$prev/$version/g" .gear/rules
+	REC git add -f .gear/rules
+	REC gear-update-tag -ac
+	V git commit -s -F .git/KB_COMMANDS
+fi
+
+topcommit=$(git log -1 --pretty='format:%s')
+if [[ "$topcommit" =~ ^([[:digit:]]+:)?[[:digit:].]+-alt ]]; then
+	echo ":: Last commit is already release commit: $topcommit"
+else
+	# Release commit.
+	tag_date=$(git log -1 --pretty=format:%cd --date=format:%Y-%m-%d "$mainline")
+	changelog="- $mainline ($tag_date)."
+	REC sed -i "/%define kernel_version/s/\b$prev\b/$version/" "$specfile"
+	git add -f "$specfile" # For REC to notice following change.
+	REC safe-add-changelog -e "$changelog" "$specfile"
+	git add -f "$specfile"
+	V gear-commit --no-edit
+fi
+
+alt_tag="kernel-source-$version-0-alt1"
+already_at_top=$(git tag --points-at @ "$alt_tag")
+if [ -n "$already_at_top" ]; then
+	echo ":: Already tagged with $alt_tag"
+else
+	kernel-tag source-"$version"
+fi
+
+if [ -e .git/refs/remotes/gitery/"$branch" ]; then
+	echo ":: gitery already have branch $branch"
+else
+	echo ":: gitery does not have branch $branch"
+	echo "Optionally run: git push -u gitery $branch"
+fi
+
+echo "RUN: girar-build"
