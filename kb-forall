@@ -218,7 +218,12 @@ for lbr in $branches; do
 	printf ' '
 	topmost=$(git describe --match='kernel-image-*' --abbrev=0 "$lbr")
 	n=$(git rev-list --first-parent --count "$topmost..$lbr")
-	[ "$n" -eq 0 ] || printf '*%d' "$n"
+	if [ "$n" -ne 0 ]; then
+		printf '*%d' "$n"
+		nn=$(git log --format=%N "$topmost..$lbr" | grep -c .) &&
+			printf ':%d' "$nn"
+		unset nn
+	fi
 	nn=$(git rev-list --count "$topmost..$lbr")
 	[ "$n" -eq "$nn" ] || printf '/%d' "$nn"
 	unset n nn
