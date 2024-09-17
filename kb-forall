@@ -155,7 +155,9 @@ for lbr in $branches; do
 	case "$lbr" in
 		HEAD | @) lbr=$(git branch --show-current) ;;
        	esac
+	[ "$cb" = "$lbr" ] && printf '\e[33m'
 	printf ':: %*s ' "$branch_width" "$lbr"
+	printf '\e[m'
 	if [ -z "$remote" ]; then
 		rbr="$(git config "branch.$lbr.remote")/$lbr" || unset rbr
 	else
