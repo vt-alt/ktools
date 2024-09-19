@@ -70,7 +70,7 @@ elif [ -n "$stable" ]; then
 else
 	branches=$(grep -Po '(?<=--branch)\s+\S+' "$HOME/src/kernelbot-bin/kernel-list")
 	# For -rc branch add it if we're working on it.
-	echo "$branches" | grep -s -wF "$cb" ||
+	echo "$branches" | grep -q -wF "$cb" ||
 		branches="$cb$CR$branches"
 	remote=kernelbot
 fi
