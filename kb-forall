@@ -23,7 +23,7 @@ reset=
 for opt do
         shift
         case "$opt" in
-		--onto) onto="$1"; shift ;;
+		--onto=*) onto=${opt#*=} ;;
                 --no-fetch) unset fetch ;;
 		--list) list_commits=y ;;
 		--apply | --pick) pick=apply ;;
