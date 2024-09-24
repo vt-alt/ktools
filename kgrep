@@ -8,7 +8,7 @@ export GIT_GREP_COLOR=(-c "color.grep.match=green bold")
 [ -t 1 ] && color=--color=always || color=
 _color=$color
 
-unset update log all
+unset update log all alt
 _grep=grep
 _setx=:
 grep_opt=
@@ -22,11 +22,16 @@ for opt do
 		-[[:digit:]]) grep_opt+=" $opt" ;;
 		-v) _setx="set -x" ;;
 		--first-parent) git_fp=$opt ;;
-		-a | --all) all=y ;;
+		-x | --extra) all=y ;;
+		-a | --alt) alt=y ;;
 		-*) echo >&2 "unknown option: $opt"; exit 1 ;;
                 *) set -- "$@" "$opt";;
         esac
 done
+
+if [ -v alt ]; then
+	($_setx; list-kernels s def --show-no-match --grep "$@")
+fi
 
 cd ~/linux
 while read -r root br dir; do
