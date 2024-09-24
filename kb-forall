@@ -11,7 +11,6 @@ pattern=
 pickedline=
 signedoff=
 fzf=
-all=
 commits=
 describe=
 pick=
@@ -35,7 +34,7 @@ for opt do
 		-x) pickedline=-x ;;
 		-s) signedoff=-s ;;
 		--fzf) fzf=y ;;
-		--all) all=y ;;
+		--no-fzf) fzf=n ;;
 		--commits) commits=y ;;
 		--describe) describe=y; commits=y ;;
 		--tag | --tags) show_tags=tags ;;
@@ -74,15 +73,16 @@ else
 		branches="$cb$CR$branches"
 	remote=kernelbot
 fi
-if [ -z "$onto" ] && [ -z "$all" ] && [ -z "$fzf" ] && [ -e "$listfile" ]; then
+if [ -z "$onto" ] && [ -z "$fzf" ] && [ -e "$listfile" ]; then
 	branches=$(cat "$listfile")
 	# shellcheck disable=SC2086
 	echo "Using --fzf preselected branches:" $branches
 fi
 
 picksfile=.git/kb/picks
-if [ -n "$fzf" ] && [ -n "$all" ]; then
+if [ "$fzf" = 'n' ]; then
 	rm "$listfile"
+	fzf=
 elif [ -n "$fzf" ]; then
 	touch "$picksfile"
 
