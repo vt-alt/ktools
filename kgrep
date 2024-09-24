@@ -29,6 +29,7 @@ done
 
 cd ~/linux
 while read -r root br dir; do
+	[[ "$root" =~ ^[[:space:]]*\# ]] && continue
 	cd ~/linux/"$root"
 	if [ "${br:-@}" = '@' ]; then
 		branch=$(git branch --show-current)
