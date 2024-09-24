@@ -28,28 +28,45 @@ for opt do
 done
 
 cd ~/linux
-while read -r root dir; do
+while read -r root br dir; do
 	cd ~/linux/"$root"
+	if [ "${br:-@}" = '@' ]; then
+		branch=$(git branch --show-current)
+		br=
+	else
+		branch=$br
+	fi
+	if [ -f ".git/refs/remotes/$branch" ]; then
+		remote=${branch%%/*}
+	else
+		remote=
+	fi
 	if [ -v update ]; then
-		figlet -t "$root"
+		figlet -t "$root${remote:+ : $remote}"
 		if [ -d .git ]; then
-			(set -x; git pull --rebase)
-			git l -1
+			if [ "$br" = '' ]; then
+				(set -x; git pull --rebase)
+			elif [ -n "$remote" ]; then
+				(set -x; git fetch "$remote")
+			else
+				echo -e >&2 "\e[1;31m- $PWD unknown how to update branch $branch\e[m"
+				continue
+			fi
+			git l -1 $br
 		else
-			echo -e >&2 "\e[1;31m- $PWD is not a git repository.\e[m"
+			echo -e >&2 "\e[1;35m- $PWD is not a git repository.\e[m"
 		fi
 		continue
 	fi
 	if [ -v log ]; then
 		[ -d .git ] || continue
-		br=$(git branch --show-current)
-		echo ":: $root [$br]"
-		git l ${grep_opt:--1} $git_fp "$@"
+		echo ":: $root [$branch]"
+		git l ${grep_opt:--1} $git_fp $br
 		echo
 		continue
 	fi
 	if [ -d .git ]; then
-		($_setx; git "${GIT_GREP_COLOR[@]}" "$_grep" $grep_opt $_color "$@" -- $dir)
+		($_setx; git "${GIT_GREP_COLOR[@]}" "$_grep" $grep_opt $_color "$@" $br -- $dir)
 	else
 		grep $grep_opt $color "$@" -r $dir
 	fi | sed "s:^:$root | :" | sed -E \
