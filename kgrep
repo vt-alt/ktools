@@ -8,7 +8,7 @@ export GIT_GREP_COLOR=(-c "color.grep.match=green bold")
 [ -t 1 ] && color=--color=always || color=
 _color=$color
 
-unset update log
+unset update log all
 _grep=grep
 _setx=:
 grep_opt=
@@ -22,6 +22,7 @@ for opt do
 		-[[:digit:]]) grep_opt+=" $opt" ;;
 		-v) _setx="set -x" ;;
 		--first-parent) git_fp=$opt ;;
+		-a | --all) all=y ;;
 		-*) echo >&2 "unknown option: $opt"; exit 1 ;;
                 *) set -- "$@" "$opt";;
         esac
@@ -30,6 +31,8 @@ done
 cd ~/linux
 while read -r root br dir; do
 	[[ "$root" =~ ^[[:space:]]*\# ]] && continue
+	[[ "$root" =~ ^\? ]] && [ ! -v all ] && continue
+	root=${root#\?}
 	cd ~/linux/"$root"
 	if [ "${br:-@}" = '@' ]; then
 		branch=$(git branch --show-current)
