@@ -8,17 +8,20 @@ export GIT_GREP_COLOR=(-c "color.grep.match=green bold")
 [ -t 1 ] && color=--color=always || color=
 _color=$color
 
-unset update
+unset update log
 _grep=grep
 _setx=:
 grep_opt=
+git_fp=
 for opt do
         shift
         case "$opt" in
 		--update) update=y ;;
+		--log) log=y ;;
 		--blame) _grep=blame-grep; _color= ;;
 		-[[:digit:]]) grep_opt+=" $opt" ;;
 		-v) _setx="set -x" ;;
+		--first-parent) git_fp=$opt ;;
 		-*) echo >&2 "unknown option: $opt"; exit 1 ;;
                 *) set -- "$@" "$opt";;
         esac
@@ -35,6 +38,14 @@ while read -r root dir; do
 		else
 			echo -e >&2 "\e[1;31m- $PWD is not a git repository.\e[m"
 		fi
+		continue
+	fi
+	if [ -v log ]; then
+		[ -d .git ] || continue
+		br=$(git branch --show-current)
+		echo ":: $root [$br]"
+		git l ${grep_opt:--1} $git_fp "$@"
+		echo
 		continue
 	fi
 	if [ -d .git ]; then
