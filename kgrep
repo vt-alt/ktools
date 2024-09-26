@@ -76,7 +76,7 @@ while read -r root br dir; do
 	fi
 	PS4="+ $root + "
 	if [ -d .git ]; then
-		($_setx; git "${GIT_GREP_COLOR[@]}" "$_grep" $grep_opt $_color "$@" $br -- $dir)
+		(set -f; $_setx; git "${GIT_GREP_COLOR[@]}" "$_grep" $grep_opt $_color "$@" $br -- $dir)
 	else
 		($_setx; grep $grep_opt $color "$@" -r $dir)
 	fi | sed "s:^:$root | :" | sed -E \
