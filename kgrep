@@ -13,6 +13,7 @@ _grep=grep
 _setx=:
 grep_opt=
 git_fp=
+match=
 for opt do
         shift
         case "$opt" in
@@ -24,6 +25,7 @@ for opt do
 		--first-parent) git_fp=$opt ;;
 		-x | --extra) all=y ;;
 		-a | --alt) alt=y ;;
+		--match=*) match=${opt#*=} ;;
 		-*) echo >&2 "unknown option: $opt"; exit 1 ;;
                 *) set -- "$@" "$opt";;
         esac
@@ -37,6 +39,7 @@ cd ~/linux
 while read -r root br dir; do
 	[[ "$root" =~ ^[[:space:]]*\# ]] && continue
 	[[ "$root" =~ ^\? ]] && [ ! -v all ] && continue
+	[[ "$root $br $dir" =~ $match ]] || continue
 	root=${root#\?}
 	cd ~/linux/"$root"
 	if [ "${br:-@}" = '@' ]; then
