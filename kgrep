@@ -74,10 +74,11 @@ while read -r root br dir; do
 		echo
 		continue
 	fi
+	PS4="+ $root + "
 	if [ -d .git ]; then
 		($_setx; git "${GIT_GREP_COLOR[@]}" "$_grep" $grep_opt $_color "$@" $br -- $dir)
 	else
-		grep $grep_opt $color "$@" -r $dir
+		($_setx; grep $grep_opt $color "$@" -r $dir)
 	fi | sed "s:^:$root | :" | sed -E \
 		-e '/is not set/s/\x1b\[1;32m/\x1b\[1;33m/g' \
 		-e 's/(x86([_-]64)?|amd64)/\x1b[1m\1\x1b[22m/g'
