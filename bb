@@ -13,7 +13,7 @@ sync
 
 mkdir -p "${TMPDIR:-/tmp}/hasher"
 
-L=log.$(date +%F_%R)
+L=log.$(date +%F_%H%M)
 ln -sf "$L" -T log
 {
 	set -x
