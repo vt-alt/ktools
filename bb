@@ -1,6 +1,15 @@
 #!/bin/bash
 set -efu
 
+for opt do
+        shift
+        case "$opt" in
+		--branch=* | --repo=*) export branch=${opt#*=} ;;
+		--arch=* | --target=*) export set_target=${opt#*=} ;;
+		-*) echo >&2 "unknown option: $opt"; exit 1 ;;
+                *) set -- "$@" "$opt";;
+        esac
+done
 type -p ts >/dev/null ||
 	ts() { awk '{ print strftime("%T"), $0}'; }
 
