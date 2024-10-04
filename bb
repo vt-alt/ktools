@@ -1,22 +1,28 @@
 #!/bin/bash
 set -efu
 
+fatal() {
+	echo >&2 "! $*"
+	exit 1
+}
+
 for opt do
         shift
         case "$opt" in
 		--branch=* | --repo=*) export branch=${opt#*=} ;;
 		--arch=* | --target=*) export set_target=${opt#*=} ;;
-		-*) echo >&2 "unknown option: $opt"; exit 1 ;;
+		-*) fatal "Unknown option: $opt" ;;
                 *) set -- "$@" "$opt";;
         esac
 done
 type -p ts >/dev/null ||
 	ts() { awk '{ print strftime("%T"), $0}'; }
 
-[ -e .git ] || {
-	echo >&2 "Not in a repo root."
-	exit 1
-}
+[ -e .git ] || fatal "Not in a repo root."
+
+[ -v branch ] && [ ! -d "/ALT/$branch" ] && fatal "Unknown branch=$branch."
+[ -v set_target ] && [ ! -d "/ALT/${branch-sisyphus}/base/release" ] && fatal "Unknwon target=$set_target."
+
 [ -e kernel-image.spec ] && kflavour
 sync
 
