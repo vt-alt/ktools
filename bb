@@ -29,7 +29,8 @@ ln -sf "$L" -T log
 	git diff
 	git log -1
 } &> log
-{ set -x
+{
+	{ echo + branch=${branch-} target=${set_target-}; } 2>/dev/null
 	gear-hsh ${*---commit}
 } |& ts %T | tee -a log
 beep
