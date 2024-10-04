@@ -9,6 +9,8 @@ fatal() {
 for opt do
         shift
         case "$opt" in
+		--32) export set_target=i586 ;;
+		--[cp][[:digit:]]*) export branch=${opt#--} ;;
 		--branch=* | --repo=*) export branch=${opt#*=} ;;
 		--arch=* | --target=*) export set_target=${opt#*=} ;;
 		-*) fatal "Unknown option: $opt" ;;
