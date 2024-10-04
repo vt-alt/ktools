@@ -32,5 +32,8 @@ ln -sf "$L" -T log
 {
 	{ echo + branch=${branch-} target=${set_target-}; } 2>/dev/null
 	gear-hsh ${*---commit}
-} |& ts %T | tee -a log
+} |& {
+	{ set +x; } 2>/dev/null
+	ts %T | tee -a log
+}
 beep
