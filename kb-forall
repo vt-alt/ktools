@@ -131,8 +131,10 @@ done
 
 [ -z "$list_commits" ] || exit
 
-# NB: Fetch may clean notes if note's fetch url starts with '+'.
-[ -v fetch ] && V git fetch kernelbot
+# NB: Fetch may clean notes if note's fetch url starts with '+' and local ref
+# is same as remote. Same refs also do not allow us to compare and determine if
+# notes update is needed. So fetch remote notes into separate ref.
+[ -v fetch ] && V git fetch kernelbot '+refs/heads/*:refs/remotes/kernelbot/*' '+refs/notes/*:refs/notes/kernelbot/*'
 
 _atexit() {
 	if [ "$cb" != "$(git branch --show-current)" ]; then
@@ -355,8 +357,13 @@ for lbr in $branches; do
 	printf '\n'
 done
 
+if needs_push refs/notes/commits refs/notes/kernelbot/commits; then
+	echo ":: refs/notes/commits | pushable"
+	pushes+=("refs/notes/commits")
+fi
+
 if [ -n "$push_to_remote" ] && [ ${#pushes[@]} -ne 0 ]; then
-	V git push $dryrun "$remote" "${pushes[@]}" refs/notes/commits
+	V git push $dryrun "$remote" "${pushes[@]}"
 fi
 
 if [ "$cb" != "$(git branch --show-current)" ]; then
