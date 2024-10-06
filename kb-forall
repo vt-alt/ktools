@@ -357,9 +357,13 @@ for lbr in $branches; do
 	printf '\n'
 done
 
-if needs_push refs/notes/commits refs/notes/kernelbot/commits; then
-	echo ":: refs/notes/commits | pushable"
-	pushes+=("refs/notes/commits")
+lnt=refs/notes/commits
+rnt=refs/notes/kernelbot/commits
+if needs_push "$lnt" "$rnt"; then
+	cnt=$(git rev-list --count "$rnt..$lnt")
+	echo ":: $lnt [$cnt] | pushable"
+	pushes+=("$lnt")
+	unset cnt
 fi
 
 if [ -n "$push_to_remote" ] && [ ${#pushes[@]} -ne 0 ]; then
