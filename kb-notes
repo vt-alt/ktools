@@ -20,7 +20,12 @@ for opt do
         esac
 done
 
-V() { echo -e "+ \e[1;33m$*\e[m" >&2; "$@"; }
+GREEN=$'\e[1;32m'
+YELLOW=$'\e[1;33m'
+MAGENTA=$'\e[1;35m'
+NORM=$'\e[m'
+
+V() { echo -e "+ $YELLOW$*$NORM" >&2; "$@"; }
 
 changeligize() {
 	for s; do
@@ -37,7 +42,7 @@ elif [ -n "$log" ]; then
 	exit
 fi
 if [ $# -eq 0 ]; then
-	echo >&2 "Nothing done, specify commit id to add a note, for example '@'."
+	echo >&2 "${MAGENTA}Nothing done, specify commit id to add a note, for example '@'.${NORM}"
 	exit 1
 fi
 
@@ -51,15 +56,15 @@ for commit; do
 	if git notes list "$commit" &>/dev/null; then
 		oldnote=$(git notes show "$commit")
 		if [ "$note" = "$oldnote" ]; then
-			echo >&2 "Note alreade set the same for '$commit': $note"
+			echo >&2 "${YELLOW}Note already set the same for '$commit': $note${NORM}"
 			continue
 		else
-			echo >&2 "Already other note on commit '$commit', --force to override."
+			echo >&2 "${MAGENTA}Already other note on commit '$commit', --force to override.${NORM}"
 			echo >&2"- $oldnote"
 			echo >&2"+ $note"
 			continue
 		fi
 	fi
 	git notes add -m "$note" "$commit"
-	echo "$commit: $note"
+	echo "${GREEN}$commit: $note${NORM}"
 done
