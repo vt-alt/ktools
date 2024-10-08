@@ -13,6 +13,7 @@ for opt do
 		--[cp][[:digit:]]*) export branch=${opt#--} ;;
 		--branch=* | --repo=*) export branch=${opt#*=} ;;
 		--arch=* | --target=*) export set_target=${opt#*=} ;;
+		--task=*) export task="${opt#*=}" ;;
 		-*) fatal "Unknown option: $opt" ;;
                 *) set -- "$@" "$opt";;
         esac
@@ -38,7 +39,7 @@ ln -sf "$L" -T log
 	git log -1
 } &> log
 {
-	{ echo + branch=${branch-} target=${set_target-}; } 2>/dev/null
+	{ echo + branch=${branch-} target=${set_target-} task=${task-}; } 2>/dev/null
 	gear-hsh ${*---commit}
 } |& {
 	{ set +x; } 2>/dev/null
