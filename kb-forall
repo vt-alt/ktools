@@ -8,6 +8,7 @@ list_commits=
 push_to_remote=
 dryrun=
 pattern=
+grep_mode=-P
 pickedline=
 signedoff=
 fzf=
@@ -31,6 +32,7 @@ for opt do
 		--push) push_to_remote=y ;;
 		--dry | --dry-run) dryrun=-n ;;
 		--grep=*) pattern=${opt#*=} ;;
+		-G|-F|-P|-E) grep_mode=$opt ;;
 		-x) pickedline=-x ;;
 		-s) signedoff=-s ;;
 		--fzf) fzf=y ;;
@@ -104,7 +106,7 @@ elif [ -n "$fzf" ]; then
 	echo "$branches" > "$listfile"
 	rm "$notefile"
 fi
-[ -z "$pattern" ] || branches=$(echo "$branches" | grep -e "$pattern")
+[ -z "$pattern" ] || branches=$(echo "$branches" | grep "$grep_mode" -e "$pattern")
 
 if [ -z "$branches" ]; then
 	echo >&2 "No branches selected, try --fzf, --all, or --stable"
