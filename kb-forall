@@ -15,6 +15,7 @@ fzf=
 commits=
 describe=
 pick=
+tag_grep=
 show_tags=
 allow_diverged=
 stable=
@@ -39,6 +40,7 @@ for opt do
 		--no-fzf) fzf=n ;;
 		--commits) commits=y ;;
 		--describe) describe=y; commits=y ;;
+		--tag=*) tag_grep=${opt#*=} ;&
 		--tag | --tags) show_tags=tags ;;
 		--log ) show_tags=log ;;
 		--log-push | --log-unpushed) show_tags=log_push ;;
@@ -160,6 +162,10 @@ for lbr in $branches; do
 	case "$lbr" in
 		HEAD | @) lbr=$(git branch --show-current) ;;
        	esac
+	if [ -n "$tag_grep" ]; then
+		git describe --match='kernel-image-*' --abbrev=0 "$lbr" |
+			grep -q "$grep_mode" -e "$tag_grep" || continue
+	fi
 	[ "$cb" = "$lbr" ] && printf '\e[33m'
 	printf ':: %*s ' "$branch_width" "$lbr"
 	printf '\e[m'
