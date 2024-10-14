@@ -10,6 +10,18 @@ shopt -s nullglob
 CACHE=$HOME/.cache/apt-man
 PAGES=$CACHE/man-$repo-$arch
 
+addtab=
+wordsep='.*'
+for opt; do
+	shift
+	case "$opt" in
+		-p) addtab=$'\t' ;;
+		-w|-x) wordsep='\b' ;&
+		-*) set -- "$@" "$opt" ;;
+		*) pat=$opt ;;
+	esac
+done
+
 if [ -z "$(find "$PAGES" -type f -ctime -7 2>/dev/null)" ]; then
 	mkdir -p "$CACHE"
 	cat /ALT/"$repo"/{"$arch",noarch}/base/contents_index \
@@ -17,7 +29,7 @@ if [ -z "$(find "$PAGES" -type f -ctime -7 2>/dev/null)" ]; then
 	mv -f "$PAGES-" "$PAGES"
 fi
 
-label=$(grep "^/usr/share/.*/man.*$1" "$PAGES" \
+label=$(grep "^/usr/share/.*/man.*$addtab$wordsep$pat" "$@" "$PAGES" \
 	| fzf --height=~100%)
 read file pkgname <<<$label
 for arch in $arch noarch; do
