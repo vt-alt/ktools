@@ -174,7 +174,7 @@ tasks.split("\n").each do |task|
     t_approve = approve.uniq.join(',')
     o_info << "|#{GREEN}A:#{t_approve}#{NORM}"
   end
-  if t_obsolete1.any?(-1)
+  if t_obsolete1.any?(-1..0)
     o_info << "!#{RED}O:REPO#{NORM}"
   end
   # if t_obsolete2.any?(-1)
