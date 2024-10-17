@@ -179,7 +179,7 @@ for lbr in $branches; do
 		rbr=$lbr
 		# Date is useful to know actual staleness of the branch.
 		printf '{%s}' "$(git log --no-walk --pretty=%cd --date=short "$lbr")"
-	elif [ ! -e ".git/refs/heads/$lbr" ]; then
+	elif ! git show-ref --verify --quiet "refs/heads/$lbr"; then
 		echo "- branch does not exist"
 		continue
 	elif git merge-base --is-ancestor "$rbr" "$lbr"; then
