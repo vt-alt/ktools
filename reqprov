@@ -71,9 +71,9 @@ for i in "${list[@]}"; do
 	rpmvrel=${i%.*.*}
 	rpmarch=${i#"$rpmvrel"}
 
-	rpm -qp "$i" ${@:--R} > $tmp/$i
-	sed_things "$i" "$tmp/$i"
-	touch -r "$i" $tmp/$i
+	rpm -qp "$i" ${@:--R} > $tmp/$i~
+	sed_things "$i" "$tmp/$i~"
+	touch -r "$i" $tmp/$i~
 
 	r=$(set +f; ls /ALT/${REPO-sisyphus}/files/*/RPMS/$name-+([^-])-+([^-])$rpmarch 2>/dev/null ||:)
 	if [ -e "$r" ]; then
@@ -89,7 +89,7 @@ for i in "${list[@]}"; do
 	fi
 	(
 		cd $tmp
-		${DIFF-colordiff -u} "$rr" "$i"  | sed 's/^/\t/' || :
+		${DIFF-colordiff -u} "$rr" "$i~"  | sed 's/^/\t/' || :
 	)
 	sep=$'\n'
 done |& less
