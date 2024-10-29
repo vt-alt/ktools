@@ -14,6 +14,7 @@ for opt do
 		--branch=* | --repo=*) export branch=${opt#*=} ;;
 		--arch=* | --target=*) export set_target=${opt#*=} ;;
 		--task=*) export task="${opt#*=}" ;;
+		--) break ;;
 		-*) fatal "Unknown option: $opt" ;;
                 *) set -- "$@" "$opt";;
         esac
