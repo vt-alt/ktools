@@ -22,7 +22,11 @@ done
 type -p ts >/dev/null ||
 	ts() { awk '{ print strftime("%T"), $0}'; }
 
-[ -e .git ] || fatal "Not in a repo root."
+toplevel=$(git rev-parse --show-toplevel)
+[ "$toplevel" -ef . ] ||{
+       	echo "+ cd $toplevel"
+	cd "$toplevel"
+}
 
 [ -v branch ] && [ ! -d "/ALT/$branch" ] && fatal "Unknown branch=$branch."
 [ -v set_target ] && [ ! -d "/ALT/${branch-sisyphus}/base/release" ] && fatal "Unknwon target=$set_target."
