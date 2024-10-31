@@ -29,7 +29,7 @@ toplevel=$(git rev-parse --show-toplevel)
 }
 
 [ -v branch ] && [ ! -d "/ALT/$branch" ] && fatal "Unknown branch=$branch."
-[ -v set_target ] && [ ! -d "/ALT/${branch-sisyphus}/base/release" ] && fatal "Unknwon target=$set_target."
+[ -v set_target ] && [ ! -f "/ALT/${branch-sisyphus}/$set_target/base/release" ] && fatal "Unknown target=$set_target."
 
 [ -e kernel-image.spec ] && kflavour
 sync
