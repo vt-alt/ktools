@@ -14,6 +14,7 @@ for opt do
 		--branch=* | --repo=*) export branch=${opt#*=} ;;
 		--arch=* | --target=*) export set_target=${opt#*=} ;;
 		--task=*) export task="${opt#*=}" ;;
+		--ini*) initroot=y ;;
 		--) break ;;
 		-*) fatal "Unknown option: $opt" ;;
                 *) set -- "$@" "$opt";;
@@ -35,6 +36,12 @@ toplevel=$(git rev-parse --show-toplevel)
 sync
 
 mkdir -p "${TMPDIR:-/tmp}/hasher"
+
+if [ -n "${initroot-}" ]; then
+	{ echo + branch=${branch-} target=${set_target-} task=${task-}; } 2>/dev/null
+	(set -x; hsh --initroot)
+	exit
+fi
 
 L=log.$(date +%F_%H%M)
 ln -sf "$L" -T log
