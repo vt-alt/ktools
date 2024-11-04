@@ -1,5 +1,10 @@
 #!/bin/bash
 set -eu
+
+toplevel=$(git rev-parse --show-toplevel)
+logdir="$toplevel/.git/bb"
+[ -d "$logdir" ] && cd "$logdir"
+
 # shellcheck disable=SC2012,SC2207,SC2016
 files=($(ls -1tr "log"* |
 	fzf \
