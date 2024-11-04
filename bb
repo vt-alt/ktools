@@ -12,8 +12,9 @@ for opt do
         case "$opt" in
 		+32)  targets+=("$HOSTTYPE") ;&
 		--32) targets+=('i586') ;;
-		--[cp][[:digit:]]*) export branch=${opt#--} ;;
-		--branch=* | --repo=*) export branch=${opt#*=} ;;
+		--s | --sisyphus) branches+=("sisyphus") ;;
+		--[cp][[:digit:]]*) branches+=(${opt#--}) ;;
+		--branch=* | --repo=*) branches+=(${opt#*=}) ;;
 		--arch=* | --target=*) targets+=( "${opt#*=}" ) ;;
 		--task=*) export task="${opt#*=}" ;;
 		--ini*) initroot=only ;;
@@ -33,7 +34,10 @@ toplevel=$(git rev-parse --show-toplevel)
 	cd "$toplevel"
 }
 
-[ -v branch ] && [ ! -d "/ALT/$branch" ] && fatal "Unknown branch=$branch."
+[ -v branches ] || branches=("sisyphus")
+for branch in "${branches[@]}"; do
+	[ -v branch ] && [ ! -d "/ALT/$branch" ] && fatal "Unknown branch=$branch."
+done
 
 [ -v targets ] || targets=("$HOSTTYPE")
 for set_target in "${targets[@]}"; do
@@ -59,12 +63,20 @@ if [ -d .git ] && [ ! -d .git/bb ]; then
 fi
 
 set -o pipefail
-trap beep EXIT
+aterr() {
+	echo "FAILED ${branch-} ${set_target-}"
+}
+trap 'beep' EXIT
+trap '{ set +x; } 2>/dev/null; aterr' ERR
 sep=
 
-for set_target in "${targets[@]}"; do
+for target in "${targets[@]}"; do
+for branch in "${branches[@]}"; do
+	set_target=$target
+	export branch set_target
 
 	L=.git/bb/log.$(date +%F_%H%M)
+	[ "sisyphus" = "$branch" ] && unset branch || L+=".$branch"
 	[ "$HOSTTYPE" = "$set_target" ] && unset set_target || L+=".$set_target"
 	ln -sf "$L" -T log
 
@@ -94,4 +106,5 @@ for set_target in "${targets[@]}"; do
 		) |& ts %T | tee -a log
 	fi
 	sep=$'\n'
+done
 done
