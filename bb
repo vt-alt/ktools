@@ -1,20 +1,24 @@
 #!/bin/bash
-set -efu
+set -efu +o posix
 
 fatal() {
 	echo >&2 "! $*"
 	exit 1
 }
 
+pkgi=()
 for opt do
         shift
         case "$opt" in
-		--32) export set_target=i586 ;;
+		+32)  targets+=("$HOSTTYPE") ;&
+		--32) targets+=('i586') ;;
 		--[cp][[:digit:]]*) export branch=${opt#--} ;;
 		--branch=* | --repo=*) export branch=${opt#*=} ;;
-		--arch=* | --target=*) export set_target=${opt#*=} ;;
+		--arch=* | --target=*) targets+=( "${opt#*=}" ) ;;
 		--task=*) export task="${opt#*=}" ;;
-		--ini*) initroot=y ;;
+		--ini*) initroot=only ;;
+		--no-ini*) noinitroot=ci ;;
+		--inst*=*|--ci=*) pkgi+=("${opt#*=}") ;;
 		--) break ;;
 		-*) fatal "Unknown option: $opt" ;;
                 *) set -- "$@" "$opt";;
@@ -30,7 +34,11 @@ toplevel=$(git rev-parse --show-toplevel)
 }
 
 [ -v branch ] && [ ! -d "/ALT/$branch" ] && fatal "Unknown branch=$branch."
-[ -v set_target ] && [ ! -f "/ALT/${branch-sisyphus}/$set_target/base/release" ] && fatal "Unknown target=$set_target."
+
+[ -v targets ] || targets=("$HOSTTYPE")
+for set_target in "${targets[@]}"; do
+	[ ! -f "/ALT/${branch-sisyphus}/$set_target/base/release" ] && fatal "Unknown target=$set_target."
+done
 
 [ -e kernel-image.spec ] && kflavour
 sync
@@ -38,23 +46,52 @@ sync
 mkdir -p "${TMPDIR:-/tmp}/hasher"
 
 if [ -n "${initroot-}" ]; then
-	{ echo + branch=${branch-} target=${set_target-} task=${task-}; } 2>/dev/null
+	echo "+ branch=${branch-} target=${set_target-} task=${task-}"
 	(set -x; hsh --initroot)
 	exit
 fi
 
-L=log.$(date +%F_%H%M)
-ln -sf "$L" -T log
-{
-	set -x
-	git diff
-	git log -1
-} &> log
-{
-	{ echo + branch=${branch-} target=${set_target-} task=${task-}; } 2>/dev/null
-	gear-hsh ${*---commit}
-} |& {
+if [ -d .git ] && [ ! -d .git/bb ]; then
+        mkdir .git/bb
+	if [[ -n $(set +f; ls log.2024* 2>/dev/null) ]]; then
+		(set +f; mv -v log.2024* -t .git/bb)
+	fi
+fi
+
+set -o pipefail
+trap beep EXIT
+sep=
+
+for set_target in "${targets[@]}"; do
+
+	L=.git/bb/log.$(date +%F_%H%M)
+	[ "$HOSTTYPE" = "$set_target" ] && unset set_target || L+=".$set_target"
+	ln -sf "$L" -T log
+
+	printf '%s' "$sep"
+	{
+		set -x
+		git diff
+		# shellcheck disable=SC2094
+		git 'log' -1
+	} &> log
+	{
+		{ echo "+ branch=${branch-} target=${set_target-} task=${task-}"; } 2>/dev/null
+		# shellcheck disable=SC2086,SC2048
+		gear-hsh ${*---commit}
+	} |& {
+		{ set +x; } 2>/dev/null
+		ts %T | tee -a log
+	}
 	{ set +x; } 2>/dev/null
-	ts %T | tee -a log
-}
-beep
+	if [[ ${#pkgi[@]} -gt 0 ]]; then
+		( cd /var/empty
+		  [ -n "${noinitroot-}" ] || (echo; set -x; hsh --initroot)
+		  echo
+		  set -x
+		  # shellcheck disable=SC2068
+		  hsh-install ${pkgi[@]}
+		) |& ts %T | tee -a log
+	fi
+	sep=$'\n'
+done
