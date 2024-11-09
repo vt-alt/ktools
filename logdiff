@@ -1,0 +1,19 @@
+#!/usr/bin/ruby -Kn
+# SPDX-License-Identifier: CC0
+# Simple log diff tool without much ado
+
+re = /\d+/
+aa = {}
+bb = {}
+fa = ARGV.shift
+fb = ARGV.shift
+puts "diff #{fa} #{fb}"
+a = IO.readlines(fa)
+b = IO.readlines(fb)
+a.each { |line| aa[line.gsub(re, '0')] = line }
+b.each { |line| bb[line.gsub(re, '0')] = line }
+puts "@@ -1 +1 @@"
+a.zip(b).each do |x,y|
+  printf('-%s', x) unless !x or bb[x.gsub(re, '0')]
+  printf('+%s', y) unless !y or aa[y.gsub(re, '0')]
+end
