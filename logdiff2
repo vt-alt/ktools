@@ -1,0 +1,56 @@
+#!/usr/bin/ruby -Kn
+# SPDX-License-Identifier: CC0
+# Another simple log diff tool
+
+require 'tmpdir'
+require 'fileutils'
+
+@temp_dir = Dir.mktmpdir
+at_exit do
+  FileUtils.remove_entry(@temp_dir)
+end
+
+def mut(fa)
+  a = IO.readlines(fa)
+  ar = a.map {|e| e.gsub(/\d+/, '0')}
+  at = File.join(@temp_dir, File.basename(fa))
+  File.write(at, ar.join)
+  [at, a]
+end
+
+at, a = mut(ARGV.shift)
+bt, b = mut(ARGV.shift)
+
+header = true
+acnt = bcnt = 0
+diff_output = IO.popen(["diff", "-u", at, bt]) do |io|
+  io.each_line do |line|
+    if !header
+      case line
+      when /^-/
+        printf '-%s', a[acnt - 1]
+        acnt += 1
+      when /^+/
+        printf '+%s', b[bcnt - 1]
+        bcnt += 1
+      when /^ /
+        printf ' %s', b[bcnt - 1]
+        acnt += 1
+        bcnt += 1
+      when /^@/
+        header = true
+      end
+    end
+    if header
+      printf '%s', line
+      case line
+      when /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/
+        acnt = $1.to_i
+        bcnt = $2.to_i
+        header = false
+      end
+    end
+  end
+end
+
+
