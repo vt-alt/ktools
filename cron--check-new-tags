@@ -25,7 +25,8 @@ if [ -z "$*" ]; then
 		restic gitui git-absorb webhook rustic bin-marcosnils bzip3		\
 		libcpucycles libmceliece libntirpc nfs-ganesha gperftools coccinelle	\
 		yajl shunit2 rasdaemon kopia rustic_server ollama git-branchless	\
-		coccigrep firmware-linux lolcat yq
+		coccigrep firmware-linux lolcat yq aichat lib25519 libntruprime argc	\
+		librandombytes
 fi
 for i in "$@"; do
 	# echo >&2 "$i"
