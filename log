@@ -8,6 +8,7 @@ logdir="$toplevel/.git/bb"
 # shellcheck disable=SC2012,SC2207,SC2016
 files=($(ls -1tr "log"* |
 	fzf \
+	--bind='q:abort,/:unbind(q)+unbind(/)' \
 	--no-mouse \
 	--no-sort \
 	--tac \
