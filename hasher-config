@@ -1,0 +1,46 @@
+# vi:ft=bash:
+def_repo="$HOME/repo"
+workdir="$TMPDIR/hasher"
+
+[[ $HOSTNAME =~ mskdc ]] ||
+	pkg_build_list+=" strace vim-console less gdb-light "
+packager=$(rpm --eval %packager)
+known_mountpoints=/proc,/dev/pts,/dev/kvm,/sys
+lazy_cleanup=yes
+install_resolver_configuration_files=yes
+
+if [ -n "${set_target-}" ]; then
+	def_target=$set_target
+else
+	def_target=$HOSTTYPE
+fi
+[ "$def_target" = "powerpc64le" ] && def_target=ppc64le
+
+if [ -z "${branch-}" ]; then
+	branch=sisyphus
+fi
+if [ -z "${components-}" ]; then
+	components="classic checkinstall"
+fi
+
+apt_config=$HOME/.hasher/apt-$def_target-$branch.conf
+cat > "$apt_config" <<-EOF
+	Dir::Etc::main "/dev/null";
+	Dir::Etc::parts "/var/empty";
+	Dir::Etc::SourceParts "/var/empty";
+	Dir::Etc::SourceList "/home/vt/.hasher/sources-$def_target.list";
+	Dir::Etc::Preferences "/home/vt/.hasher/preferences";
+EOF
+sources_list=$HOME/.hasher/sources-$def_target.list
+if [ -n "${archive_date-}" ]; then
+	url="http://ftp.altlinux.org/pub/distributions/archive/$branch/date/$archive_date/"
+else
+	url="file:/ALT/$branch"
+fi
+cat > "$sources_list" <<-EOF
+	rpm $url $def_target debuginfo $components
+	rpm $url noarch $components
+EOF
+if [ -n "${task-}" ]; then
+	echo rpm http://git.altlinux.org repo/$task/$def_target task
+fi >> "$sources_list"
