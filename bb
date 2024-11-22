@@ -17,7 +17,8 @@ for opt do
 		--branch=* | --repo=*) branches+=(${opt#*=}) ;;
 		--arch=* | --target=*) targets+=( "${opt#*=}" ) ;;
 		--task=*) task="${opt#*=}" ;;
-		--build-srpm-only) gear_hsh=("$opt") ;;
+		--build-srpm-only) gear_hsh=("hsh" "$opt") ;;
+		--install-only) gear_hsh=("hsh-rebuild" "$opt") ;;
 		--ini*) initroot=only ;;
 		--no-ini*) noinitroot=ci ;;
 		--inst*=*|--ci=*) pkgi+=("${opt#*=}") ;;
@@ -72,7 +73,7 @@ if [ -n "${initroot-}" ]; then
 	exit
 elif [ -v gear_hsh ]; then
 	log_config
-	(set -x; gear --hasher -- hsh "${gear_hsh[@]}")
+	(set -x; gear --hasher -- "${gear_hsh[@]}")
 	pkg_install
 	exit
 fi
