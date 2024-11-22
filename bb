@@ -17,6 +17,7 @@ for opt do
 		--branch=* | --repo=*) branches+=(${opt#*=}) ;;
 		--arch=* | --target=*) targets+=( "${opt#*=}" ) ;;
 		--task=*) task="${opt#*=}" ;;
+		--build-srpm-only) gear_hsh=("$opt") ;;
 		--ini*) initroot=only ;;
 		--no-ini*) noinitroot=ci ;;
 		--inst*=*|--ci=*) pkgi+=("${opt#*=}") ;;
@@ -55,9 +56,14 @@ mkdir -p "${TMPDIR:-/tmp}/hasher"
 
 log_config() { echo "+ branch=${branch-} target=${set_target-} date=${archive_date-} task=${task-}"; }
 
+export branch set_target archive_date task components
 if [ -n "${initroot-}" ]; then
 	log_config
 	(set -x; hsh --initroot)
+	exit
+elif [ -v gear_hsh ]; then
+	log_config
+	(set -x; gear --hasher -- hsh "${gear_hsh[@]}")
 	exit
 fi
 
@@ -88,7 +94,8 @@ sep=
 for target in "${targets[@]}"; do
 for branch in "${branches[@]}"; do
 	set_target=$target
-	export branch set_target archive_date task
+	# Reexport, since we did unset inside of the loop.
+	export branch set_target
 
 	L=.git/bb/log.$(date +%F_%H%M)
 	[ "sisyphus" = "$branch" ] && unset branch || L+=".$branch"
