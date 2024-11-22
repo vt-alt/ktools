@@ -56,14 +56,24 @@ mkdir -p "${TMPDIR:-/tmp}/hasher"
 
 log_config() { echo "+ branch=${branch-} target=${set_target-} date=${archive_date-} task=${task-}"; }
 
+pkg_install() {
+	((${#pkgi[@]})) && (
+		cd /var/empty
+		set -x
+		hsh-install "${pkgi[@]}"
+	)
+}
+
 export branch set_target archive_date task components
 if [ -n "${initroot-}" ]; then
 	log_config
 	(set -x; hsh --initroot)
+	pkg_install
 	exit
 elif [ -v gear_hsh ]; then
 	log_config
 	(set -x; gear --hasher -- hsh "${gear_hsh[@]}")
+	pkg_install
 	exit
 fi
 
@@ -90,6 +100,7 @@ aterr() {
 trap 'beep' EXIT
 trap '{ set +x; } 2>/dev/null; aterr' ERR
 sep=
+
 
 for target in "${targets[@]}"; do
 for branch in "${branches[@]}"; do
@@ -118,15 +129,11 @@ for branch in "${branches[@]}"; do
 		ts %T | tee -a log
 	}
 	{ set +x; } 2>/dev/null
-	if [[ ${#pkgi[@]} -gt 0 ]]; then
-		( cd /var/empty
-		  [ -n "${noinitroot-}" ] || (echo; set -x; hsh --initroot)
-		  echo
-		  set -x
-		  # shellcheck disable=SC2068
-		  hsh-install ${pkgi[@]}
-		) |& ts %T | tee -a log
-	fi
+	((${#pkgi[@]})) && (
+		[ -n "${noinitroot-}" ] || (echo; set -x; hsh --initroot)
+		echo
+		pkg_install
+	) |& ts %T | tee -a log
 	sep=$'\n'
 done
 done
