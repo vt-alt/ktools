@@ -1,12 +1,37 @@
 #!/bin/bash
-set -eu
+set -eu +o posix
+shopt -s extglob
 
+grepcmd='grep'
+unset mode
+for opt do
+        shift
+        case "$opt" in
+		--grep|-ug|--ug|--ugrep|-rg|--rg) grepcmd=${opt##+(-)} ;&
+		-g) mode=GREP; break ;;
+		--) break ;;
+		-*) echo >&2 "Error: unknown option: $opt" ;;
+                *) set -- "$@" "$opt";;
+        esac
+done
 toplevel=$(git rev-parse --show-toplevel)
 logdir="$toplevel/.git/bb"
 [ -d "$logdir" ] && cd "$logdir"
 
+mapfile -t files < <(ls -1tr "log"*)
+
+if [ -v mode ]; then
+	for o; do [[ $o = -l ]] && mode=LIST; done
+	if [[ $mode == LIST ]]; then
+		mapfile -t files < <(grep "$@" "${files[@]}")
+	else
+		$grepcmd --color=auto "$@" "${files[@]}"
+		exit
+	fi
+fi
+
 # shellcheck disable=SC2012,SC2207,SC2016
-files=($(ls -1tr "log"* |
+files=($(ls -1tr "${files[@]}" |
 	fzf \
 	--bind='q:abort,/:unbind(q)+unbind(/)' \
 	--no-mouse \
