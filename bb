@@ -16,10 +16,12 @@ for opt do
 		--[cp][[:digit:]]*) branches+=(${opt#--}) ;;
 		--branch=* | --repo=*) branches+=(${opt#*=}) ;;
 		--arch=* | --target=*) targets+=( "${opt#*=}" ) ;;
-		--task=*) export task="${opt#*=}" ;;
+		--task=*) task="${opt#*=}" ;;
 		--ini*) initroot=only ;;
 		--no-ini*) noinitroot=ci ;;
 		--inst*=*|--ci=*) pkgi+=("${opt#*=}") ;;
+		--date=*|--archive=*) archive_date=${opt#*=} ;;
+		--components=*) components=${opt#*=} ;;
 		--) break ;;
 		-*) fatal "Unknown option: $opt" ;;
                 *) set -- "$@" "$opt";;
@@ -44,13 +46,26 @@ for set_target in "${targets[@]}"; do
 	[ ! -f "/ALT/${branch-sisyphus}/$set_target/base/release" ] && fatal "Unknown target=$set_target."
 done
 
+if [ -v archive_date ]; then
+	archive_date=${archive_date//-/\/}
+	if [[ $archive_date == */*/* ]]; then
+		:
+	elif [[ $archive_date == */* ]]; then
+		archive_date+="/01"
+	else
+		archive_date+="/01/01"
+	fi
+fi
+
 [ -e kernel-image.spec ] && kflavour
 sync
 
 mkdir -p "${TMPDIR:-/tmp}/hasher"
 
+log_config() { echo "+ branch=${branch-} target=${set_target-} date=${archive_date-} task=${task-}"; }
+
 if [ -n "${initroot-}" ]; then
-	echo "+ branch=${branch-} target=${set_target-} task=${task-}"
+	log_config
 	(set -x; hsh --initroot)
 	exit
 fi
@@ -73,7 +88,7 @@ sep=
 for target in "${targets[@]}"; do
 for branch in "${branches[@]}"; do
 	set_target=$target
-	export branch set_target
+	export branch set_target archive_date task
 
 	L=.git/bb/log.$(date +%F_%H%M)
 	[ "sisyphus" = "$branch" ] && unset branch || L+=".$branch"
@@ -88,7 +103,7 @@ for branch in "${branches[@]}"; do
 		git 'log' -1
 	} &> log
 	{
-		{ echo "+ branch=${branch-} target=${set_target-} task=${task-}"; } 2>/dev/null
+		{ log_config; } 2>/dev/null
 		# shellcheck disable=SC2086,SC2048
 		gear-hsh ${*---commit}
 	} |& {
