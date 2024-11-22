@@ -30,12 +30,6 @@ done
 type -p ts >/dev/null ||
 	ts() { awk '{ print strftime("%T"), $0}'; }
 
-toplevel=$(git rev-parse --show-toplevel)
-[ "$toplevel" -ef . ] ||{
-       	echo "+ cd $toplevel"
-	cd "$toplevel"
-}
-
 [ -v branches ] || branches=("sisyphus")
 for branch in "${branches[@]}"; do
 	[ -v branch ] && [ ! -d "/ALT/$branch" ] && fatal "Unknown branch=$branch."
@@ -57,9 +51,6 @@ if [ -v archive_date ]; then
 	fi
 fi
 
-[ -e kernel-image.spec ] && kflavour
-sync
-
 mkdir -p "${TMPDIR:-/tmp}/hasher"
 
 log_config() { echo "+ branch=${branch-} target=${set_target-} date=${archive_date-} task=${task-}"; }
@@ -70,12 +61,21 @@ if [ -n "${initroot-}" ]; then
 	exit
 fi
 
+toplevel=$(git rev-parse --show-toplevel)
+[ "$toplevel" -ef . ] ||{
+	echo "+ cd $toplevel"
+	cd "$toplevel"
+}
+
 if [ -d .git ] && [ ! -d .git/bb ]; then
         mkdir .git/bb
 	if [[ -n $(set +f; ls log.2024* 2>/dev/null) ]]; then
 		(set +f; mv -v log.2024* -t .git/bb)
 	fi
 fi
+
+[ -e kernel-image.spec ] && kflavour
+sync
 
 set -o pipefail
 aterr() {
