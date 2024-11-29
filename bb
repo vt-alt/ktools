@@ -58,7 +58,7 @@ mkdir -p "${TMPDIR:-/tmp}/hasher"
 log_config() { echo "+ branch=${branch-} target=${set_target-} date=${archive_date-} task=${task-}"; }
 
 pkg_install() {
-	((${#pkgi[@]})) && (
+	((!${#pkgi[@]})) || (
 		cd /var/empty
 		set -x
 		hsh-install "${pkgi[@]}"
