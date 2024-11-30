@@ -2,18 +2,51 @@
 # SPDX-License-Identifier: CC0
 # Simple log diff tool without much ado
 
-re = /\d+/
-aa = {}
-bb = {}
+# Condenser function
+@s = [/\d+/, '0']
+
 fa = ARGV.shift
 fb = ARGV.shift
 puts "diff #{fa} #{fb}"
+
+# Raw lines
 a = IO.readlines(fa)
 b = IO.readlines(fb)
-a.each { |line| aa[line.gsub(re, '0')] = line }
-b.each { |line| bb[line.gsub(re, '0')] = line }
-puts "@@ -1 +1 @@"
-a.zip(b).each do |x,y|
-  printf('-%s', x) unless !x or bb[x.gsub(re, '0')]
-  printf('+%s', y) unless !y or aa[y.gsub(re, '0')]
+
+# Condensed to raw lines
+aa = {}
+bb = {}
+a.each { |line| aa[line.gsub(*@s)] = line }
+b.each { |line| bb[line.gsub(*@s)] = line }
+
+=begin
+# For debug replace 'a' with 'ca'
+ca = []
+cb = []
+a.each { |line| ca << line.gsub(*@s) }
+b.each { |line| cb << line.gsub(*@s) }
+=end
+
+# How much condensed lines from A unmatched in BB
+def unmatched(a, bb)
+  count = 0
+  a.each do |x|
+    y = x.gsub(*@s)
+    break if !a or bb[y]
+    count += 1
+  end if a
+  count
+end
+
+ac = bc = 0
+while ac < a.size or bc < b.size
+  xc = unmatched(a[ac..], bb)
+  yc = unmatched(b[bc..], aa)
+  if xc > 0 or yc > 0
+    puts "@@ -#{ac + 1},#{xc} +#{bc + 1},#{yc} @@"
+    a[ac, xc].each { |c| printf('-%s', c) } if xc > 0
+    b[bc, yc].each { |c| printf('+%s', c) } if yc > 0
+  end
+  ac += (xc == 0)? 1 : xc
+  bc += (yc == 0)? 1 : yc
 end
