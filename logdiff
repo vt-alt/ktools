@@ -3,7 +3,20 @@
 # Simple log diff tool without much ado
 
 # Condenser function
-@s = [/\d+/, '0']
+@s = [
+  [/\d+/, '0'],
+  [%r{/usr/src/tmp/rpm-tmp\.\S{4,6}}, '/usr/src/tmp/rpm-tmp.X'],
+]
+
+class String
+  def ggsub(repls)
+    res = self.dup
+    repls.each do |re, s|
+      res.gsub!(re, s)
+    end
+    res
+  end
+end
 
 fa = ARGV.shift
 fb = ARGV.shift
@@ -16,22 +29,22 @@ b = IO.readlines(fb)
 # Condensed to raw lines
 aa = {}
 bb = {}
-a.each { |line| aa[line.gsub(*@s)] = line }
-b.each { |line| bb[line.gsub(*@s)] = line }
+a.each { |line| aa[line.ggsub(@s)] = line }
+b.each { |line| bb[line.ggsub(@s)] = line }
 
 =begin
 # For debug replace 'a' with 'ca'
 ca = []
 cb = []
-a.each { |line| ca << line.gsub(*@s) }
-b.each { |line| cb << line.gsub(*@s) }
+a.each { |line| ca << line.ggsub(@s) }
+b.each { |line| cb << line.ggsub(@s) }
 =end
 
 # How much condensed lines from A unmatched in BB
 def unmatched(a, bb)
   count = 0
   a.each do |x|
-    y = x.gsub(*@s)
+    y = x.ggsub(@s)
     break if !a or bb[y]
     count += 1
   end if a
