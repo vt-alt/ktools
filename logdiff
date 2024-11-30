@@ -5,6 +5,7 @@
 # Condenser function
 @s = [
   [/\d+/, '0'],
+  [/\s+/, ' '],
   [%r{/usr/src/tmp/rpm-tmp\.\S{4,6}}, '/usr/src/tmp/rpm-tmp.X'],
 ]
 
