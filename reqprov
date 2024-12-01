@@ -44,6 +44,8 @@ if [ "$#" -eq 0 ]; then
        SKIPDEBUGINFO=1
        set -- --fileclass
        echo "Default comparison is $* with SKIPDEBUGINFO=1"
+elif [ "$*" = "-P" ]; then
+       set -- --provides
 fi
 
 # Use --fileclass to compare file lists.
