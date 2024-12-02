@@ -30,7 +30,7 @@ for opt do
         esac
 done
 type -p ts >/dev/null ||
-	ts() { awk '{ print strftime("%T"), $0}'; }
+	ts() { awk '{ print strftime("%T"), $0}; fflush()'; }
 
 [ -v branches ] || branches=("sisyphus")
 for branch in "${branches[@]}"; do
