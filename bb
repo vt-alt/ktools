@@ -11,7 +11,7 @@ for opt do
         shift
         case "$opt" in
 		+32)  targets+=("$HOSTTYPE") ;&
-		--32) targets+=('i586') ;;
+		-32 | --32) targets+=('i586') ;;
 		--s | --sisyphus) branches+=("sisyphus") ;;
 		--[cp][[:digit:]]*) branches+=(${opt#--}) ;;
 		--branch=* | --repo=*) branches+=(${opt#*=}) ;;
