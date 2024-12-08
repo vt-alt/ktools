@@ -2,8 +2,11 @@
 def_repo="$HOME/repo"
 workdir="$TMPDIR/hasher"
 
-[[ $HOSTNAME =~ mskdc ]] ||
+if [[ $HOSTNAME =~ mskdc ]]; then
+	workdir="$HOME/hasher"
+else
 	pkg_build_list+=" strace vim-console less gdb-light "
+fi
 packager=$(rpm --eval %packager)
 known_mountpoints=/proc,/dev/pts,/dev/kvm,/sys
 lazy_cleanup=yes
