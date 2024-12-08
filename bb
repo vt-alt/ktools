@@ -24,6 +24,7 @@ for opt do
 		--inst*=*|--ci=*) pkgi+=("${opt#*=}") ;;
 		--date=*|--archive=*) archive_date=${opt#*=} ;;
 		--components=*) components=${opt#*=} ;;
+		--disable[-=]*) set_rpmargs+="--disable ${opt#--*[-=]}" ;;
 		--) break ;;
 		-*) fatal "Unknown option: $opt" ;;
                 *) set -- "$@" "$opt";;
@@ -55,7 +56,10 @@ fi
 
 mkdir -p "${TMPDIR:-/tmp}/hasher"
 
-log_config() { echo "+ branch=${branch-} target=${set_target-} date=${archive_date-} task=${task-}"; }
+log_config() {
+	echo "+ branch=${branch-} target=${set_target-} date=${archive_date-} task=${task-}"
+	if [ -v set_rpmargs ]; then echo "+ rpmargs=$set_rpmargs"; fi
+}
 
 pkg_install() {
 	((!${#pkgi[@]})) || (
@@ -65,7 +69,7 @@ pkg_install() {
 	)
 }
 
-export branch set_target archive_date task components
+export branch set_target archive_date task components set_rpmargs
 if [ -n "${initroot-}" ]; then
 	log_config
 	(set -x; hsh --initroot)
@@ -101,7 +105,6 @@ aterr() {
 trap 'beep' EXIT
 trap '{ set +x; } 2>/dev/null; aterr' ERR
 sep=
-
 
 for target in "${targets[@]}"; do
 for branch in "${branches[@]}"; do
