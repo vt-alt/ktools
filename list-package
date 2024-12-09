@@ -20,7 +20,7 @@ branches='' arches='' packages=''
 all_arch='' lsopts='-ltrd' rpmpeek='' lesser='' logs='' dts=''
 pattern='' query='' show_pkg='' srpms='' bat=''
 SELECTOR='gum choose'
-unset show_task aptcache spec logdiff
+unset show_task aptcache spec logdiff offset
 for i; do
 	shift
 	[ "$i" = s ]        && i=Sisyphus
@@ -43,6 +43,7 @@ for i; do
 		-1|--names) lsopts= ;;
 		--peek|--rpmpeek) rpmpeek=y; lsopts=; break ;;
 		--less) lesser=y; lsopts= ;;
+		-[0-9]) offset=$i ;;
 		--logdiff) logdiff=log; logtool=logdiff; break ;;
 		--logdiff2) logdiff=log; logtool=logdiff2; break ;;
 		--log*) logs=y ;;
@@ -256,14 +257,16 @@ elif [ -v logdiff ]; then
 	select_one --task
 	url="https://git.altlinux.org/tasks/$TASK/build/$SUBTASK/$arch/log"
 	curl -sSf -L "$url" -o "$tmp/log-remote"
-	cp -L "$logdiff" -T "$tmp/log-local"
+	[[ $SELECTOR = *fzf* ]] && offset=
+	log_local="$tmp/log-local${offset-}"
+	log ${offset--1} > "$log_local"
 	sed -Ei 's/^\[([0-9:]+)\]/\1/' "$tmp/log-remote"
-	sed -Ei 's/ -fdiagnostics-color=always//g' "$tmp/log-local"
-	sed -Ei 's/\o033\[[0-9;]*[a-zA-Z]//g' "$tmp/log-remote" "$tmp/log-local"
+	sed -Ei 's/ -fdiagnostics-color=always//g' "$log_local"
+	sed -Ei 's/\o033\[[0-9;]*[a-zA-Z]//g' "$tmp/log-remote" "$log_local"
 	for i; do
-		sed -Ei "$i" "$tmp/log-remote" "$tmp/log-local"
+		sed -Ei "$i" "$tmp/log-remote" "$log_local"
 	done
-	$logtool "$tmp/log-remote" "$tmp/log-local" | delta
+	$logtool "$tmp/log-remote" "$log_local" | delta
 	exit
 elif [ -v show_task ]; then
 	select_one --task
