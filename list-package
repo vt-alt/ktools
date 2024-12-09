@@ -259,7 +259,7 @@ elif [ -v logdiff ]; then
 	cp -L "$logdiff" -T "$tmp/log-local"
 	sed -Ei 's/^\[([0-9:]+)\]/\1/' "$tmp/log-remote"
 	sed -Ei 's/ -fdiagnostics-color=always//g' "$tmp/log-local"
-	sed -Ei 's/\o033\[[0-9;]*[a-zA-Z]//g' "$tmp/log-local"
+	sed -Ei 's/\o033\[[0-9;]*[a-zA-Z]//g' "$tmp/log-remote" "$tmp/log-local"
 	for i; do
 		sed -Ei "$i" "$tmp/log-remote" "$tmp/log-local"
 	done
