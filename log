@@ -3,10 +3,11 @@ set -eu +o posix
 shopt -s extglob
 
 grepcmd='grep'
-unset mode
+unset mode offset
 for opt do
         shift
         case "$opt" in
+		-+([0-9])) offset=${opt#-} ;;
 		--grep|-ug|--ug|--ugrep|-rg|--rg) grepcmd=${opt##+(-)} ;&
 		-g) mode=GREP; break ;;
 		--) break ;;
@@ -30,17 +31,22 @@ if [ -v mode ]; then
 	fi
 fi
 
-# shellcheck disable=SC2012,SC2207,SC2016
-files=($(ls -1tr "${files[@]}" |
-	fzf \
-	--bind='q:abort,/:unbind(q)+unbind(/)' \
-	--no-mouse \
-	--no-sort \
-	--tac \
-	--multi \
-	--highlight-line \
-	--preview-window=80% \
-	--preview='head -$((LINES/2-1)) {}; echo ...; tail -$((LINES/2)) {}'))
+if [ -v offset ]; then
+	# Start from 1 like in tail -1 is the last line.
+	files=($(ls -1tr "${files[@]}" | tac | sed -n "${offset}p"))
+else
+	# shellcheck disable=SC2012,SC2207,SC2016
+	files=($(ls -1tr "${files[@]}" |
+		fzf \
+		--bind='q:abort,/:unbind(q)+unbind(/)' \
+		--no-mouse \
+		--no-sort \
+		--tac \
+		--multi \
+		--highlight-line \
+		--preview-window=80% \
+		--preview='head -$((LINES/2-1)) {}; echo ...; tail -$((LINES/2)) {}'))
+fi
 if [ ${#files[@]} -eq 0 ]; then
 	exit
 elif [ ${#files[@]} -eq 1 ]; then
