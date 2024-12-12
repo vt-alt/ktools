@@ -1,6 +1,24 @@
 #!/bin/bash
 
 set -efu -o pipefail
+shopt -s extglob
+
+DIFF=colordiff
+REPO=sisyphus
+for opt do
+        shift
+        case "$opt" in
+		--evr=*) EVR=${opt#*=} ;;
+		--skip-debuginfo) SKIPDEBUGINFO=1 ;;
+		--skip-match=*) SKIPMATCH=${opt#*=} ;;
+		--skip-ver=*) SEDVER=${opt#*=} ;;
+		--strip=*) STRIP=${opt#*=} ;;
+		--diff=*) DIFF=${opt#*=} ;;
+		--repo=*) REPO=${opt#*=} ;;
+		--) break ;;
+                *) set -- "$@" "$opt";;
+        esac
+done
 
 gear_describe()
 {
@@ -31,19 +49,18 @@ for i in $(set +f; echo *.rpm); do
 done
 
 if [ ${#list[@]} -eq 0 ]; then
-	echo >&2 "No matching $SRPM RPMs are found in $PWD, try setting EVR= or building."
+	echo >&2 "No matching $SRPM RPMs are found in $PWD, try setting --evr= or build locally."
 	exit 1
 fi
 
-tmp=$(mktemp -d)
-trap "rm -rf $tmp" 0
+tmp=$(mktemp -d) && trap "rm -rf $tmp" 0
 export QUOTING_STYLE=shell-escape
 sep=
 
 if [ "$#" -eq 0 ]; then
        SKIPDEBUGINFO=1
        set -- --fileclass
-       echo "Default comparison is $* with SKIPDEBUGINFO=1"
+       echo "Default comparison is $* with --skip-debuginfo"
 elif [ "$*" = "-P" ]; then
        set -- --provides
 fi
@@ -58,11 +75,13 @@ sed_things() {
 		sed -Ei "s/($SEDVER-)?$V(-$SEDVER)?(-$R)?/VERSION-RELEASE/g" "$t"
 	fi
 	if [ -v SKIPMATCH ]; then
-		sed -Ei "/$SKIPMATCH/d" "$t"
+		sed -Ei "\!$SKIPMATCH!d" "$t"
+	fi
+	if [ -v STRIP ]; then
+		sed -Ei "s!$STRIP!!g" $tmp/$t
 	fi
 }
 
-shopt -s extglob
 for i in "${list[@]}"; do
 	name=${i%-*-*}
 	printf "%s= %s =\n" "$sep" "$name"
@@ -73,25 +92,22 @@ for i in "${list[@]}"; do
 	rpmvrel=${i%.*.*}
 	rpmarch=${i#"$rpmvrel"}
 
-	rpm -qp "$i" ${@:--R} > $tmp/$i~
+	rpm -qp "$i" "$@" > $tmp/$i~
 	sed_things "$i" "$tmp/$i~"
 	touch -r "$i" $tmp/$i~
 
-	r=$(set +f; ls /ALT/${REPO-sisyphus}/files/*/RPMS/$name-+([^-])-+([^-])$rpmarch 2>/dev/null ||:)
+	r=$(set +f; ls /ALT/$REPO/files/*/RPMS/$name-+([^-])-+([^-])$rpmarch 2>/dev/null ||:)
 	if [ -e "$r" ]; then
 		rr=$(basename $r)
-		rpm -qp "$r" ${@:--R} > $tmp/$rr
+		rpm -qp "$r" "$@" > $tmp/$rr
 		sed_things "$r" "$tmp/$rr"
 		touch -r "$r" $tmp/$rr
 	else
 		rr=/dev/null
 	fi
-	if [ -v STRIP ] && [ -s $tmp/$rr ]; then
-		sed -i "s!$STRIP!!g" $tmp/$rr
-	fi
 	(
 		cd $tmp
-		${DIFF-colordiff -u} "$rr" "$i~"  | sed 's/^/\t/' || :
+		$DIFF -u "$rr" "$i~"  | sed 's/^/\t/' || :
 	)
 	sep=$'\n'
 done |& less
