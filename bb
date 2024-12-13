@@ -25,6 +25,7 @@ for opt do
 		--date=*|--archive=*) archive_date=${opt#*=} ;;
 		--components=*) components=${opt#*=} ;;
 		--disable[-=]*) set_rpmargs+="--disable ${opt#--*[-=]}" ;;
+		--kflavour=*) kflavour=${opt#*=} ;;
 		--) break ;;
 		-*) fatal "Unknown option: $opt" ;;
                 *) set -- "$@" "$opt";;
@@ -95,7 +96,8 @@ if [ -d .git ] && [ ! -d .git/bb ]; then
 	fi
 fi
 
-[ -e kernel-image.spec ] && kflavour
+# shellcheck disable=SC2086
+[ -e kernel-image.spec ] && kflavour ${kflavour-}
 sync
 
 set -o pipefail
