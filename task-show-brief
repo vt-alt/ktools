@@ -1,26 +1,91 @@
 #!/bin/bash
 set -efu -o pipefail
 
+unset verbose
+orig=sisyphus
+for opt do
+        shift
+        case "$opt" in
+		-v | --verbose) verbose=y ;;
+		--orig=*) orig=${opt#*=} ;;
+		--) break ;;
+                *) set -- "$@" "$opt";;
+        esac
+done
 task=${1?task-id}; shift
 [[ $# -eq 0 ]] && set -- ''
 
-unset skip
+repo_check() {
+	local repo=$1 dir=$2 tag=$3 pkgname=${4-}
+	if [[ $dir != /gears/* ]]; then
+		if [ -n "$pkgname" ]; then
+			dir="/gears/${pkgname:0:1}/$pkgname.git"
+		else
+			[ -v verbose ] && printf '%14s ' "new(dir)"
+			return 0
+		fi
+	fi
+	local heads orighead repohead
+	heads=$(git ls-remote "http://git.altlinux.org/$dir")
+	orighead=$(echo "$heads" | grep -E "\srefs/heads/$orig\$" ||:)
+	repohead=$(echo "$heads" | grep -E "\srefs/heads/$repo\$" ||:)
+	if [ -z "$repohead" ]; then
+		[ -v verbose ] && printf '%14s ' "newhead($repo)"
+	       return 0
+	fi
+	local repoheadcommit origheadcommit origtag repotag
+	repoheadcommit=${repohead%%[[:space:]]*}
+	origheadcommit=${orighead%%[[:space:]]*}
+	repotag=$(echo "$heads" | grep -Po "$repoheadcommit\s+refs/tags/\K.*-alt[^\^]+")
+	origtag=$(echo "$heads" | grep -Po "$origheadcommit\s+refs/tags/\K.*-alt[^\^]+")
+	local action
+	if [ "$tag" = 'delete' ]; then # deletion
+		if [ -n "$repotag" ]; then
+			action="exist"
+		else
+			action="REDUNDANT"
+		fi
+	else
+		local repocmp origcmp
+		repocmp=$(rpmvercmp "$repotag" "$tag")
+		origcmp=$(rpmvercmp "$origtag" "$tag")
+		case "$origcmp:$repo:$repocmp" in
+			-1:"$orig":*)	action=update ;;
+			-1:*:*)		action="E[$tag>$origtag]" ;;
+			0:"$orig":0)	action=rebuild ;;
+			0:*:-1)		action=copy ;;
+			1:*:-1)		action=backport ;;
+			*:*:0)		action="rebuild[$repo]" ;;
+			*:*:1)		action=OBSOLETE ;;
+			*)		action="Unknown[$origcmp:$repo:$repocmp]" ;;
+		esac
+	fi
+	[ -v verbose ] && printf '%14s ' "$action"
+	return 0
+}
+
+unset skip repo
 declare -i prev_id=0
 while IFS=:= read -r a b c; do
-	[[ $a == "id" ]] && continue
+	if [[ $a == "id" ]]; then
+		[[ "$a $b $c" =~ [[:space:]]repo=([[:alnum:]]+) ]] && repo=${BASH_REMATCH[1]}
+		continue
+	fi
 	declare -i id=a
-	(( prev_id != id )) && unset dir tag_name delete package skip
+	(( prev_id != id )) && unset dir tag_name delete package pkgname skip
 	[[ -v skip ]] && continue
 	prev_id=id
 	case "$b" in
-		dir | tag_name | rebuild_from | delete | package)
+		dir | tag_name | rebuild_from | delete | package | pkgname)
 			declare "$b=$c"
 			;;
 	esac
 	if [[ -v delete ]] && [[ -v package ]]; then
+		repo_check "$repo" "/gears/${package:0:1}/$package.git" "delete"
 		printf 'del %s\n' "$package"
 		skip=
 	elif [[ -v dir ]] && [[ -v tag_name ]]; then
+		repo_check "$repo" "$dir" "$tag_name" "${pkgname-}"
 		printf '%s=%s\n' "$dir" "$tag_name"
 		skip=
 	fi
