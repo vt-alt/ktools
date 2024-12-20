@@ -22,7 +22,7 @@ branches= flavours= arches=
 all_arch=
 unset logs configs grep_mode query rpmpeek include
 unset aptcachecmd show_no_match
-unset verbose
+unset verbose show_date
 for i; do
 	shift
 	[ "$i" = sisyphus ] && i=Sisyphus
@@ -60,6 +60,7 @@ for i; do
 		--config*) configs= ;;
 		--grep=*)  configs="${i#*=}" ;;
 		--grep)    configs=; grep_mode=y; break ;;
+		--date)    show_date=y ;;
 		--show-no-match) show_no_match=y ;;
 		--no-cache) export NO_CACHE=y ;;
 		-a | --all-arch*) all_arch=y ;;
@@ -126,16 +127,18 @@ if [ -v configs ]; then
 		branch=${prefix%%/files/*}
 		prefix=$package-${prefix##*"$package"-}
 		prefix=${prefix%.rpm}
+		pref="$branch/$prefix:"
+		[ -v show_date ] && pref="$(date -r "$i" +%F) $pref"
 		if [ -v grep_mode ]; then
 			[ -t 1 ] || unset GREP_COLORS
 			if ! { kernel-config $i || kill $$; } |
-			       	sed "s,^,$branch/$prefix:," |
+			       	sed "s,^,$pref," |
 			       	grep -P --color${GREP_COLORS+=always} -i "$@" |
 				sed -E '/is not set/s/\x1b\[01;32m/\x1b\[1;33m/g'; then
-				echo "$branch/$prefix:${RED}no match${show_no_match-}${NORM}"
+				echo "$pref${RED}no match${show_no_match-}${NORM}"
 			fi
 		else
-			kernel-config $i | sed "s,^,$branch/$prefix:,"
+			kernel-config $i | sed "s,^,$pref,"
 		fi
 	done
 	exit
