@@ -13,7 +13,7 @@ if [ -z "$*" ]; then
 		kpatch        tmux stgit quilt shadowsocks-rust shadowsocks-libev	\
 		       libdeflate sslscan xapian-bindings iotop-c pgpdump xtail		\
 		         liboqs openssh forkstat unit liburing rr          tinyssh	\
-		stress-ng kernel-shark libtraceevent libtracefs trace-cmd libbpf	\
+		stress-ng kernelshark libtraceevent libtracefs trace-cmd libbpf		\
 		capnproto neomutt sbsigntools bcc              codespell stalld		\
 		                              makedumpfile          blktrace		\
 		fossology sysstat crash gum libkdumpfile psmisc moreutils       	\
@@ -26,7 +26,7 @@ if [ -z "$*" ]; then
 		libcpucycles libmceliece libntirpc nfs-ganesha gperftools coccinelle	\
 		yajl shunit2 rasdaemon kopia rustic_server ollama git-branchless	\
 		coccigrep firmware-linux lolcat yq aichat lib25519 libntruprime argc	\
-		librandombytes typos
+		librandombytes typos ollama-python cpu_features
 fi
 for i in "$@"; do
 	# echo >&2 "$i"
