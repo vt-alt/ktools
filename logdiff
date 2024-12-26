@@ -5,8 +5,9 @@
 # Condenser function
 @s = [
   [/\d+/, '0'],
-  [/\s+/, ' '],
+  [/[\t ]+/, ' '],
   [%r{/usr/src/tmp/rpm-tmp\.\S{4,6}}, '/usr/src/tmp/rpm-tmp.X'],
+  [%r{/usr/src/tmp/\S{8}\.ltrans\d\.ltrans.o}, '/usr/src/tmp/X.ltrans0.ltrans.o'],
 ]
 
 class String
