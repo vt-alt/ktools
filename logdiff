@@ -6,6 +6,8 @@
 @s = [
   [/\d+/, '0'],
   [/[\t ]+/, ' '],
+  [/ -fdiagnostics-color=always/, ''],
+  [/\033\[[0-9;]*[a-zA-Z]/, ''],
   [%r{/usr/src/tmp/rpm-tmp\.\S{4,6}}, '/usr/src/tmp/rpm-tmp.X'],
   [%r{/usr/src/tmp/\S{8}\.ltrans\d\.ltrans.o}, '/usr/src/tmp/X.ltrans0.ltrans.o'],
   [%r{\.text\+0x[0-9a-f]+}, '.text+0x0'],
