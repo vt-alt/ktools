@@ -13,6 +13,8 @@
   [%r{/usr/src/tmp/\S{8}\.ltrans\d\.ltrans.o}, '/usr/src/tmp/X.ltrans0.ltrans.o'],
   [%r{\.text\+0x[0-9a-f]+}, '.text+0x0'],
   [%r{\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b}, 'Jan'],
+  [%r{/usr/bin/(sed|grep|mkdir|dd|bzip0|gzip|install|tar|cat|chgrp|chmod|chown|cp|cpio|mv|rm)\b}, '/bin/\1'],
+  [%r{/bin/install\b}, '/usr/bin/ginstall'],
 ]
 
 class String
