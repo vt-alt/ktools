@@ -66,6 +66,9 @@ while ac < a.size or bc < b.size
     puts "@@ -#{ac + 1},#{xc} +#{bc + 1},#{yc} @@"
     a[ac, xc].each { |c| printf('-%s', c) } if xc > 0
     b[bc, yc].each { |c| printf('+%s', c) } if yc > 0
+    # Remove duplicated lines (that are already printed).
+    a[ac, xc].each { |c| bb[c.ggsub(@s)] = true } if xc > 0
+    b[bc, yc].each { |c| aa[c.ggsub(@s)] = true } if yc > 0
   end
   ac += (xc == 0)? 1 : xc
   bc += (yc == 0)? 1 : yc
