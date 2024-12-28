@@ -15,6 +15,7 @@
   [%r{\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b}, 'Jan'],
   [%r{/usr/bin/(sed|grep|mkdir|dd|bzip0|gzip|install|tar|cat|chgrp|chmod|chown|cp|cpio|mv|rm)\b}, '/bin/\1'],
   [%r{/bin/install\b}, '/usr/bin/ginstall'],
+  [%r{w0.[lgx]zdio\b}, 'w0.lzdio'],
 ]
 
 class String
