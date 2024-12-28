@@ -1,0 +1,45 @@
+#!/bin/sh
+
+# Fix:
+#   hasher-priv: master: bytes written limit (505413632 bytes) exceeded
+#   hsh-initroot: Chroot archivation failed.
+find /usr/share/locale/ -mindepth 3 -maxdepth 3 -type f -name '*.mo' -delete
+
+#rm -f /usr/src/.bash_logout /root/.bash_logout
+cat > /etc/bashrc.d/hasher.sh <<'EOF'
+  ALT_BRANCH_ID="$(rpm --eval %_priority_distbranch)"
+  [[ -n $ALT_BRANCH_ID ]] || ALT_BRANCH_ID=unknown
+  [[ $ALT_BRANCH_ID = sisyphus ]] && ALT_BRANCH_ID= || ALT_BRANCH_ID=-$ALT_BRANCH_ID
+  PS1='\[\033[1;31m\]\u\[\033[0;37m\]@\[\033[1;31m\]$HOSTTYPE$ALT_BRANCH_ID\[\033[0;37m\]:\[\033[0;31m\]\w\[\033[0;37m\]\$\[\033[0;m\] '
+  HISTIGNORE="&:fg:bg:%*:history:rm -r*:ll"
+  HISTCONTROL=ignoredups
+  command_oriented_history=1
+  shopt -s checkwinsize
+  alias bu="cd /usr/src/tmp/*-buildroot"
+  alias src="cd ~/RPM/BUILD/* 2>/dev/null || cd ~/RPM/BUILD/*-*; cd kernel-source-* 2>/dev/null"
+  dump() { if [[ ${1:-%} =~ ^% ]]; then (exec -a rpm rpmbuild --eval "${*:-%dump}" 2>&1); else (exec -a rpm rpmbuild --eval %dump 2>&1) | grep --color "$@"; fi; }
+  alias gcc-defs="gcc -dM -E - </dev/null"
+  alias clang-defs="clang -dM -E - </dev/null"
+EOF
+
+cat > /etc/skel/.gdbinit <<'EOF'
+set confirm off
+set history save on
+set prompt \1\033[1;31m\2(gdb) \1\033[m\2
+set auto-load safe-path /
+EOF
+
+cat > /etc/skel/.inputrc <<'EOF'
+"\e[B": history-search-forward
+"\e[A": history-search-backward
+"\e[1;5C": forward-word
+"\e[1;5D": backward-word
+EOF
+
+cat > /etc/skel/.vimrc <<'EOF'
+au BufReadPost * if line("'\"") > 0 && line("'\"") <= line("$") | exe "normal g`\"" | endif
+EOF
+
+echo 'ulimit -c unlimited' >> /etc/skel/.bash_profile
+
+sed -i '/^%optflags_warnings/s/$/ -fdiagnostics-color=always/' /usr/lib/rpm/*-alt-linux/macros
