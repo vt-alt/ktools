@@ -260,7 +260,6 @@ elif [ -v logdiff ]; then
 	[[ $SELECTOR = *fzf* ]] && offset=
 	log_local="$tmp/log-local${offset-}"
 	log ${offset--1} > "$log_local"
-	sed -Ei 's/^\[([0-9:]+)\]/\1/' "$tmp/log-remote"
 	for i; do
 		sed -Ei "$i" "$tmp/log-remote" "$log_local"
 	done

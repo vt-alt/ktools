@@ -8,6 +8,7 @@
   [/[\t ]+/, ' '],
   [/ -fdiagnostics-color=always/, ''],
   [/\033\[[0-9;]*[a-zA-Z]/, ''],
+  [/^\[?0:0:0\]? /, ''],
   [%r{/usr/src/tmp/rpm-tmp\.\S{4,6}}, '/usr/src/tmp/rpm-tmp.X'],
   [%r{/usr/src/tmp/\S{8}\.ltrans\d\.ltrans.o}, '/usr/src/tmp/X.ltrans0.ltrans.o'],
   [%r{\.text\+0x[0-9a-f]+}, '.text+0x0'],
