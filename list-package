@@ -255,8 +255,9 @@ elif [ -n "$logs" ]; then
 	exit
 elif [ -v logdiff ]; then
 	select_one --task
-	url="https://git.altlinux.org/tasks/$TASK/build/$SUBTASK/$arch/log"
-	curl -sSf -L "$url" -o "$tmp/log-remote"
+	baseurl="https://git.altlinux.org/tasks/$TASK/build/$SUBTASK/$arch"
+	curl -sSf -L "$baseurl/srpm.log" > "$tmp/log-remote"
+	curl -sSf -L "$baseurl/log"     >> "$tmp/log-remote"
 	[[ $SELECTOR = *fzf* ]] && offset=
 	log_local="$tmp/log-local${offset-}"
 	log ${offset--1} > "$log_local"
