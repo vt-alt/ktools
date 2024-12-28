@@ -18,12 +18,13 @@ for opt do
 		--task=*) task="${opt#*=}" ;;
 		--commit) commit=--commit kernelbot=y ;;
 		--share*) shared=y ;;
-		--branch=*) branch="${opt#*=}" ;;
+		--repo=* | --branch=*) branch="${opt#*=}" ;;
 		--no-kmodules) unset kmodules ;;
 		--no-run) unset runthetask ;;
 		--disapprove) disapprove=y ;;
 		--branch) push_branch=y ;;
 		--no-branch) unset_push_branch=y ;;
+		--test) disapprove=y; unset_push_branch=y ;;
 		--deps=*) deps="${opt#*=}" ;;
 		*) set -- "$opt" "$@"; break ;; # tags
 	esac
