@@ -4,7 +4,7 @@ set -efu
 shopt -s extglob
 V() { echo -e "+ \e[1;33m$@\e[m" >&2; "$@"; }
 
-unset shared kernelbot task deps disapprove
+unset shared kernelbot usertask deps disapprove
 force=
 kmodules=y
 runthetask=y
@@ -15,7 +15,7 @@ for opt do
 	case "$opt" in
 		--kernelbot) kernelbot=y ;;
 		-f | --force) force="-f" ;;
-		--task=*) task="${opt#*=}" ;;
+		--task=*) usertask="${opt#*=}" ;;
 		--commit) commit=--commit kernelbot=y ;;
 		--share*) shared=y ;;
 		--repo=* | --branch=*) branch="${opt#*=}" ;;
@@ -80,7 +80,11 @@ for tag; do
 	flavour=${flavour%-*-alt*}
 
 	V git push $remote $tag $force
-	[ -v task ] || task=$(V ssh -n $girar task new $branch)
+	if [ -v usertask ]; then
+		task=$usertask
+	else
+		task=$(V ssh -n $girar task new $branch)
+	fi
 	V ssh -n $girar task add $task repo $repo $tag
 	[ -v shared ] && V ssh -n $girar task share $task enable
 	if [ -v kmodules ] && V ssh -n $girar task add $task kmodules $flavour; then
