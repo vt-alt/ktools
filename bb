@@ -7,6 +7,7 @@ fatal() {
 }
 
 pkgi=()
+commit=("--commit")
 for opt do
         shift
         case "$opt" in
@@ -17,7 +18,7 @@ for opt do
 		--branch=* | --repo=*) branches+=(${opt#*=}) ;;
 		--arch=* | --target=*) targets+=( "${opt#*=}" ) ;;
 		--task=*) task="${opt#*=}" ;;
-		--build-srpm-only) gear_hsh=("hsh" "$opt") ;;
+		--build-srpm-only | -bs) gear_hsh=("hsh" "--build-srpm-only") ;;
 		--install-only) gear_hsh=("hsh-rebuild" "$opt") ;;
 		--ini*) initroot=only ;;
 		--no-ini*) noinitroot=ci ;;
@@ -26,6 +27,7 @@ for opt do
 		--components=*) components=${opt#*=} ;;
 		--disable[-=]*) set_rpmargs+="--disable ${opt#--*[-=]}" ;;
 		--kflavour=*) kflavour=${opt#*=} ;;
+		--tree-ish=* | -t=*) commit=("-t" "${opt#*=}") ;;
 		--) break ;;
 		-*) fatal "Unknown option: $opt" ;;
                 *) set -- "$@" "$opt";;
@@ -78,7 +80,7 @@ if [ -n "${initroot-}" ]; then
 	exit
 elif [ -v gear_hsh ]; then
 	log_config
-	(set -x; gear --hasher -- "${gear_hsh[@]}")
+	(set -x; gear --hasher "${commit[@]}" -- "${gear_hsh[@]}")
 	pkg_install
 	exit
 fi
@@ -128,8 +130,7 @@ for branch in "${branches[@]}"; do
 	} &> log
 	{
 		{ log_config; } 2>/dev/null
-		# shellcheck disable=SC2086,SC2048
-		gear-hsh ${*---commit}
+		gear-hsh "${commit[@]}" "${@}"
 	} |& {
 		{ set +x; } 2>/dev/null
 		ts %T | tee -a log
