@@ -19,7 +19,7 @@ branch=Sisyphus arch=x86_64
 branches='' arches='' packages=''
 all_arch='' lsopts='-ltrd' rpmpeek='' lesser='' logs='' dts=''
 pattern='' query='' show_pkg='' srpms='' bat=''
-SELECTOR='gum choose'
+SELECTOR="gum choose --height=$((LINES-5))"
 unset show_task aptcache spec logdiff offset
 for i; do
 	shift
