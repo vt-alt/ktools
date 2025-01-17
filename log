@@ -3,6 +3,7 @@ set -eu +o posix
 shopt -s extglob
 
 grepcmd='grep'
+selector='fzf --highlight-line'
 unset mode offset
 for opt do
         shift
@@ -10,6 +11,7 @@ for opt do
 		-+([0-9])) offset=${opt#-} ;;
 		--grep|-ug|--ug|--ugrep|-rg|--rg) grepcmd=${opt##+(-)} ;&
 		-g) mode=GREP; break ;;
+		--sk | --skim) selector='sk' ;;
 		--) break ;;
 		-*) echo >&2 "Error: unknown option: $opt" ;;
                 *) set -- "$@" "$opt";;
@@ -37,13 +39,12 @@ if [ -v offset ]; then
 else
 	# shellcheck disable=SC2012,SC2207,SC2016
 	files=($(ls -1tr "${files[@]}" |
-		fzf \
+		$selector \
 		--bind='q:abort,/:unbind(q)+unbind(/)' \
 		--no-mouse \
 		--no-sort \
 		--tac \
 		--multi \
-		--highlight-line \
 		--preview-window=80% \
 		--preview='head -$((LINES/2-1)) {}; echo ...; tail -$((LINES/2)) {}'))
 fi
