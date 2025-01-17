@@ -116,10 +116,13 @@ for branch in "${branches[@]}"; do
 	# Reexport, since we did unset inside of the loop.
 	export branch set_target
 
+	for log in log log1 .log build.log; do
+		[[ -d "$log" ]] || break
+	done
 	L=.git/bb/log.$(date +%F_%H%M)
 	[ "sisyphus" = "$branch" ] && unset branch || L+=".$branch"
 	[ "$HOSTTYPE" = "$set_target" ] && unset set_target || L+=".$set_target"
-	ln -sf "$L" -T log
+	ln -sf "$L" -T "$log"
 
 	printf '%s' "$sep"
 	{
@@ -127,20 +130,20 @@ for branch in "${branches[@]}"; do
 		git diff
 		# shellcheck disable=SC2094
 		git 'log' -1
-	} &> log
+	} &> "$log"
 	{
 		{ log_config; } 2>/dev/null
 		gear-hsh "${commit[@]}" "${@}"
 	} |& {
 		{ set +x; } 2>/dev/null
-		ts %T | tee -a log
+		ts %T | tee -a "$log"
 	}
 	{ set +x; } 2>/dev/null
 	((${#pkgi[@]})) && (
 		[ -n "${noinitroot-}" ] || (echo; set -x; hsh --initroot)
 		echo
 		pkg_install
-	) |& ts %T | tee -a log
+	) |& ts %T | tee -a "$log"
 	sep=$'\n'
 done
 done
