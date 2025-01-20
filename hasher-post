@@ -20,6 +20,7 @@ cat > /etc/bashrc.d/hasher.sh <<'EOF'
   dump() { if [[ ${1:-%} =~ ^% ]]; then (exec -a rpm rpmbuild --eval "${*:-%dump}" 2>&1); else (exec -a rpm rpmbuild --eval %dump 2>&1) | grep --color "$@"; fi; }
   alias gcc-defs="gcc -dM -E - </dev/null"
   alias clang-defs="clang -dM -E - </dev/null"
+  export OCAML_COLOR=always
 EOF
 
 cat > /etc/skel/.gdbinit <<'EOF'
@@ -43,3 +44,4 @@ EOF
 echo 'ulimit -c unlimited' >> /etc/skel/.bash_profile
 
 sed -i '/^%optflags_warnings/s/$/ -fdiagnostics-color=always/' /usr/lib/rpm/*-alt-linux/macros
+echo 'export OCAML_COLOR=always' >> /usr/lib/rpm/macros.d/ocaml.env
