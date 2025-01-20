@@ -2,7 +2,7 @@
 
 [ ! -v MANPAGER ] && export MANPAGER="less -R --use-color -Dd+y -Du+c"
 
-shopt -s nullglob
+shopt -s nullglob extglob
 
 : ${repo:=sisyphus}
 : ${arch:=$HOSTTYPE}
@@ -34,7 +34,7 @@ label=$(grep "^/usr/share/.*/man.*$addtab$wordsep$pat" "$@" "$PAGES" \
 read file pkgname <<<$label
 for arch in $arch noarch; do
 	dir=/ALT/$repo/files/$arch/RPMS
-	pkg=( "$dir"/"$pkgname"-[0-9]*-alt*."$arch".rpm )
+	pkg=( "$dir"/"$pkgname"-+([^-])-alt*."$arch".rpm )
 	if [ -v pkg ]; then
 		exec rpmpeek "$pkg" man ".$file"
 	fi
