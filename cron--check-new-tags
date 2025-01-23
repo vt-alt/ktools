@@ -10,7 +10,7 @@ a=$(mktemp)
 if [ -z "$*" ]; then
 	set --                 libsodium xsecurelock file simde zig ltp                 \
 		editorconfig-vim blake2 blake3 dwarves tig honggfuzz libpfm  delta	\
-		kpatch        tmux stgit quilt shadowsocks-rust shadowsocks-libev	\
+		              tmux stgit quilt shadowsocks-rust shadowsocks-libev	\
 		       libdeflate sslscan xapian-bindings iotop-c pgpdump xtail		\
 		         liboqs openssh forkstat unit liburing rr          tinyssh	\
 		stress-ng kernelshark libtraceevent libtracefs trace-cmd libbpf		\
