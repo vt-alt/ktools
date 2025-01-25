@@ -43,5 +43,5 @@ EOF
 
 echo 'ulimit -c unlimited' >> /etc/skel/.bash_profile
 
-sed -i '/^%optflags_warnings/s/$/ -fdiagnostics-color=always/' /usr/lib/rpm/*-alt-linux/macros
+sed -i '/^%optflags_warnings/s/ -fdiagnostics-color=always\|$/ -fdiagnostics-color=always/' /usr/lib/rpm/*-alt-linux/macros
 echo 'export OCAML_COLOR=always' >> /usr/lib/rpm/macros.d/ocaml.env
