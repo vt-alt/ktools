@@ -8,9 +8,9 @@ t=$(mktemp)
 a=$(mktemp)
 
 if [ -z "$*" ]; then
-	set --                 libsodium xsecurelock file simde zig ltp                 \
+	set --                 libsodium xsecurelock file       zig ltp                 \
 		editorconfig-vim blake2 blake3 dwarves tig honggfuzz libpfm  delta	\
-		              tmux stgit quilt shadowsocks-rust shadowsocks-libev	\
+		              tmux       quilt shadowsocks-rust shadowsocks-libev	\
 		       libdeflate sslscan xapian-bindings iotop-c pgpdump xtail		\
 		         liboqs openssh forkstat unit liburing rr          tinyssh	\
 		stress-ng kernelshark libtraceevent libtracefs trace-cmd libbpf		\
@@ -18,14 +18,14 @@ if [ -z "$*" ]; then
 		                              makedumpfile          blktrace		\
 		fossology sysstat crash gum libkdumpfile psmisc moreutils       	\
 		rt-tests yara aide fsverity-utils bpftrace burp ima-evm-utils		\
-		tuned wget simdjson fscrypt fscryptctl fio       kvmtool ubdsrv libnbd	\
+		tuned wget          fscrypt fscryptctl fio       kvmtool ubdsrv libnbd	\
 		musl klibc toybox               ugrep vgrep vim-plugin-ale nbdkit	\
-		drgn dropbear            libseccomp busybox cbonsai certspotter lowdown	\
+		drgn dropbear            libseccomp busybox cbonsai certspotter        	\
 		tiv      cbmc      uftrace just etckeeper autorestic resticprofile	\
-		restic gitui git-absorb webhook rustic bin-marcosnils bzip3		\
+		restic gitui            webhook rustic bin-marcosnils bzip3		\
 		libcpucycles libmceliece libntirpc nfs-ganesha gperftools coccinelle	\
 		yajl shunit2 rasdaemon kopia rustic_server ollama git-branchless	\
-		coccigrep firmware-linux lolcat yq aichat lib25519 libntruprime argc	\
+		coccigrep firmware-linux lolcat    aichat lib25519 libntruprime argc	\
 		librandombytes typos ollama-python cpu_features llama-swap
 fi
 for i in "$@"; do
