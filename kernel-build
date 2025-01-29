@@ -55,15 +55,22 @@ esac
 brflvr=${br%/*}
 case $brflvr in
 	un-def|std-def|std-pae|std-debug|std-next|un-next|next|rt|+([[:digit:]]).+([[:digit:]])) ;;
+	kasan)
+		commit=--test-only
+		unset push_branch
+		unset kmodules
+		;;
 	*) echo >&2 "Invalid flavour $brflvr"; exit 1 ;;
 esac
 
-tests=$(git log --oneline --author=altlinux -i --grep=test "$remote/$br..")
-if [ -n "$tests" ]; then
-	echo "$tests" | sed 's/^/\t(test) /'
-	echo >&2 "Test build, do not push branch, do not add kmodules."
-	unset push_branch
-	unset kmodules
+if [ -v push_branch -o -v kmodules ]; then
+	tests=$(git log --oneline --author=altlinux -i --grep=test "$remote/$br..")
+	if [ -n "$tests" ]; then
+		echo "$tests" | sed 's/^/\t(test) /'
+		echo >&2 "Test build, do not push branch, do not add kmodules."
+		unset push_branch
+		unset kmodules
+	fi
 fi
 
 # Set tags to build.
