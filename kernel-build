@@ -4,15 +4,17 @@ set -efu
 shopt -s extglob
 V() { echo -e "+ \e[1;33m$@\e[m" >&2; "$@"; }
 
-unset shared kernelbot usertask deps disapprove
+unset shared usertask deps disapprove
 force=
 kmodules=y
 runthetask=y
 commit=--test-only
+kernelbot=y
 unset push_branch unset_push_branch
 for opt do
 	shift
 	case "$opt" in
+		--gitery) unset kernelbot ;;
 		--kernelbot) kernelbot=y ;;
 		-f | --force) force="-f" ;;
 		--task=*) usertask="${opt#*=}" ;;
