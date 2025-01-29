@@ -51,7 +51,7 @@ for i in "$@"; do
 		if [ $i = kernel-image-rt ]; then
 			new-tags rt | cut -f1-2 | grep -P 'v5.10.*rt\d+$'
 		else
-			new-tags $origin | grep -v -e -beta -e oss-fuzz
+			new-tags $origin | grep -v -e -beta -e oss-fuzz -e dev
 		fi | sed "s/^/$n /" > $t
 	elif [ -n "$watchfile" ]; then
 		rpm-uscan --report | tail -1 | sed "s/^/$n /" > $t
