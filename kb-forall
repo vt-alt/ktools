@@ -21,6 +21,8 @@ allow_diverged=
 stable=
 onto=
 reset=
+grep_args=()
+grep_pathspec=()
 for opt do
         shift
         case "$opt" in
@@ -32,7 +34,9 @@ for opt do
 		--reset) reset=y ;;
 		--push) push_to_remote=y ;;
 		--dry | --dry-run) dryrun=-n ;;
-		--grep=*) pattern=${opt#*=} ;;
+		--match=*) pattern=${opt#*=} ;;
+		--grep=*) grep_args+=${opt#*=} ;;
+		--grep-pathspec=*) grep_pathspec+=${opt#*=} ;;
 		-G|-F|-P|-E) grep_mode=$opt ;;
 		-x) pickedline=-x ;;
 		-s) signedoff=-s ;;
@@ -240,6 +244,13 @@ for lbr in $branches; do
 	nn=$(git rev-list --count "$topmost..$lbr")
 	[ "$n" -eq "$nn" ] || printf '/%d' "$nn"
 	unset n nn
+
+	if [ -v grep_args ]; then
+		echo
+		git grep "$grep_mode" "${grep_args[@]}" "$lbr" -- "${grep_pathspec[@]}" &&
+			echo
+		continue
+	fi
 
 	list=()
 	for commit; do
