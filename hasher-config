@@ -1,6 +1,6 @@
 # vi:ft=bash:
 def_repo="$HOME/repo"
-workdir="$TMPDIR/hasher"
+workdir="${TMPDIR-/tmp/.private/$USER}/hasher"
 
 if [[ $HOSTNAME =~ mskdc ]]; then
 	workdir="$HOME/hasher"
