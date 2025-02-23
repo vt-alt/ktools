@@ -46,7 +46,7 @@ for i; do
 		-[0-9]) offset=$i ;;
 		--logdiff) logdiff=log; logtool=logdiff; break ;;
 		--logdiff2) logdiff=log; logtool=logdiff2; break ;;
-		--log*) logs=y ;;
+		--log) logs=y ;;
 		--dts | --ver*) dts=y ;;
 		--task) show_task=--brief ;;
 		--task-full) show_task= ;;
