@@ -7,6 +7,7 @@ if [[ $HOSTNAME =~ mskdc ]]; then
 else
 	pkg_build_list+=" strace vim-console less gdb-light "
 fi
+mkdir -p "$workdir"
 packager=$(rpm --eval %packager)
 known_mountpoints=/proc,/dev/pts,/dev/kvm,/sys
 lazy_cleanup=yes
