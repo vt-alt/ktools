@@ -24,6 +24,7 @@ for opt do
 		--no-ini*) noinitroot=ci ;;
 		--rpmi=*|--ci=*) pkgi+=("${opt#*=}") ;;
 		--ci) ci=all ;;
+		--fresh) fresh=y ;;
 		--date=*|--archive=*) archive_date=${opt#*=} ;;
 		--components=*) components=${opt#*=} ;;
 		--disable[-=]*) set_rpmargs+="--disable ${opt#--*[-=]}" ;;
@@ -66,11 +67,23 @@ log_config() {
 }
 
 pkg_install() {
-	((!${#pkgi[@]})) || (
-		cd /var/empty
-		set -x
-		hsh-install "${pkgi[@]}"
-	)
+	if [ -v fresh ]; then
+		# Install each package in a fresh Hasher one by one.
+		for pkg in "${pkgi[@]}"; do
+			(echo; set -x; hsh --initroot)
+			echo
+			cd /var/empty
+			(set -x; hsh-install "$pkg")
+		done
+	else
+		[ -n "${noinitroot-}" ] || (echo; set -x; hsh --initroot)
+		echo
+		((!${#pkgi[@]})) || (
+			cd /var/empty
+			set -x
+			hsh-install "${pkgi[@]}"
+		)
+	fi
 }
 
 export branch set_target archive_date task components set_rpmargs
@@ -143,11 +156,8 @@ for branch in "${branches[@]}"; do
 	if [ -v ci ]; then
 		mapfile -t pkgi < <(sed -En 's!^\S+ Wrote:\s/usr/src/RPM/RPMS/[[:graph:]/]+/(\S+-checkinstall)-\S+\.rpm\s.*!\1!p' log)
 	fi
-	((${#pkgi[@]})) && (
-		[ -n "${noinitroot-}" ] || (echo; set -x; hsh --initroot)
-		echo
-		pkg_install
-	) |& ts %T | tee -a "$log"
+	((${#pkgi[@]})) &&
+		pkg_install |& ts %T | tee -a "$log"
 	sep=$'\n'
 done
 done
