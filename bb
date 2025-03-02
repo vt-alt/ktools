@@ -143,9 +143,8 @@ sync
 set -o pipefail
 unset build_state
 aterr() {
-	echo -ne '\e[1;31m'
-	echo "FAILED ($(basename "$PWD")) ${branch-} ${set_target-} state=${build_state-}"
-	echo -ne '\e[m'
+	local red=$'\e[1;31m' norm=$'\e[m'
+	echo "${red}FAILED ($(basename "$PWD")) ${branch-} ${set_target-} state=${build_state-}${norm}"
 }
 [ -v NOBEEP ] || trap 'beep' EXIT
 trap '{ set +x; } 2>/dev/null; aterr' ERR
