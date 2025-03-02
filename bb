@@ -26,6 +26,7 @@ for opt do
 		--ci) ci=checkinstall ;;
 		--ci-all) ci=all ;;
 		--ci-command=*) ci_command="${opt#*=}" ;;
+		--clean) hsh_clean=y ;;
 		--fresh) fresh=y ;;
 		--date=*|--archive=*) archive_date=${opt#*=} ;;
 		--components=*) components=${opt#*=} ;;
@@ -94,6 +95,12 @@ pkg_install() {
 	unset build_state
 }
 
+repo_clean() {
+	mkdir -p ~/repo
+	rm -rf -v ~/repo/*
+}
+[ -v hsh_clean ] && repo_clean
+
 export branch set_target archive_date task components set_rpmargs
 if [ -n "${initroot-}" ]; then
 	log_config
@@ -149,6 +156,7 @@ for branch in "${branches[@]}"; do
 	[ "$HOSTTYPE" = "$set_target" ] && unset set_target || L+=".$set_target"
 	ln -sf "$L" -T "$log"
 
+	[ -v hsh_clean ] && repo_clean
 	printf '%s' "$sep"
 	build_state="gear-hsh"
 	{
