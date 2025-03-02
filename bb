@@ -41,12 +41,16 @@ done
 type -p ts >/dev/null ||
 	ts() { awk '{ print strftime("%T"), $0}; fflush()'; }
 
-[ -v branches ] || branches=("sisyphus")
+if [ ! -v branches ]; then
+	[ -v branch ] && branches=("$branch") || branches=("sisyphus")
+fi
 for branch in "${branches[@]}"; do
 	[ -v branch ] && [ ! -d "/ALT/$branch" ] && fatal "Unknown branch=$branch."
 done
 
-[ -v targets ] || targets=("$HOSTTYPE")
+if [ ! -v targets ]; then
+	[ -v set_target ] && targets=("$set_target") || targets=("$HOSTTYPE")
+fi
 for set_target in "${targets[@]}"; do
 	[ ! -f "/ALT/${branch-sisyphus}/$set_target/base/release" ] && fatal "Unknown target=$set_target."
 done
