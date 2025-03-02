@@ -25,6 +25,7 @@ for opt do
 		--rpmi=*|--ci=*) pkgi+=("${opt#*=}") ;;
 		--ci) ci=checkinstall ;;
 		--ci-all) ci=all ;;
+		--ci-command=*) ci_command="${opt#*=}" ;;
 		--fresh) fresh=y ;;
 		--date=*|--archive=*) archive_date=${opt#*=} ;;
 		--components=*) components=${opt#*=} ;;
@@ -156,6 +157,11 @@ for branch in "${branches[@]}"; do
 		ts %T | tee -a "$log"
 	}
 	{ set +x; } 2>/dev/null
+	if [ -v ci_command ]; then
+		echo
+		(eval "set -xe; $ci_command")
+		echo
+	fi |& ts %T | tee -a "$log"
 	if [ -v ci ]; then
 		mapfile -t pkgi < <(
 			if [[ $ci == checkinstall ]]; then
