@@ -69,10 +69,12 @@ log_config() {
 }
 
 pkg_install() {
+	build_state="CI initroot"
 	if [ -v fresh ]; then
 		echo ":: CI ${branch-Sisyphus} packages one by one: ${pkgi[*]}"
 		for pkg in "${pkgi[@]}"; do
 			(echo; set -x; hsh --initroot)
+			build_state="CI install-one $pkg"
 			echo
 			cd /var/empty
 			(set -x; hsh-install "$pkg")
@@ -82,12 +84,14 @@ pkg_install() {
 		echo ":: CI ${branch-Sisyphus} packages all at once: ${pkgi[*]}"
 		[ -n "${noinitroot-}" ] || (echo; set -x; hsh --initroot)
 		echo
+		build_state="CI install-all ${pkgi[*]}"
 		((!${#pkgi[@]})) || (
 			cd /var/empty
 			set -x
 			hsh-install "${pkgi[@]}"
 		)
 	fi
+	unset build_state
 }
 
 export branch set_target archive_date task components set_rpmargs
@@ -121,8 +125,11 @@ fi
 sync
 
 set -o pipefail
+unset build_state
 aterr() {
-	echo "FAILED ${branch-} ${set_target-}"
+	echo -ne '\e[1;31m'
+	echo "FAILED ${branch-} ${set_target-} state=${build_state-}"
+	echo -ne '\e[m'
 }
 trap 'beep' EXIT
 trap '{ set +x; } 2>/dev/null; aterr' ERR
@@ -143,6 +150,7 @@ for branch in "${branches[@]}"; do
 	ln -sf "$L" -T "$log"
 
 	printf '%s' "$sep"
+	build_state="gear-hsh"
 	{
 		set -x
 		git diff
@@ -159,7 +167,10 @@ for branch in "${branches[@]}"; do
 	{ set +x; } 2>/dev/null
 	if [ -v ci_command ]; then
 		echo
+		echo ":: CI commands for ${branch-Sisyphus}:"
+		build_state="ci-command"
 		(eval "set -xe; $ci_command")
+		unset build_state
 		echo
 	fi |& ts %T | tee -a "$log"
 	if [ -v ci ]; then
