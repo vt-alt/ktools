@@ -69,7 +69,7 @@ log_config() {
 
 pkg_install() {
 	if [ -v fresh ]; then
-		# Install each package in a fresh Hasher one by one.
+		echo ":: CI ${branch-Sisyphus} packages one by one: ${pkgi[*]}"
 		for pkg in "${pkgi[@]}"; do
 			(echo; set -x; hsh --initroot)
 			echo
@@ -77,6 +77,8 @@ pkg_install() {
 			(set -x; hsh-install "$pkg")
 		done
 	else
+		echo
+		echo ":: CI ${branch-Sisyphus} packages all at once: ${pkgi[*]}"
 		[ -n "${noinitroot-}" ] || (echo; set -x; hsh --initroot)
 		echo
 		((!${#pkgi[@]})) || (
