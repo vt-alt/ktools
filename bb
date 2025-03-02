@@ -23,7 +23,8 @@ for opt do
 		--ini*) initroot=only ;;
 		--no-ini*) noinitroot=ci ;;
 		--rpmi=*|--ci=*) pkgi+=("${opt#*=}") ;;
-		--ci) ci=all ;;
+		--ci) ci=checkinstall ;;
+		--ci-all) ci=all ;;
 		--fresh) fresh=y ;;
 		--date=*|--archive=*) archive_date=${opt#*=} ;;
 		--components=*) components=${opt#*=} ;;
@@ -154,7 +155,14 @@ for branch in "${branches[@]}"; do
 	}
 	{ set +x; } 2>/dev/null
 	if [ -v ci ]; then
-		mapfile -t pkgi < <(sed -En 's!^\S+ Wrote:\s/usr/src/RPM/RPMS/[[:graph:]/]+/(\S+-checkinstall)-\S+\.rpm\s.*!\1!p' log)
+		mapfile -t pkgi < <(
+			if [[ $ci == checkinstall ]]; then
+				sed -En 's!^\S+ Wrote:\s/usr/src/RPM/RPMS/[[:graph:]/]+/(\S+-checkinstall)-\S+\.rpm\s.*!\1!p'
+			elif [[ $ci == all ]]; then
+				sed -En 's!^\S+ Wrote:\s/usr/src/RPM/RPMS/[[:graph:]/]+/(\S+)-[^-]+-alt\S+\.rpm\s.*!\1!p' |
+				grep -v '-debuginfo'
+			fi < log
+		)
 	fi
 	((${#pkgi[@]})) &&
 		pkg_install |& ts %T | tee -a "$log"
