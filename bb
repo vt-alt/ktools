@@ -11,12 +11,13 @@ commit=("--commit")
 ts='%T'
 for opt do
         shift
+	arg=${opt#*=}
         case "$opt" in
 		+32)  targets+=("$HOSTTYPE") ;&
 		-32 | --32) targets+=('i586') ;;
 		--s | --sisyphus) branches+=("sisyphus") ;;
 		--[cp][[:digit:]]*) branches+=(${opt#--}) ;;
-		--branch=* | --repo=*) branches+=(${opt#*=}) ;;
+		--branch=* | --repo=*) branches+=(${arg//,/ }) ;;
 		--arch=* | --target=*) targets+=( "${opt#*=}" ) ;;
 		--task=*) task="${opt#*=}" ;;
 		--build-srpm-only | -bs) gear_hsh=("hsh" "--build-srpm-only") ;;
@@ -41,6 +42,7 @@ for opt do
                 *) set -- "$@" "$opt";;
         esac
 done
+unset opt arg
 type -p ts >/dev/null ||
 	ts() { awk -v t="${1-%T}" '{ print strftime(t), $0}; fflush()'; }
 
@@ -50,7 +52,7 @@ if [ ! -v branches ]; then
 	[ -v branch ] && branches=("$branch") || branches=("sisyphus")
 fi
 for branch in "${branches[@]}"; do
-	[ -v branch ] && [ ! -d "/ALT/$branch" ] && fatal "Unknown branch=$branch."
+	[ ! -d "/ALT/$branch" ] && fatal "Unknown branch=$branch."
 done
 
 if [ ! -v targets ]; then
