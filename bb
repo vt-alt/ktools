@@ -22,7 +22,8 @@ for opt do
 		--install-only) gear_hsh=("hsh-rebuild" "$opt") ;;
 		--ini*) initroot=only ;;
 		--no-ini*) noinitroot=ci ;;
-		--inst*=*|--ci=*) pkgi+=("${opt#*=}") ;;
+		--rpmi=*|--ci=*) pkgi+=("${opt#*=}") ;;
+		--ci) ci=all ;;
 		--date=*|--archive=*) archive_date=${opt#*=} ;;
 		--components=*) components=${opt#*=} ;;
 		--disable[-=]*) set_rpmargs+="--disable ${opt#--*[-=]}" ;;
@@ -139,6 +140,9 @@ for branch in "${branches[@]}"; do
 		ts %T | tee -a "$log"
 	}
 	{ set +x; } 2>/dev/null
+	if [ -v ci ]; then
+		mapfile -t pkgi < <(sed -En 's!^\S+ Wrote:\s/usr/src/RPM/RPMS/[[:graph:]/]+/(\S+-checkinstall)-\S+\.rpm\s.*!\1!p' log)
+	fi
 	((${#pkgi[@]})) && (
 		[ -n "${noinitroot-}" ] || (echo; set -x; hsh --initroot)
 		echo
