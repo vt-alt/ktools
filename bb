@@ -23,6 +23,7 @@ for opt do
 		--ini*) initroot=only ;;
 		--no-ini*) noinitroot=ci ;;
 		--rpmi=*|--ci=*) pkgi+=("${opt#*=}") ;;
+		--no-beep) NOBEEP=y ;;
 		--ci) ci=checkinstall ;;
 		--ci-all) ci=all ;;
 		--ci-command=*) ci_command="${opt#*=}" ;;
@@ -139,10 +140,10 @@ set -o pipefail
 unset build_state
 aterr() {
 	echo -ne '\e[1;31m'
-	echo "FAILED ${branch-} ${set_target-} state=${build_state-}"
+	echo "FAILED ($(basename "$PWD")) ${branch-} ${set_target-} state=${build_state-}"
 	echo -ne '\e[m'
 }
-trap 'beep' EXIT
+[ -v NOBEEP ] || trap 'beep' EXIT
 trap '{ set +x; } 2>/dev/null; aterr' ERR
 sep=
 
@@ -181,6 +182,7 @@ for branch in "${branches[@]}"; do
 		echo
 		echo ":: CI commands for ${branch-Sisyphus}:"
 		build_state="ci-command"
+		export NOBEEP=y
 		(eval "set -xe; $ci_command")
 		unset build_state
 		echo
