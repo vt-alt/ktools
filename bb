@@ -8,6 +8,7 @@ fatal() {
 
 pkgi=()
 commit=("--commit")
+ts='%T'
 for opt do
         shift
         case "$opt" in
@@ -34,13 +35,16 @@ for opt do
 		--disable[-=]*) set_rpmargs+="--disable ${opt#--*[-=]}" ;;
 		--kflavour=*) kflavour=${opt#*=} ;;
 		--tree-ish=* | -t=*) commit=("-t" "${opt#*=}") ;;
+		--ts=*) ts=${opt#*=} ;;
 		--) break ;;
 		-*) fatal "Unknown option: $opt" ;;
                 *) set -- "$@" "$opt";;
         esac
 done
 type -p ts >/dev/null ||
-	ts() { awk '{ print strftime("%T"), $0}; fflush()'; }
+	ts() { awk -v t="${1-%T}" '{ print strftime(t), $0}; fflush()'; }
+
+[ "${bb_ts-}" = pwd ] && ts="($(basename "$PWD"))"
 
 if [ ! -v branches ]; then
 	[ -v branch ] && branches=("$branch") || branches=("sisyphus")
@@ -175,18 +179,18 @@ for branch in "${branches[@]}"; do
 		gear-hsh "${commit[@]}" "${@}"
 	} |& {
 		{ set +x; } 2>/dev/null
-		ts %T | tee -a "$log"
+		ts "$ts" | tee -a "$log"
 	}
 	{ set +x; } 2>/dev/null
 	if [ -v ci_command ]; then
 		echo
 		echo ":: CI commands for ${branch-Sisyphus}:"
 		build_state="ci-command"
-		export NOBEEP=y
+		export NOBEEP=y bb_ts=pwd
 		(eval "set -xe; $ci_command")
 		unset build_state
 		echo
-	fi |& ts %T | tee -a "$log"
+	fi |& ts "$ts" | tee -a "$log"
 	if [ -v ci ]; then
 		mapfile -t pkgi < <(
 			if [[ $ci == checkinstall ]]; then
@@ -198,7 +202,7 @@ for branch in "${branches[@]}"; do
 		)
 	fi
 	((${#pkgi[@]})) &&
-		pkg_install |& ts %T | tee -a "$log"
+		pkg_install |& ts "$ts" | tee -a "$log"
 	sep=$'\n'
 done
 done
