@@ -24,7 +24,7 @@ for opt do
 		--install-only) gear_hsh=("hsh-rebuild" "$opt") ;;
 		--ini*) initroot=only ;;
 		--no-ini*) noinitroot=ci ;;
-		--rpmi=*|--ci=*) pkgi+=("${opt#*=}") ;;
+		--rpmi=*|--ci=*) pkgi+=(${arg//,/ }) ;;
 		--no-beep) NOBEEP=y ;;
 		--ci) ci=checkinstall ;;
 		--ci-all) ci=all ;;
@@ -115,7 +115,6 @@ repo_clean() {
 export branch set_target archive_date task components set_rpmargs
 if [ -n "${initroot-}" ]; then
 	log_config
-	(set -x; hsh --initroot)
 	pkg_install
 	exit
 elif [ -v gear_hsh ]; then
