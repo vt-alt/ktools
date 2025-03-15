@@ -256,16 +256,17 @@ elif [ -n "$logs" ]; then
 elif [ -v logdiff ]; then
 	select_one --task
 	baseurl="https://git.altlinux.org/tasks/$TASK/build/$SUBTASK/$arch"
-	curl -sSf -L "$baseurl/srpm.log" > "$tmp/log-remote"
-	sed -i 's/^/00:00:00 /' "$tmp/log-remote"
-	curl -sSf -L "$baseurl/log"     >> "$tmp/log-remote"
+	log_remote="$tmp/log-remote[$TASK-$SUBTASK-$arch]"
+	curl -sSf -L "$baseurl/srpm.log" > "$log_remote"
+	sed -i 's/^/00:00:00 /' "$log_remote"
+	curl -sSf -L "$baseurl/log"     >> "$log_remote"
 	[[ $SELECTOR = *fzf* ]] && offset=
 	log_local="$tmp/log-local${offset-}"
 	log ${offset--1} > "$log_local"
 	for i; do
-		sed -Ei "$i" "$tmp/log-remote" "$log_local"
+		sed -Ei "$i" "$log_remote" "$log_local"
 	done
-	$logtool "$tmp/log-remote" "$log_local" | delta
+	$logtool "$log_remote" "$log_local" | delta
 	exit
 elif [ -v show_task ]; then
 	select_one --task
