@@ -13,7 +13,7 @@ for opt do
 		-g) mode=GREP; break ;;
 		--sk | --skim) selector='sk' ;;
 		--) break ;;
-		-*) echo >&2 "Error: unknown option: $opt" ;;
+		-*) echo >&2 "Error: unknown option: $opt"; exit 1 ;;
                 *) set -- "$@" "$opt";;
         esac
 done
