@@ -20,7 +20,7 @@ branches='' arches='' packages=''
 all_arch='' lsopts='-ltrd' rpmpeek='' lesser='' logs='' dts=''
 pattern='' query='' show_pkg='' srpms='' bat=''
 SELECTOR="gum choose --height=$((LINES-5))"
-unset show_task aptcache spec logdiff offset sourcerpm
+unset show_task aptcache spec logdiff offset sourcerpm resolve
 for i; do
 	shift
 	[ "$i" = s ]        && i=Sisyphus
@@ -38,6 +38,7 @@ for i; do
 	case "$i" in
 		--src|--srpm*) srpms=y ;;
 		--sourcerpm) sourcerpm=y ;;
+		--resolve-src) resolve=src ;;
 		--spec) spec=y; srpms=only ;;
 		-a|--all-arch*) all_arch=y ;;
 		--full-time) lsopts+=" $i" ;;
@@ -97,6 +98,22 @@ gear_describe()
 	VERSION=$2
 	RELEASE=$3
 	export NAME VERSION RELEASE
+}
+
+resolver_filter() {
+	if [ ! -v resolve ]; then
+		cat
+		return
+	fi
+	while read -r a aa; do
+		binlist=$rroot/$b/files/list/bin.list
+		solve=$(awk "\$1 == \"$a\" {print\$5; exit}" "$binlist")
+		if [ -n "$solve" ]; then
+			printf '%s %s -> %s\n' "$a" "$aa" "${solve%-*-*.src.rpm}"
+		else
+			printf '%s %s\n' "$a" "$aa"
+		fi
+	done
 }
 
 packages=${packages# }
@@ -311,6 +328,7 @@ elif [ -n "$query" ]; then
 			prefix=$REPO@$prefix
 		fi
 		rpm -qp "$query" -- "$rpm" |
+		resolver_filter |
 		if ! sed "s,^,$prefix: ," | grep --color=auto "$pattern"; then
 			echo "$prefix: no match"
 		fi
