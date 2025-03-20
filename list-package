@@ -20,7 +20,7 @@ branches='' arches='' packages=''
 all_arch='' lsopts='-ltrd' rpmpeek='' lesser='' logs='' dts=''
 pattern='' query='' show_pkg='' srpms='' bat=''
 SELECTOR="gum choose --height=$((LINES-5))"
-unset show_task aptcache spec logdiff offset
+unset show_task aptcache spec logdiff offset sourcerpm
 for i; do
 	shift
 	[ "$i" = s ]        && i=Sisyphus
@@ -37,6 +37,7 @@ for i; do
 	fi
 	case "$i" in
 		--src|--srpm*) srpms=y ;;
+		--sourcerpm) sourcerpm=y ;;
 		--spec) spec=y; srpms=only ;;
 		-a|--all-arch*) all_arch=y ;;
 		--full-time) lsopts+=" $i" ;;
@@ -130,6 +131,12 @@ for package in $packages; do
 			set +f
 			for i in $pat; do
 				test -e "$i" || continue
+				if [ -v sourcerpm ]; then
+					# Redirect requests to SOURCERPM.
+					srpm=$(rpm -qp "$i" --qf '%{SOURCERPM}')
+					r=$rroot/$b/files/SRPMS
+					i=$r/$srpm
+				fi
 				list+=("$i")
 			done
 			set -f
