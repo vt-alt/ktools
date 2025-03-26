@@ -218,7 +218,13 @@ select_one() {
 	if [ -n "$dts" ]; then
 		grab_dts
 		export GUM_CHOOSE_SELECTED=$(printf %s "$DTS" | grep -w "${TASK-}")
-		DTS=$(printf %s "$DTS" | $SELECTOR)
+		if [ -v show_task ]; then
+			DTS=$(printf %s "$DTS" | fzf --no-sort --tac --height=~100% \
+				--preview-window=60% \
+				--preview='ssh girar task show $show_task {2}')
+		else
+			DTS=$(printf %s "$DTS" | $SELECTOR)
+		fi
 		read -r _ TASK SUBTASK _ <<< "$DTS"
 		[ "${1-}" = --task ] && return
 		# Download requested RPM into cache.
