@@ -48,8 +48,8 @@ repo_check() {
 		fi
 	else
 		local repocmp origcmp
-		repocmp=$(rpmvercmp "$repotag" "$tag")
-		origcmp=$(rpmvercmp "$origtag" "$tag")
+		origcmp=$(rpmevrcmp "$origtag" "$tag")
+		repocmp=$(rpmevrcmp "$repotag" "$tag")
 		case "$origcmp:$repo:$repocmp" in
 			-1:"$orig":*)	action=update ;;
 			-1:*:*)		action="E[$tag>$origtag]" ;;
