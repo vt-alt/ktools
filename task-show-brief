@@ -1,12 +1,13 @@
 #!/bin/bash
 set -efu -o pipefail
 
-unset verbose
+unset verbose debug
 orig=sisyphus
 for opt do
         shift
         case "$opt" in
 		-v | --verbose) verbose=y ;;
+		-d | --debug) debug=y ;;
 		--orig=*) orig=${opt#*=} ;;
 		--) break ;;
                 *) set -- "$@" "$opt";;
@@ -59,6 +60,7 @@ repo_check() {
 			*:*:1)		action=OBSOLETE ;;
 			*)		action="Unknown[$origcmp:$repo:$repocmp]" ;;
 		esac
+		[ -v debug ] && action="<$origtag:$repotag?$tag>=<$origcmp:$repo:$repocmp>$action"
 	fi
 	[ -v verbose ] && printf '%14s ' "$action"
 	return 0
