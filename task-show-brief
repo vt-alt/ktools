@@ -18,10 +18,13 @@ task=${1?task-id}; shift
 
 repo_check() {
 	local repo=$1 dir=$2 tag=$3 pkgname=${4-}
+	if [ -z "$pkgname" ] && [ -n "$dir" ]; then
+		pkgname=${dir##*/}
+		pkgname=${pkgname%.git}
+	fi
 	if [[ $dir != /gears/* ]]; then
-		if [ -n "$pkgname" ]; then
-			dir="/gears/${pkgname:0:1}/$pkgname.git"
-		else
+		dir="/gears/${pkgname:0:1}/$pkgname.git"
+		if ! curl -sf "http://git.altlinux.org/$dir" >/dev/null 2>&1; then
 			[ -v verbose ] && printf '%14s ' "new(dir)"
 			return 0
 		fi
@@ -55,7 +58,7 @@ repo_check() {
 			-1:*:*)		action="E[$tag>$origtag]" ;;
 			0:"$orig":0)	action=rebuild ;;
 			0:*:-1)		action=copy ;;
-			1:*:-1)		action=backport ;;
+			1:*:-1)		action=backport ;; # older than in sisyphus newr that in target
 			*:*:0)		action="rebuild[$repo]" ;;
 			*:*:1)		action=OBSOLETE ;;
 			*)		action="Unknown[$origcmp:$repo:$repocmp]" ;;
@@ -87,6 +90,7 @@ while IFS=:= read -r a b c; do
 		printf 'del %s\n' "$package"
 		skip=
 	elif [[ -v dir ]] && [[ -v tag_name ]]; then
+		# BUG: `pkgname` is newer set because it's last tag much after `tag_name`.
 		repo_check "$repo" "$dir" "$tag_name" "${pkgname-}"
 		printf '%s=%s\n' "$dir" "$tag_name"
 		skip=
