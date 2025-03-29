@@ -69,13 +69,13 @@ for commit; do
 		if [ "$note" = "$oldnote" ]; then
 			echo >&2 "${YELLOW}Note already set the same for '$commit': $note${NORM}"
 			continue
-		else
+		elif [ -z "$force" ]; then
 			echo >&2 "${MAGENTA}Already other note on commit '$commit', --force to override.${NORM}"
 			echo >&2"- $oldnote"
 			echo >&2"+ $note"
 			continue
 		fi
 	fi
-	git notes add -m "$note" "$commit"
+	git notes add $force -m "$note" "$commit"
 	echo "${GREEN}$commit: $note${NORM}"
 done
