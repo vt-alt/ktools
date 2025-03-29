@@ -7,6 +7,7 @@ edit=
 tig=
 log=
 logopt=
+bugs=
 for opt do
         shift
         case "$opt" in
@@ -14,6 +15,8 @@ for opt do
 		--edit) edit=y ;;
 		--tig) tig=y ;;
 		--log) log=y ;;
+		--close) unset bugs ;;
+		--close=*) bugs=${opt##*=} ;;
 		-p) logopt+=" $opt" ;;
 		-*) echo >&2 "Unknown option: $opt"; exit 1 ;;
                 *) set -- "$@" "$opt";;
@@ -27,7 +30,7 @@ NORM=$'\e[m'
 
 V() { echo -e "+ $YELLOW$*$NORM" >&2; "$@"; }
 
-changeligize() {
+changelogize() {
 	for s; do
 		echo "- $s." | fmt -t | sed -E 's/^[[:space:]]+/  /'
 	done
@@ -48,7 +51,15 @@ fi
 
 for commit; do
 	subject=$(git log --format=%s -n1 "$commit")
-	note=$(changeligize "$subject")
+	if [ ! -v bugs ]; then
+		bugs=$(git log --format='%(trailers:key=link)' -n1 "$commit" |
+			grep -Po 'https://bugzilla.altlinux.org/\K\d+' |
+			tail -1)
+	fi
+	for i in ${bugs-}; do
+		subject+=" (ALT#$i)"
+	done
+	note=$(changelogize "$subject")
 	if [ -n "$edit" ]; then
 		git notes edit "$commit"
 		continue
