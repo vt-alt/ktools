@@ -138,7 +138,7 @@ if [ -d .git ] && [ ! -d .git/bb ]; then
 fi
 
 # shellcheck disable=SC2086
-[ -e kernel-image.spec ] && kflavour ${kflavour-}
+[ -e kernel-image.spec -o -v kflavour ] && kflavour ${kflavour-}
 sync
 
 set -o pipefail
