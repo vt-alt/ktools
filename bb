@@ -49,7 +49,14 @@ type -p ts >/dev/null ||
 [ "${bb_ts-}" = pwd ] && ts="($(basename "$PWD"))"
 
 if [ ! -v branches ]; then
-	[ -v branch ] && branches=("$branch") || branches=("sisyphus")
+	if [ -v branch ]; then
+		: # From upper level bb run.
+	elif [ -v task ]; then
+		branch=$(curl -sSLf "https://git.altlinux.org/tasks/$task/task/repo")
+	else
+		branch="sisyphus"
+	fi
+	branches=("$branch")
 fi
 for branch in "${branches[@]}"; do
 	[ "$branch" = 's' ] && branch=sisyphus
