@@ -52,6 +52,7 @@ if [ ! -v branches ]; then
 	[ -v branch ] && branches=("$branch") || branches=("sisyphus")
 fi
 for branch in "${branches[@]}"; do
+	[ "$branch" = 's' ] && branch=sisyphus
 	[ ! -d "/ALT/$branch" ] && fatal "Unknown branch=$branch."
 done
 
@@ -153,6 +154,7 @@ sep=
 
 for target in "${targets[@]}"; do
 for branch in "${branches[@]}"; do
+	[ "$branch" = 's' ] && branch=sisyphus
 	set_target=$target
 	# Reexport, since we did unset inside of the loop.
 	export branch set_target
