@@ -1,5 +1,6 @@
 #!/bin/bash
 set -efu +o posix
+shopt -s extglob
 
 fatal() {
 	echo >&2 "! $*"
@@ -15,10 +16,10 @@ for opt do
         case "$opt" in
 		+32)  targets+=("$HOSTTYPE") ;&
 		-32 | --32) targets+=('i586') ;;
+		--arch=* | --target=*) targets+=( "${opt#*=}" ) ;;
 		--s | --sisyphus) branches+=("sisyphus") ;;
 		--[cp][[:digit:]]*) branches+=(${opt#--}) ;;
 		--branch=* | --repo=*) branches+=(${arg//,/ }) ;;
-		--arch=* | --target=*) targets+=( "${opt#*=}" ) ;;
 		--task=*) task="${opt#*=}" ;;
 		--build-srpm-only | -bs) gear_hsh=("hsh" "--build-srpm-only") ;;
 		--install-only) gear_hsh=("hsh-rebuild" "$opt") ;;
@@ -48,11 +49,15 @@ type -p ts >/dev/null ||
 
 [ "${bb_ts-}" = pwd ] && ts="($(basename "$PWD"))"
 
+task_to_branch() {
+	curl -sSLf "https://git.altlinux.org/tasks/${1?}/task/repo"
+}
+
 if [ ! -v branches ]; then
 	if [ -v branch ]; then
 		: # From upper level bb run.
 	elif [ -v task ]; then
-		branch=$(curl -sSLf "https://git.altlinux.org/tasks/$task/task/repo")
+		branch=$task
 	else
 		branch="sisyphus"
 	fi
@@ -60,6 +65,9 @@ if [ ! -v branches ]; then
 fi
 for branch in "${branches[@]}"; do
 	[ "$branch" = 's' ] && branch=sisyphus
+	[[ $branch == +([[:digit:]]) ]] &&
+		branch=$(task_to_branch "$branch") &&
+		continue
 	[ ! -d "/ALT/$branch" ] && fatal "Unknown branch=$branch."
 done
 
@@ -162,6 +170,10 @@ sep=
 for target in "${targets[@]}"; do
 for branch in "${branches[@]}"; do
 	[ "$branch" = 's' ] && branch=sisyphus
+	if [[ $branch == +([[:digit:]]) ]]; then
+		task=$branch
+		branch=$(task_to_branch "$task")
+	fi
 	set_target=$target
 	# Reexport, since we did unset inside of the loop.
 	export branch set_target
