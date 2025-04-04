@@ -1,0 +1,22 @@
+#!/bin/bash
+
+toplevel=$(git rev-parse --show-toplevel 2>/dev/null)
+if [ -n "$toplevel" ]; then
+	cd "$toplevel"
+	if [[ $* == *--rooter* ]]; then
+		f=.git/bb/.bash_history--rooter
+		o=/root/.bash_history
+		if [ -s "$f" ]; then
+			hsh-run --rooter -- test -e "$o" ||
+				hsh-run --rooter -- dd of="$o" status=none < "$f"
+		fi
+	else
+		f=.git/bb/.bash_history
+		o=/usr/src/.bash_history
+		if [ -s "$f" ]; then
+			hsh-run -- test -e "$o" ||
+				hsh-copy "$f"
+		fi
+	fi
+fi
+exec /usr/bin/hsh-shell "$@"
