@@ -1,22 +1,37 @@
 #!/bin/bash
 
 toplevel=$(git rev-parse --show-toplevel 2>/dev/null)
-if [ -n "$toplevel" ]; then
-	cd "$toplevel"
+if [ -n "$toplevel" ] && cd "$toplevel"; then
 	if [[ $* == *--rooter* ]]; then
+		hist=/root/.bash_history
+		opt=(--rooter)
 		f=.git/bb/.bash_history--rooter
-		o=/root/.bash_history
 		if [ -s "$f" ]; then
-			hsh-run --rooter -- test -e "$o" ||
-				hsh-run --rooter -- dd of="$o" status=none < "$f"
+			hsh-run --rooter -- test -e "$hist" ||
+				hsh-run --rooter -- dd of="$hist" status=none < "$f"
 		fi
 	else
+		hist=/usr/src/.bash_history
+		opt=()
 		f=.git/bb/.bash_history
-		o=/usr/src/.bash_history
 		if [ -s "$f" ]; then
-			hsh-run -- test -e "$o" ||
+			hsh-run -- test -e "$hist" ||
 				hsh-copy "$f"
 		fi
 	fi
 fi
-exec /usr/bin/hsh-shell "$@"
+
+/usr/bin/hsh-shell "$@"
+ret=$?
+
+[ -n "$toplevel" ] || exit "$ret"
+
+rotate() {
+	[ -s "${2?}" ] && ln -f "$2" "$2-"
+	[ -s "${1?}" ] && mv -f "$1" "$2"
+}
+
+hsh-run --no-wait-lock "${opt[@]}" -- cat "$hist" > "$f-new" 2>/dev/null
+rotate "$f-new" "$f"
+
+exit "$ret"

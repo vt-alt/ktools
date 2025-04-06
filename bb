@@ -141,20 +141,6 @@ if [ -d .git ] && [ ! -d .git/bb ]; then
 	fi
 fi
 
-rotate() {
-	[ -s "${2?}" ] && ln -f "$2" "$2-"
-	[ -s "${1?}" ] && mv -f "$1" "$2" && echo >&2 ": Updated $2"
-}
-
-for i in '/usr/src/.bash_history' '/root/.bash_history --rooter'; do
-	read -r f o <<<"$i"
-	b=".git/bb/${f##*/}$o"
-	# shellcheck disable=SC2086
-	hsh-run --no-wait-lock $o -- cat "$f" > "$b-new" 2>/dev/null || continue
-	rotate "$b-new" "$b"
-	unset f o b
-done
-
 export branch set_target archive_date task components set_rpmargs
 if [ -n "${initroot-}" ]; then
 	log_config
@@ -166,7 +152,6 @@ elif [ -v gear_hsh ]; then
 	pkg_install
 	exit
 fi
-
 
 # shellcheck disable=SC2086
 [ -e kernel-image.spec -o -v kflavour ] && kflavour ${kflavour-}
