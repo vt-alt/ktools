@@ -21,6 +21,7 @@ all_arch='' lsopts='-ltrd' rpmpeek='' lesser='' logs='' dts=''
 pattern='' query='' show_pkg='' srpms='' bat=''
 SELECTOR="gum choose --height=$((LINES-5))"
 unset show_task aptcache spec logdiff offset sourcerpm resolve
+unset summary_task preview
 for i; do
 	shift
 	[ "$i" = s ]        && i=Sisyphus
@@ -50,6 +51,7 @@ for i; do
 		--logdiff2) logdiff=log; logtool=logdiff2; break ;;
 		--log) logs=y ;;
 		--dts | --ver*) dts=y ;;
+		--summary) dts=y; summary_task=y ;&
 		--task) show_task=--brief ;;
 		--task-full) show_task= ;;
 		-p | --pkg | --packages) show_pkg=y ;;
@@ -218,13 +220,19 @@ select_one() {
 	if [ -n "$dts" ]; then
 		grab_dts
 		export GUM_CHOOSE_SELECTED=$(printf %s "$DTS" | grep -w "${TASK-}")
-		if [ -v show_task ]; then
+		if [ -v summary_task ]; then
+			preview="girar-summary-task {2}"
+		elif [ -v show_task ]; then
+			preview="ssh girar task show $show_task {2}"
+		fi
+		if [ -v preview ]; then
 			DTS=$(printf %s "$DTS" | fzf --no-sort --tac --height=~100% \
 				--preview-window=60% \
-				--preview='ssh girar task show $show_task {2}')
+				--preview="$preview")
 		else
 			DTS=$(printf %s "$DTS" | $SELECTOR)
 		fi
+		unset preview
 		read -r _ TASK SUBTASK _ <<< "$DTS"
 		[ "${1-}" = --task ] && return
 		# Download requested RPM into cache.
