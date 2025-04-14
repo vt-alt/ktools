@@ -18,6 +18,7 @@ pick=
 tag_grep=
 show_tags=
 allow_diverged=
+all=
 stable=
 onto=
 reset=
@@ -49,6 +50,7 @@ for opt do
 		--log ) show_tags=log ;;
 		--log-push | --log-unpushed) show_tags=log_push ;;
 		--allow-diverged) allow_diverged=y ;;
+		--all) all=y ;&
 		--stable | --stable-rc) stable=${opt#--} ;;
 		-*) echo >&2 "Unknown option: $opt"; exit 1 ;;
                 *) set -- "$@" "$opt";;
@@ -71,7 +73,11 @@ elif [ -n "$stable" ]; then
 	unset fetch
 	branches=$(
 		git branch -lr --sort=-creatordate --format='%(refname:short) %(creatordate:relative)' "$stable/*" |
-		grep -v -e 'year' -e 'month' |
+		if [ -n "$all" ]; then
+			grep -e "$pattern"
+		else
+			grep -v -e 'year' -e 'month'
+		fi |
 		cut -d' ' -f1
 	)
 	remote=$stable
