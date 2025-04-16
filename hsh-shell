@@ -21,6 +21,7 @@ if [ -n "$toplevel" ] && cd "$toplevel"; then
 	fi
 fi
 
+TERM=${TERM#screen.}
 /usr/bin/hsh-shell "$@"
 ret=$?
 
