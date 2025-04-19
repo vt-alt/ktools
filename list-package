@@ -50,6 +50,7 @@ for i; do
 		--logdiff) logdiff=log; logtool=logdiff; break ;;
 		--logdiff2) logdiff=log; logtool=logdiff2; break ;;
 		--log) logs=y ;;
+		--dts-http) dts=http ;;
 		--dts | --ver*) dts=y ;;
 		--summary) dts=y; summary_task=y ;&
 		--task) show_task=--brief ;;
@@ -179,8 +180,13 @@ grab_dts() {
 		SOURCERPM=$(rpm -qp "$RPM" --qf '%{SOURCERPM}')
 		pkgname=${SOURCERPM%-*-*.*.rpm}
 	fi
-	DTS_FILE="/ALT/repo/$REPO/index/src/${pkgname:0:1}/$pkgname/d-t-s-evr.list"
-	DTS_LIST=$(awk 'OFS="\t" {$1=strftime("%Y-%m-%d",$1); print $0}' "$DTS_FILE" | column -t)
+	if [ "$dts" = 'http' ]; then
+		DTS_FILE="http://ftp.altlinux.org/pub/distributions/archive/$REPO/index/src/${pkgname:0:1}/$pkgname/d-t-s-evr.list"
+		DTS_LIST=$(curl -sSf -L "$DTS_FILE" | awk 'OFS="\t" {$1=strftime("%Y-%m-%d",$1); print $0}' | column -t)
+	else
+		DTS_FILE="/ALT/repo/$REPO/index/src/${pkgname:0:1}/$pkgname/d-t-s-evr.list"
+		DTS_LIST=$(awk 'OFS="\t" {$1=strftime("%Y-%m-%d",$1); print $0}' "$DTS_FILE" | column -t)
+	fi
 	DTS=$DTS_LIST
 }
 
