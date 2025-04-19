@@ -34,6 +34,7 @@ for opt do
 		--fresh) fresh=y ;;
 		--date=*|--archive=*) archive_date=${opt#*=} ;;
 		--components=*) components=${opt#*=} ;;
+		--rsync) do_rsync=y ;;
 		--disable[-=]*) set_rpmargs+="--disable ${opt#--*[-=]}" ;;
 		--kernel-latest=*) set_rpmargs+="--define 'kernel_latest $arg'" ;;
 		--kflavour=*) kflavour=${opt#*=} ;;
@@ -142,7 +143,7 @@ if [ -d .git ] && [ ! -d .git/bb ]; then
 	fi
 fi
 
-export branch set_target archive_date task components set_rpmargs
+export branch set_target archive_date task components set_rpmargs do_rsync
 if [ -n "${initroot-}" ]; then
 	log_config
 	pkg_install

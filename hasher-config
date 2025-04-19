@@ -37,7 +37,10 @@ cat > "$apt_config" <<-EOF
 EOF
 sources_list=$HOME/.hasher/sources-$def_target.list
 if [ -n "${archive_date-}" ]; then
-	url="http://ftp.altlinux.org/pub/distributions/archive/$branch/date/$archive_date/"
+	[ -n "${do_rsync-}" ] &&
+		url="rsync://ftp.altlinux.org/alt-repo" ||
+		url="http://ftp.altlinux.org/pub/distributions/archive"
+	url+="/$branch/date/$archive_date/"
 else
 	url="file:/ALT/$branch"
 fi
@@ -46,7 +49,9 @@ cat > "$sources_list" <<-EOF
 	rpm $url noarch $components
 EOF
 if [ -n "${task-}" ]; then
-	echo rpm http://git.altlinux.org repo/$task/$def_target task
+	[ -n "${do_rsync-}" ] &&
+		echo "rpm rsync://git.altlinux.org/tasks/$task/build repo/$def_target task" ||
+		echo "rpm http://git.altlinux.org repo/$task/$def_target task"
 fi >> "$sources_list"
 
 if [ -z "$disttag" ]; then
