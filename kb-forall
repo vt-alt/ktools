@@ -267,7 +267,7 @@ for lbr in $branches; do
 		picked=$(  echo "$cherry" | grep -c '^- ' ||:)
 		unpicked=$(echo "$cherry" | grep -c '^+ ' ||:)
 		case "$picked:$unpicked" in
-			0:0)  state=skip ;;
+			0:0)  state=exact ;;
 			"$n:0") state=picked ;;
 			*:0)  state=picked-mismatch-$picked-$n ;;
 			"0:$n") state=unpicked; list+=("$commit") ;;
