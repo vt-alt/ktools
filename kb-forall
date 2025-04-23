@@ -267,12 +267,12 @@ for lbr in $branches; do
 		picked=$(  echo "$cherry" | grep -c '^- ' ||:)
 		unpicked=$(echo "$cherry" | grep -c '^+ ' ||:)
 		case "$picked:$unpicked" in
-			0:0)  state=exact ;;
-			"$n:0") state=picked ;;
-			*:0)  state=picked-mismatch-$picked-$n ;;
-			"0:$n") state=unpicked; list+=("$commit") ;;
-			0:*)  state=unpicked-mismatch-$unpicked-$n ;;
-			*)  state=mixed-$picked-$unpicked-$n ;;
+			0:0)    state=exact; hl=32 ;;
+			"$n:0") state=picked; hl=32 ;;
+			*:0)    state=picked-mismatch-$picked-$n; hl=35 ;;
+			"0:$n") state=unpicked; list+=("$commit"); hl=34 ;;
+			0:*)    state=unpicked-mismatch-$unpicked-$n; hl=35 ;;
+			*)     state=mixed-$picked-$unpicked-$n; hl=35 ;;
 		esac
 		unset n
 
@@ -285,7 +285,10 @@ for lbr in $branches; do
 				state=[$(git describe --contains "${target#* }" 2>/dev/null || echo 'picked')]
 			fi
 		fi
-		printf ' %s' "$state"
+		hl=$'\e'"[1;${hl}m"
+		he=$'\e[m';
+		printf ' %s' "$hl$state$he"
+		unset hl he
 
 		printf '%s %s %s\n' "$rev" "$commit" "$state" >> "$picksfile"
 	done
