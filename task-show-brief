@@ -1,13 +1,14 @@
 #!/bin/bash
 set -efu -o pipefail
 
-unset verbose debug
+unset verbose debug show_subtask_id
 orig=sisyphus
 for opt do
         shift
         case "$opt" in
 		-v | --verbose) verbose=y ;;
 		-d | --debug) debug=y ;;
+		-n ) show_subtask_id=y ;;
 		--orig=*) orig=${opt#*=} ;;
 		--) break ;;
                 *) set -- "$@" "$opt";;
@@ -86,10 +87,12 @@ while IFS=:= read -r a b c; do
 			;;
 	esac
 	if [[ -v delete ]] && [[ -v package ]]; then
+		[ -v show_subtask_id ] && printf '%5s ' "$id"
 		repo_check "$repo" "/gears/${package:0:1}/$package.git" "delete"
 		printf 'del %s\n' "$package"
 		skip=
 	elif [[ -v dir ]] && [[ -v tag_name ]]; then
+		[ -v show_subtask_id ] && printf '%5s ' "$id"
 		# BUG: `pkgname` is newer set because it's last tag much after `tag_name`.
 		repo_check "$repo" "$dir" "$tag_name" "${pkgname-}"
 		printf '%s=%s\n' "$dir" "$tag_name"
