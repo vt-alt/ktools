@@ -31,7 +31,10 @@ repo_check() {
 		fi
 	fi
 	local heads orighead repohead
-	heads=$(git ls-remote "http://git.altlinux.org/$dir")
+	heads=$(git ls-remote "http://git.altlinux.org/${dir#/}" 2>/dev/null) || {
+		printf '%14s ' 'error'
+		return 0
+	}
 	orighead=$(echo "$heads" | grep -E "\srefs/heads/$orig\$" ||:)
 	repohead=$(echo "$heads" | grep -E "\srefs/heads/$repo\$" ||:)
 	if [ -z "$repohead" ]; then
