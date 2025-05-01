@@ -5,6 +5,32 @@
 require 'tmpdir'
 require 'fileutils'
 
+@s = [
+  [/\d+/, '0'],
+  [/[\t ]+/, ' '],
+  [/ -fdiagnostics-color=always/, ''],
+  [/\033\[[0-9;]*[a-zA-Z]/, ''],
+  [/^\[?0:0:0\]? /, ''],
+  [%r{/usr/src/tmp/rpm-tmp\.\S{4,6}}, '/usr/src/tmp/rpm-tmp.X'],
+  [%r{/usr/src/tmp/\S{8}\.ltrans\d\.ltrans.o}, '/usr/src/tmp/X.ltrans0.ltrans.o'],
+  [%r{\b0x[0-9a-f]+\b}, '0x0'],
+  [%r{\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b}, 'Jan'],
+  [%r{\b(Sun|Mon|Tue|Wed|Thu|Fri|Sat)\b}, 'Sun'],
+  [%r{/usr/bin/(sed|grep|mkdir|dd|bzip0|gzip|install|tar|cat|chgrp|chmod|chown|cp|cpio|mv|rm)\b}, '/bin/\1'],
+  [%r{/bin/install\b}, '/usr/bin/ginstall'],
+  [%r{w0.[lgx]zdio\b}, 'w0.lzdio'],
+]
+
+class String
+  def ggsub(repls)
+    res = self.dup
+    repls.each do |re, s|
+      res.gsub!(re, s)
+    end
+    res
+  end
+end
+
 @temp_dir = Dir.mktmpdir
 at_exit do
   FileUtils.remove_entry(@temp_dir)
@@ -12,7 +38,7 @@ end
 
 def mut(fa)
   a = IO.readlines(fa)
-  ar = a.map {|e| e.gsub(/\d+/, '0')}
+  ar = a.map {|e| e.ggsub(@s)}
   at = File.join(@temp_dir, File.basename(fa))
   File.write(at, ar.join)
   [at, a]
@@ -30,7 +56,7 @@ diff_output = IO.popen(["diff", "-u", at, bt]) do |io|
       when /^-/
         printf '-%s', a[acnt - 1]
         acnt += 1
-      when /^+/
+      when /^\+/
         printf '+%s', b[bcnt - 1]
         bcnt += 1
       when /^ /
@@ -52,5 +78,3 @@ diff_output = IO.popen(["diff", "-u", at, bt]) do |io|
     end
   end
 end
-
-
