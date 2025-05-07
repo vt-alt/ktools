@@ -34,7 +34,9 @@ if [ -v mode ]; then
 fi
 
 if [ -v offset ]; then
-	# Start from 1 like in tail -1 is the last line.
+	# Start from 0 like, Nth previous log file.
+	# (Similar to sar -N or journalctl -b N)
+	offset=$((offset+1))
 	files=($(ls -1tr "${files[@]}" | tac | sed -n "${offset}p"))
 else
 	# shellcheck disable=SC2012,SC2207,SC2016
