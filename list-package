@@ -19,6 +19,7 @@ branch=Sisyphus arch=x86_64
 branches='' arches='' packages=''
 all_arch='' lsopts='-ltrd' rpmpeek='' lesser='' logs='' dts=''
 pattern='' query='' show_pkg='' srpms='' bat=''
+dts_proto=''
 SELECTOR="gum choose --height=$((LINES-5))"
 unset show_task aptcache spec logdiff offset sourcerpm resolve
 unset summary_task preview
@@ -50,8 +51,9 @@ for i; do
 		--logdiff) logdiff=log; logtool=logdiff; break ;;
 		--logdiff2) logdiff=log; logtool=logdiff2; break ;;
 		--log) logs=y ;;
-		--dts-http) dts=http ;;
+		--dts-http) dts_proto=http ;&
 		--dts | --ver*) dts=y ;;
+		--dts=*) dts=${i#*=} ;;
 		--summary) dts=y; summary_task=y ;&
 		--task) show_task=--brief ;;
 		--task-full) show_task= ;;
@@ -180,12 +182,16 @@ grab_dts() {
 		SOURCERPM=$(rpm -qp "$RPM" --qf '%{SOURCERPM}')
 		pkgname=${SOURCERPM%-*-*.*.rpm}
 	fi
-	if [ "$dts" = 'http' ]; then
+	if [ "$dts_proto" = 'http' ]; then
 		DTS_FILE="http://ftp.altlinux.org/pub/distributions/archive/$REPO/index/src/${pkgname:0:1}/$pkgname/d-t-s-evr.list"
 		DTS_LIST=$(curl -sSf -L "$DTS_FILE" | awk 'OFS="\t" {$1=strftime("%Y-%m-%d",$1); print $0}' | column -t)
 	else
 		DTS_FILE="/ALT/repo/$REPO/index/src/${pkgname:0:1}/$pkgname/d-t-s-evr.list"
 		DTS_LIST=$(awk 'OFS="\t" {$1=strftime("%Y-%m-%d",$1); print $0}' "$DTS_FILE" | column -t)
+	fi
+	if [[ $dts = +([-[:digit:]]) ]]; then
+		((dts < 0)) && dts=$((-dts))
+		DTS_LIST=$(echo "$DTS_LIST" | tail -$((dts+1)) | head -1)
 	fi
 	DTS=$DTS_LIST
 }
@@ -223,7 +229,7 @@ select_one() {
 		local default=$(ls -1 "${list[@]}" | grep -i -m1 '/sisyphus/')
 		RPM=$(gum choose --header='Select one:' --cursor='-> ' --selected="$default" "${list[@]}")
 	fi
-	if [ -n "$dts" ]; then
+	if [ "${1-}" != --no-dts ] && [ -n "$dts" ]; then
 		grab_dts
 		export GUM_CHOOSE_SELECTED=$(printf %s "$DTS" | grep -w "${TASK-}")
 		if [ -v summary_task ]; then
@@ -231,7 +237,9 @@ select_one() {
 		elif [ -v show_task ]; then
 			preview="ssh girar task show $show_task {2}"
 		fi
-		if [ -v preview ]; then
+		if [[ $dts = +([[:digit:]]) ]]; then
+			: # dts list is already reduced to a single line in grab_dts
+		elif [ -v preview ]; then
 			DTS=$(printf %s "$DTS" | fzf --no-sort --tac --height=~100% \
 				--preview-window=60% \
 				--preview="$preview")
@@ -370,7 +378,7 @@ elif [ -v aptcache ]; then
 	exit
 elif [ -n "$dts" ]; then
 	# Last resort - just print d-t-s-evr.list
-	dts='' select_one
+	select_one --no-dts
 	grab_dts
 	printf '%s\n' "- $DTS_FILE" >&2
 	printf '%s\n' "$DTS_LIST" |& less
