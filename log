@@ -4,7 +4,7 @@ shopt -s extglob
 
 grepcmd='grep'
 selector='fzf --highlight-line'
-unset mode offset
+unset mode offset difftool
 for opt do
         shift
         case "$opt" in
@@ -12,6 +12,7 @@ for opt do
 		--grep|-ug|--ug|--ugrep|-rg|--rg) grepcmd=${opt##+(-)} ;&
 		-g) mode=GREP; break ;;
 		--sk | --skim) selector='sk' ;;
+		--logdiff | --logdiff2) difftool=${opt#--} ;;
 		--) break ;;
 		-*) echo >&2 "Error: unknown option: $opt"; exit 1 ;;
                 *) set -- "$@" "$opt";;
@@ -33,15 +34,11 @@ if [ -v mode ]; then
 	fi
 fi
 
-if [ -v offset ]; then
-	# Start from 0 like, Nth previous log file.
-	# (Similar to sar -N or journalctl -b N)
-	offset=$((offset+1))
-	files=($(ls -1tr "${files[@]}" | tac | sed -n "${offset}p"))
-else
+tui_selector() {
 	# shellcheck disable=SC2012,SC2207,SC2016
 	files=($(ls -1tr "${files[@]}" |
 		$selector \
+		"$@" \
 		--bind='q:abort,/:unbind(q)+unbind(/)' \
 		--no-mouse \
 		--no-sort \
@@ -49,6 +46,24 @@ else
 		--multi \
 		--preview-window=80% \
 		--preview='head -$((LINES/2-1)) {}; echo ...; tail -$((LINES/2)) {}'))
+}
+
+if [ -v offset ]; then
+	# Start from 0 like, Nth previous log file.
+	# (Similar to sar -N or journalctl -b N)
+	offset=$((offset+1))
+	files=($(ls -1tr "${files[@]}" | tac | sed -n "${offset}p"))
+elif [ -v difftool ]; then
+	tui_selector --multi
+	if (( ${#files[@]} == 2 )); then
+		"$difftool" "${files[@]}" | delta
+		exit
+	else
+		echo "Need to select two logs (using TAB)" >&2
+		exit 1
+	fi
+else
+	tui_selector
 fi
 if [ ${#files[@]} -eq 0 ]; then
 	exit
