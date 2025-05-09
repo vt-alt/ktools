@@ -12,6 +12,7 @@ packager=$(rpm --eval %packager)
 known_mountpoints=/proc,/dev/pts,/dev/kvm,/sys
 lazy_cleanup=yes
 install_resolver_configuration_files=yes
+wlimit_time_long=2400
 
 if [ -n "${set_target-}" ]; then
 	def_target=$set_target
