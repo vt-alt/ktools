@@ -4,6 +4,7 @@ set -eu +f
 export LC_ALL=C
 export GREP_COLORS="mt=1;32"
 export GIT_GREP_COLOR=(-c "color.grep.match=green bold")
+unset CDPATH
 
 [ -t 1 ] && color=--color=always || color=
 _color=$color
@@ -14,6 +15,7 @@ _setx=:
 grep_opt=
 git_fp=
 match=
+show_commit=
 for opt do
         shift
         case "$opt" in
@@ -26,6 +28,8 @@ for opt do
 		-x | --extra) all=y ;;
 		-a | --alt) alt=y ;;
 		--match=*) match=${opt#*=} ;;
+		--commit) grep_opt+=" -n"; show_commit=y ;;
+		--line-number | -n) grep_opt+=" $opt" ;;
 		-*) echo >&2 "unknown option: $opt"; exit 1 ;;
                 *) set -- "$@" "$opt";;
         esac
@@ -35,55 +39,86 @@ if [ -v alt ]; then
 	($_setx; list-kernels s def --show-no-match --grep "$@")
 fi
 
-cd ~/linux
-while read -r root br dir; do
-	[[ "$root" =~ ^[[:space:]]*\# ]] && continue
-	[[ "$root" =~ ^\? ]] && [ ! -v all ] && continue
-	[[ "$root $br $dir" =~ $match ]] || continue
-	root=${root#\?}
-	cd ~/linux/"$root"
-	if [ "${br:-@}" = '@' ]; then
-		branch=$(git branch --show-current)
-		br=
-	else
-		branch=$br
-	fi
-	if [ -f ".git/refs/remotes/$branch" ]; then
-		remote=${branch%%/*}
-	else
-		remote=
-	fi
-	if [ -v update ]; then
-		figlet -t "$root${remote:+ : $remote}"
-		if [ -d .git ]; then
-			if [ "$br" = '' ]; then
-				(set -x; git pull --rebase)
-			elif [ -n "$remote" ]; then
-				(set -x; git fetch "$remote")
-			else
-				echo -e >&2 "\e[1;31m- $PWD unknown how to update branch $branch\e[m"
-				continue
-			fi
-			git l -1 $br
-		else
-			echo -e >&2 "\e[1;35m- $PWD is not a git repository.\e[m"
-		fi
-		continue
-	fi
-	if [ -v log ]; then
-		[ -d .git ] || continue
-		echo ":: $root [$branch]"
-		git l ${grep_opt:--1} $git_fp $br
-		echo
-		continue
-	fi
-	PS4="+ $root + "
-	if [ -d .git ]; then
-		(set -f; $_setx; git "${GIT_GREP_COLOR[@]}" "$_grep" $grep_opt $_color "$@" $br -- $dir)
-	else
-		($_setx; grep $grep_opt $color "$@" -r $dir)
-	fi | sed "s:^:$root | :" | sed -E \
-		-e '/is not set/s/\x1b\[1;32m/\x1b\[1;33m/g' \
-		-e 's/(x86([_-]64)?|amd64)/\x1b[1m\1\x1b[22m/g'
+HLARCH='s/(x86([_-]64)?|amd64)/\x1b[1m\1\x1b[22m/g'
+do_kgrep() {
+	cd ~/linux
+	while read -r root br dir; do
+		[[ "$root" =~ ^[[:space:]]*\# ]] && continue
+		[[ "$root" =~ ^\? ]] && [ ! -v all ] && continue
+		[[ "$root $br $dir" =~ $match ]] || continue
+		root=${root#\?}
+		cd ~/linux/"$root"
 
-done < ".kgrep.conf"
+		if [ "${br:-@}" = '@' ]; then
+			branch=$(git branch --show-current)
+			br=
+		else
+			branch=$br
+		fi
+		if [ -f ".git/refs/remotes/$branch" ]; then
+			remote=${branch%%/*}
+		else
+			remote=
+		fi
+		if [ -v update ]; then
+			figlet -t "$root${remote:+ : $remote}"
+			if [ -d .git ]; then
+				if [ "$br" = '' ]; then
+					(set -x; git pull --rebase)
+				elif [ -n "$remote" ]; then
+					(set -x; git fetch "$remote")
+				else
+					echo -e >&2 "\e[1;31m- $PWD unknown how to update branch $branch\e[m"
+					continue
+				fi
+				git l -1 $br
+			else
+				echo -e >&2 "\e[1;35m- $PWD is not a git repository.\e[m"
+			fi
+			continue
+		fi
+		if [ -v log ]; then
+			[ -d .git ] || continue
+			echo ":: $root [$branch]"
+			git l ${grep_opt:--1} $git_fp $br
+			echo
+			continue
+		fi
+		PS4="+ $root + "
+		if [ -d .git ]; then
+			(set -f; $_setx; git "${GIT_GREP_COLOR[@]}" "$_grep" $grep_opt $_color "$@" $br -- $dir)
+		else
+			($_setx; grep $grep_opt $color "$@" -r $dir)
+		fi | sed "s:^:$root | :" | sed -E \
+			-e '/is not set/s/\x1b\[1;32m/\x1b\[1;33m/g' \
+			-e "$HLARCH"
+
+	done < ".kgrep.conf"
+}
+
+kgrep-preview-commit() {
+	read -r dist _ loc _ <<<"$*"
+	IFS=: read -r f j _ <<<"$loc"
+	conf=$(awk -v dist="$dist" '$1 == dist' < ~/linux/.kgrep.conf)
+	read -r _ rev _ <<< "$conf"
+	[ -n "$rev" ] || rev=@
+	cd ~/linux/"$dist"
+	read -r commit _ <<<"$(git blame -l -L"$j,$j" "$rev" -- "$f")"
+	git show "$commit"
+}
+export -f kgrep-preview-commit
+
+if [ -z "$show_commit" ]; then
+	do_kgrep "$@"
+else
+	color=
+	_color=
+	HLARCH=
+	do_kgrep "$@" |& fzf \
+		--bind='q:abort,/:unbind(q)+unbind(/)' \
+		--no-mouse \
+		--no-sort \
+		--tac \
+		--preview-window=50% \
+		--preview='bash -c "kgrep-preview-commit {}"'
+fi
