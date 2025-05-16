@@ -231,7 +231,7 @@ for lbr in $branches; do
 			printf ' @{u}'
 			git branch -q --set-upstream-to "$rbr" "$lbr"
 		elif [ "$ubr" != "$rbr" ]; then
-			printf ' [%s?]' "$ubr"
+			printf ' [remote=%s?]' "$ubr"
 		fi
 	fi
 
