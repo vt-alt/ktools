@@ -7,15 +7,15 @@ if [ -n "$toplevel" ] && cd "$toplevel"; then
 		opt=(--rooter)
 		f=.git/bb/.bash_history--rooter
 		if [ -s "$f" ]; then
-			hsh-run --rooter -- test -e "$hist" ||
-				hsh-run --rooter -- dd of="$hist" status=none < "$f"
+			hsh-run --rooter -- /usr/bin/test -e "$hist" ||
+				hsh-run --rooter -- /bin/dd of="$hist" status=none < "$f"
 		fi
 	else
 		hist=/usr/src/.bash_history
 		opt=()
 		f=.git/bb/.bash_history
 		if [ -s "$f" ]; then
-			hsh-run -- test -e "$hist" ||
+			hsh-run -- /usr/bin/test -e "$hist" ||
 				hsh-copy "$f"
 		fi
 	fi
@@ -32,7 +32,7 @@ rotate() {
 	[ -s "${1?}" ] && mv -f "$1" "$2"
 }
 
-hsh-run --no-wait-lock "${opt[@]}" -- cat "$hist" > "$f-new" 2>/dev/null
+hsh-run --no-wait-lock "${opt[@]}" -- /bin/cat "$hist" > "$f-new" 2>/dev/null
 rotate "$f-new" "$f"
 
 exit "$ret"
