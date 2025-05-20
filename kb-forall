@@ -237,19 +237,21 @@ for lbr in $branches; do
 
 	rev=$(git rev-parse "$lbr")
 
-	# Show number of unreleased commits. This is a column even if no output.
-	printf ' '
-	topmost=$(git describe --match='kernel-image-*' --abbrev=0 "$lbr")
-	n=$(git rev-list --first-parent --count "$topmost..$lbr")
-	if [ "$n" -ne 0 ]; then
-		printf '*%d' "$n"
-		nn=$(git log --format=%N "$topmost..$lbr" | grep -c .) &&
-			printf ':%d' "$nn"
-		unset nn
+	if [ -z "$stable" ]; then
+		# Show number of unreleased commits. This is a column even if no output.
+		printf ' '
+		topmost=$(git describe --match='kernel-image-*' --abbrev=0 "$lbr" 2>/dev/null)
+		n=$(git rev-list --first-parent --count "$topmost..$lbr")
+		if [ "$n" -ne 0 ]; then
+			printf '*%d' "$n"
+			nn=$(git log --format=%N "$topmost..$lbr" | grep -c .) &&
+				printf ':%d' "$nn"
+			unset nn
+		fi
+		nn=$(git rev-list --count "$topmost..$lbr")
+		[ "$n" -eq "$nn" ] || printf '/%d' "$nn"
+		unset n nn
 	fi
-	nn=$(git rev-list --count "$topmost..$lbr")
-	[ "$n" -eq "$nn" ] || printf '/%d' "$nn"
-	unset n nn
 
 	if [ -v grep_args ]; then
 		echo
