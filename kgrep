@@ -114,18 +114,26 @@ else
 	color=
 	_color=
 	HLARCH=
-	selection=$(do_kgrep "$@" |& fzf \
-		--bind='q:abort,/:unbind(q)+unbind(/)' \
-		--no-mouse \
-		--no-sort \
-		--tac \
-		--preview-window=50% \
-		--preview='bash -c "kgrep-preview-commit {}"'
-	)
-	if [[ $selection =~ ([^[:space:]]+)[[:space:]]\|[[:space:]]([^:]+): ]]; then
-		dir=${BASH_REMATCH[1]}
-		f=${BASH_REMATCH[2]}
-		cd "$dir"
-		tig "$f"
-	fi
+
+	pos=1
+	while true; do
+		list=$(do_kgrep "$@" 2>&1)
+		selection=$(echo "$list" | fzf \
+			--bind='q:abort,/:unbind(q)+unbind(/)' \
+			--no-mouse \
+			--no-sort \
+			--tac \
+			--bind="load:pos($pos)" \
+			--preview-window=50% \
+			--preview='bash -c "kgrep-preview-commit {}"'
+		)
+		pos=$(echo "$list" | grep -nF "$selection")
+		pos=-${pos%%:*}
+		if [[ $selection =~ ([^[:space:]]+)[[:space:]]\|[[:space:]]([^:]+): ]]; then
+			dir=${BASH_REMATCH[1]}
+			f=${BASH_REMATCH[2]}
+			cd ~/linux/"$dir"
+			tig "$f"
+		fi
+	done
 fi
