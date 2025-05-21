@@ -124,24 +124,12 @@ pkg_install() {
 	unset build_state
 }
 
-repo_clean() {
+repo_clean() (
+	set +f
 	mkdir -p ~/repo
 	rm -rf -v ~/repo/*
-}
+)
 [ -v hsh_clean ] && repo_clean
-
-toplevel=$(git rev-parse --show-toplevel)
-[ "$toplevel" -ef . ] ||{
-	echo "+ cd $toplevel"
-	cd "$toplevel"
-}
-
-if [ -d .git ] && [ ! -d .git/bb ]; then
-        mkdir .git/bb
-	if [[ -n $(set +f; ls log.2024* 2>/dev/null) ]]; then
-		(set +f; mv -v log.2024* -t .git/bb)
-	fi
-fi
 
 export branch set_target archive_date task components set_rpmargs do_rsync
 if [ -n "${initroot-}" ]; then
@@ -153,6 +141,19 @@ elif [ -v gear_hsh ]; then
 	(set -x; gear --hasher "${commit[@]}" -- "${gear_hsh[@]}")
 	pkg_install
 	exit
+fi
+
+toplevel=$(git rev-parse --show-toplevel)
+[ "$toplevel" -ef . ] || {
+	echo "+ cd $toplevel"
+	cd "$toplevel"
+}
+
+if [ -d .git ] && [ ! -d .git/bb ]; then
+        mkdir .git/bb
+	if [[ -n $(set +f; ls log.2024* 2>/dev/null) ]]; then
+		(set +f; mv -v log.2024* -t .git/bb)
+	fi
 fi
 
 # shellcheck disable=SC2086
