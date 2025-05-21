@@ -101,7 +101,8 @@ log_config() {
 pkg_install() {
 	build_state="CI initroot"
 	if [ -v fresh ]; then
-		echo ":: CI ${branch-Sisyphus} packages one by one: ${pkgi[*]}"
+		((${#pkgi[@]})) &&
+			echo -e "\n:: CI ${branch-Sisyphus} packages one by one: ${pkgi[*]}"
 		for pkg in "${pkgi[@]}"; do
 			(echo; set -x; hsh --initroot)
 			build_state="CI install-one $pkg"
@@ -110,8 +111,8 @@ pkg_install() {
 			(set -x; hsh-install "$pkg")
 		done
 	else
-		echo
-		echo ":: CI ${branch-Sisyphus} packages all at once: ${pkgi[*]}"
+		((${#pkgi[@]})) &&
+			echo -e "\n:: CI ${branch-Sisyphus} packages all at once: ${pkgi[*]}"
 		[ -n "${noinitroot-}" ] || (echo; set -x; hsh --initroot)
 		echo
 		build_state="CI install-all ${pkgi[*]}"
