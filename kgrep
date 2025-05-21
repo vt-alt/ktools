@@ -104,15 +104,15 @@ kgrep-preview-commit() {
 	[ -n "$rev" ] || rev=@
 	cd ~/linux/"$dist"
 	read -r commit _ <<<"$(git blame -l -L"$j,$j" "$rev" -- "$f")"
-	git show "$commit"
+	git show $_color "$commit"
 }
 export -f kgrep-preview-commit
 
 if [ -z "$show_commit" ]; then
 	do_kgrep "$@"
 else
-	color=
-	_color=
+	color=--color=always
+	export _color=$color
 	HLARCH=
 
 	pos=1
@@ -120,6 +120,7 @@ else
 		list=$(do_kgrep "$@" 2>&1)
 		selection=$(echo "$list" | fzf \
 			--bind='q:abort,/:unbind(q)+unbind(/)' \
+			--ansi \
 			--no-mouse \
 			--no-sort \
 			--tac \
@@ -127,7 +128,7 @@ else
 			--preview-window=50% \
 			--preview='bash -c "kgrep-preview-commit {}"'
 		)
-		pos=$(echo "$list" | grep -nF "$selection")
+		pos=$(echo "$list" | sed -E 's/\x1b\[[[:digit:];]*m//g' | grep -nF "$selection")
 		pos=-${pos%%:*}
 		if [[ $selection =~ ([^[:space:]]+)[[:space:]]\|[[:space:]]([^:]+): ]]; then
 			dir=${BASH_REMATCH[1]}
