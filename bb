@@ -104,7 +104,7 @@ pkg_install() {
 		((${#pkgi[@]})) &&
 			echo -e "\n:: CI ${branch-Sisyphus} packages one by one: ${pkgi[*]}"
 		for pkg in "${pkgi[@]}"; do
-			(echo; set -x; hsh --initroot)
+			(echo; set -x; hsh --no-wait-lock --initroot)
 			build_state="CI install-one $pkg"
 			echo
 			cd /var/empty
@@ -113,7 +113,7 @@ pkg_install() {
 	else
 		((${#pkgi[@]})) &&
 			echo -e "\n:: CI ${branch-Sisyphus} packages all at once: ${pkgi[*]}"
-		[ -n "${noinitroot-}" ] || (echo; set -x; hsh --initroot)
+		[ -n "${noinitroot-}" ] || (echo; set -x; hsh --no-wait-lock --initroot)
 		echo
 		build_state="CI install-all ${pkgi[*]}"
 		((!${#pkgi[@]})) || (
@@ -139,7 +139,7 @@ if [ -n "${initroot-}" ]; then
 	exit
 elif [ -v gear_hsh ]; then
 	log_config
-	(set -x; gear --hasher "${commit[@]}" -- "${gear_hsh[@]}")
+	(set -x; gear --hasher "${commit[@]}" -- "${gear_hsh[@]}" --no-wait-lock)
 	pkg_install
 	exit
 fi
@@ -201,7 +201,7 @@ for branch in "${branches[@]}"; do
 	} &> "$log"
 	{
 		{ log_config; } 2>/dev/null
-		gear-hsh "${commit[@]}" "${@}"
+		gear-hsh --no-wait-lock "${commit[@]}" "${@}"
 	} |& {
 		{ set +x; } 2>/dev/null
 		ts "$ts" | tee -a "$log"
