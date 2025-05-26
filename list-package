@@ -76,7 +76,7 @@ for i; do
 		--grep=*)
 			# --grep= also provides 'no match' message.
 			pattern=${i#*=} ;;
-		s/*/*/*) sed_expressions+=( "$i" ) ;;
+		s/*/*/* | s!*!*!*) sed_expressions+=( "$i" ) ;;
 		--) break ;;
 		-*) echo "No option $i"; exit 1 ;;
 		*) packages+=" $i" ;;
