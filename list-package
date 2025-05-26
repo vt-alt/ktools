@@ -18,7 +18,7 @@ find "$tmp" -maxdepth 3 -fstype tmpfs -name '*.rpm*' -ctime +1 -delete
 branch=Sisyphus arch=x86_64
 branches='' arches='' packages=''
 all_arch='' lsopts='-ltrd' rpmpeek='' lesser='' logs='' dts=''
-pattern='' query='' show_pkg='' srpms='' bat=''
+pattern='' query='' show_pkg='' srpms='' bat='' invert_grep=''
 dts_proto=''
 SELECTOR="gum choose --height=$((LINES-5))"
 unset show_task aptcache spec logdiff offset sourcerpm resolve
@@ -73,6 +73,7 @@ for i; do
 		--ls=* | --list=*) query=-l; pattern=${i#*=} ;;
 		--whatdepends |	--depends | --showpkg | --showsrc | --show | --policy | --pkgnames)
 			aptcache=${i#--} ;;
+		-v) invert_grep=-v ;;
 		--grep=*)
 			# --grep= also provides 'no match' message.
 			pattern=${i#*=} ;;
@@ -322,9 +323,9 @@ elif [ -v logdiff ]; then
 		sed -Ei "$i" "$log_remote" "$log_local"
 	done
 	if [ -n "$pattern" ]; then
-		grep -Pe "$pattern" "$log_remote" > "$log_remote="
+		grep $invert_grep -Pe "$pattern" "$log_remote" > "$log_remote="
 		log_remote="$log_remote="
-		grep -Pe "$pattern" "$log_local" > "$log_local="
+		grep $invert_grep -Pe "$pattern" "$log_local" > "$log_local="
 		log_local="$log_local="
 	fi
 	$logtool "$log_remote" "$log_local" | delta
