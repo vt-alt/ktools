@@ -321,6 +321,12 @@ elif [ -v logdiff ]; then
 	for i in "${sed_expressions[@]}"; do
 		sed -Ei "$i" "$log_remote" "$log_local"
 	done
+	if [ -n "$pattern" ]; then
+		grep -Pe "$pattern" "$log_remote" > "$log_remote="
+		log_remote="$log_remote="
+		grep -Pe "$pattern" "$log_local" > "$log_local="
+		log_local="$log_local="
+	fi
 	$logtool "$log_remote" "$log_local" | delta
 	exit
 elif [ -v show_task ]; then
