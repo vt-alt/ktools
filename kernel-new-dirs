@@ -1,0 +1,25 @@
+#!/bin/bash
+
+export LC_ALL=C
+set -efu +o posix
+
+function git_mainline_tags() {
+	git tag -l 'v[[:digit:]]*.[[:digit:]]*' --sort=-version:refname | grep -P '^v\d+\.\d+$'
+}
+
+git_new_dirs() {
+	local commit1=$1
+	local commit2=$2
+
+	diff -U0 \
+		<(git ls-tree -r -t "$commit1" | grep " tree " | sed 's/.*\t//') \
+		<(git ls-tree -r -t "$commit2" | grep " tree " | sed 's/.*\t//') \
+	| grep '^+[^+]' | grep -Pe "${3-}" | grep -Ev 'testing/selftests|tools/perf|lib/perf' || :
+}
+
+p=HEAD
+while read -r v; do
+	echo "  $v --> $p:"
+       	git_new_dirs "$v" "$p" ${1-\\+tools}
+	p=$v
+done < <(git_mainline_tags) | less
