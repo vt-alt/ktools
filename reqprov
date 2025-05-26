@@ -11,6 +11,7 @@ for opt do
 		--evr=*) EVR=${opt#*=} ;;
 		--skip-debuginfo) SKIPDEBUGINFO=1 ;;
 		--skip-match=*) SKIPMATCH=${opt#*=} ;;
+		--skip-ver)   SEDVER=--- ;;
 		--skip-ver=*) SEDVER=${opt#*=} ;;
 		--strip=*) STRIP=${opt#*=} ;;
 		--diff=*) DIFF=${opt#*=} ;;
