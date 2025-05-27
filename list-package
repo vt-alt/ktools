@@ -328,7 +328,7 @@ elif [ -v logdiff ]; then
 		grep $invert_grep -Pe "$pattern" "$log_local" > "$log_local="
 		log_local="$log_local="
 	fi
-	$logtool "$log_remote" "$log_local" | delta
+	$logtool "$log_remote" "$log_local" | delta --max-line-length=99999
 	exit
 elif [ -v show_task ]; then
 	select_one --task
