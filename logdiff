@@ -10,6 +10,7 @@
   [%r{/usr/src/tmp/rpm-tmp\.\S{4,6}}, '/usr/src/tmp/rpm-tmp.X'],
   [%r{/usr/src/tmp/\S{8}\.ltrans\d\.ltrans.o}, '/usr/src/tmp/X.ltrans0.ltrans.o'],
   [%r{/usr/src/tmp/vm\.\S{10}}, '/usr/src/tmp/vm.X'],
+  [%r{(\./(temp|tempout|initrd)-)\w{4}}, '\1-X'],
   [%r{\b0x[0-9a-f]+\b}, '0x0'],
   [/\d+/, '0'],
   [/^\[?0:0:0\]? /, ''],
