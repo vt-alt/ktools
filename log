@@ -5,6 +5,7 @@ shopt -s extglob
 grepcmd='grep'
 selector='fzf --highlight-line'
 unset mode offset difftool pattern
+multi=
 for opt do
         shift
         case "$opt" in
@@ -12,6 +13,7 @@ for opt do
 		--grep|-ug|--ug|--ugrep|-rg|--rg) grepcmd=${opt##+(-)} ;&
 		-g) mode=GREP; break ;;
 		--sk | --skim) selector='sk' ;;
+		--multi) multi=--multi ;;
 		--logdiff | --logdiff2) difftool=${opt#--} ;;
 		--diff-grep=*) pattern+=("${opt#*=}") ;;
 		-f | --filename) print_filename=y ;;
@@ -48,6 +50,7 @@ tui_selector() {
 		--no-mouse \
 		--no-sort \
 		--tac \
+		$multi \
 		--preview-window=80% \
 		--preview='head -$((LINES/2-1)) {}; echo ...; tail -$((LINES/2)) {}'))
 }
