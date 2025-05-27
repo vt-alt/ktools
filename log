@@ -46,7 +46,6 @@ tui_selector() {
 		--no-mouse \
 		--no-sort \
 		--tac \
-		--multi \
 		--preview-window=80% \
 		--preview='head -$((LINES/2-1)) {}; echo ...; tail -$((LINES/2)) {}'))
 }
