@@ -4,7 +4,7 @@ shopt -s extglob
 
 grepcmd='grep'
 selector='fzf --highlight-line'
-unset mode offset difftool
+unset mode offset difftool pattern
 for opt do
         shift
         case "$opt" in
@@ -13,6 +13,7 @@ for opt do
 		-g) mode=GREP; break ;;
 		--sk | --skim) selector='sk' ;;
 		--logdiff | --logdiff2) difftool=${opt#--} ;;
+		--diff-grep=*) pattern+=("${opt#*=}") ;;
 		--) break ;;
 		-*) echo >&2 "Error: unknown option: $opt"; exit 1 ;;
                 *) set -- "$@" "$opt";;
@@ -61,7 +62,11 @@ fi
 if [ -v difftool ]; then
 	(( ${#files[@]} == 2 )) || tui_selector --multi
 	if (( ${#files[@]} == 2 )); then
-		"$difftool" "${files[@]}" | delta
+		if [ -v pattern ]; then
+			"$difftool" <(grep "${pattern[@]}" "${files[0]}") <(grep "${pattern[@]}" "${files[1]}")
+		else
+			"$difftool" "${files[@]}"
+		fi | delta --max-line-length=99999
 		exit
 	else
 		echo "Need to select two logs (using TAB)" >&2
