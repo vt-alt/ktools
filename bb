@@ -23,6 +23,7 @@ for opt do
 		--task=*) task="${opt#*=}" ;;
 		--build-srpm-only | -bs) gear_hsh=("hsh" "--build-srpm-only") ;;
 		--install-only) gear_hsh=("hsh-rebuild" "$opt") ;;
+		--no-cache) no_cache=1 ;;
 		--ini*) initroot=only ;;
 		--no-ini*) noinitroot=ci ;;
 		--rpmi=*|--ci=*) pkgi+=(${arg//,/ }) ;;
@@ -104,7 +105,7 @@ pkg_install() {
 		((${#pkgi[@]})) &&
 			echo -e "\n:: CI ${branch-Sisyphus} packages one by one: ${pkgi[*]}"
 		for pkg in "${pkgi[@]}"; do
-			(echo; set -x; hsh --no-wait-lock --initroot)
+			(echo; set -x; hsh --no-wait-lock --initroot ${no_cache:+--no-cache})
 			build_state="CI install-one $pkg"
 			echo
 			cd /var/empty
@@ -113,7 +114,7 @@ pkg_install() {
 	else
 		((${#pkgi[@]})) &&
 			echo -e "\n:: CI ${branch-Sisyphus} packages all at once: ${pkgi[*]}"
-		[ -n "${noinitroot-}" ] || (echo; set -x; hsh --no-wait-lock --initroot)
+		[ -n "${noinitroot-}" ] || (echo; set -x; hsh --no-wait-lock --initroot ${no_cache:+--no-cache})
 		echo
 		build_state="CI install-all ${pkgi[*]}"
 		((!${#pkgi[@]})) || (
