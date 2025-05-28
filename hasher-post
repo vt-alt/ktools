@@ -35,6 +35,13 @@ cat > /etc/skel/.inputrc <<'EOF'
 "\e[A": history-search-backward
 "\e[1;5C": forward-word
 "\e[1;5D": backward-word
+"\e[1~": beginning-of-line
+"\e[4~": end-of-line
+EOF
+
+cat > /etc/skel/.lesskey <<'EOF'
+\e[1~ goto-line
+\e[4~ goto-end
 EOF
 
 cat > /etc/skel/.vimrc <<'EOF'
