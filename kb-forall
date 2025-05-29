@@ -219,8 +219,9 @@ for lbr in $branches; do
 	elif [ -n "$allow_diverged" ]; then
 		printf '<diverged>'
 	else
+		hl=$'\e'"[1;41m" he=$'\e[m';
 		# Diverged or independent branches.
-		printf '! diverged: %s\n' "$(git branch -v -l "$lbr")"
+		printf "! ${hl}diverged:${he} %s\n" "$(git branch -v -l "$lbr")"
 		continue
 	fi
 
