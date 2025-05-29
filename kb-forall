@@ -176,7 +176,7 @@ for lbr in $branches; do
 		git describe --match='kernel-image-*' --abbrev=0 "$lbr" |
 			grep -q "$grep_mode" -e "$tag_grep" || continue
 	fi
-	[ "$cb" = "$lbr" ] && printf '\e[33m'
+	[ "$cb" = "$lbr" ] && printf '\e[32m'
 	printf ':: %*s ' "$branch_width" "$lbr"
 	printf '\e[m'
 	if [ -z "$remote" ]; then
@@ -316,7 +316,7 @@ for lbr in $branches; do
 			fi
 			if [ "$n" -gt 0 ]; then
 				echo " -log-$log_msg-"
-				git log --oneline --first-parent "$log_from..$lbr"
+				git log --no-decorate --oneline --first-parent "$log_from..$lbr"
 			fi
 		fi
 		unset n log_from log_msg
