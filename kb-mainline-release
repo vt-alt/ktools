@@ -1,0 +1,155 @@
+#!/bin/bash
+set -efu
+
+export TZ=UTC LANG=C LC_ALL=C
+
+fatal() {
+	echo >&2 "Error: $*"
+	exit 1
+}
+V() { echo -e "+ \e[1;33m$*\e[m" >&2; "$@"; }
+
+kernelbot=y
+torvalds=y
+for opt do
+        shift
+        case "$opt" in
+                --no-kernelbot) unset kernelbot ;;
+                --no-torvalds) unset torvalds ;;
+                --no-fetch) unset kernelbot torvalds ;;
+		-*) fatal "Unknown option: $opt" ;;
+                *) set -- "$@" "$opt";;
+        esac
+done
+
+toplevel=$(git rev-parse --show-toplevel)
+cd "$toplevel"
+
+if ! git diff --quiet ||
+   ! git diff --quiet --cached; then
+	fatal "Work tree is unclean."
+fi
+
+[ -v kernelbot ] && V git fetch kernelbot
+[ -v torvalds ] && V git fetch --tags torvalds
+
+# Latest tag on torvalds branch
+mainline=$(git describe --abbrev=0 --tags --match 'v*' -- torvalds/master)
+if [[ "$mainline" =~ ^v([[:digit:]]+\.[[:digit:]]+)$ ]]; then
+	version=${BASH_REMATCH[1]}
+	release=
+	rtype=release
+elif [[ "$mainline" =~ ^v([[:digit:]]+\.[[:digit:]]+)-(rc[[:digit:]]+)$ ]]; then
+	version=${BASH_REMATCH[1]}
+	release=${BASH_REMATCH[2]}
+	rtype=pre-release
+else
+	fatal "Mainline tag does not match mainline release: $mainline"
+fi
+echo >&2 ":: Topmost mainline tag: $mainline ($rtype)"
+patches_branch=sisyphus-patches-$version
+image_branch=$version/sisyphus
+
+weak=$(printf '%s\n' "$version" "$latest_kernel_source" | sort -V | head -1)
+[ "$weak" != "$version" ] ||
+	fatal "It seems that version $version is not need to be packaged."
+prev_release=$(set -x;git describe --abbrev=0 --tags --match 'v*' --exclude "v$version-rc*" --exclude "v$version" -- torvalds/master)
+echo ":: Previous mainline release tagged $prev_release"
+[[ "$prev_release" =~ ^v([[:digit:]]+\.[[:digit:]]+)$ ]] || fatal "Unknown release tag format: $prev_release"
+prev_version=${BASH_REMATCH[1]}
+prev_patches_branch=sisyphus-patches-$prev_version
+
+# Determine previous kernel release.
+latest_kernel_image=$(
+	gum spin --show-output --show-error -- \
+		curl -Y0 -Ssf "https://git.altlinux.org/gears/k/" |
+		grep -Po '(?<=href="/gears/k/kernel-image-)[\d.]+(?=\.git")' |
+	       	sort -V |
+		tail -1
+	)
+echo "Latest known kernel-image package is $latest_kernel_image"
+[ "$prev_version" = "$latest_kernel_image" ] || fatal "This does not match previous mainline release."
+[ "$version" != "$latest_kernel_image" ] || fatal "This does not differ from current mainline release."
+
+if git show-ref --verify --quiet "refs/heads/$patches_branch"; then
+	echo ":: $patches_branch already exists, skipping creation."
+else
+	echo ":: Need to create $patches_branch"
+	V git checkout -b "$patches_branch" "$prev_patches_branch"
+	V git rebase "$mainline"
+fi
+
+if git show-ref --verify --quiet "refs/heads/$image_branch"; then
+	echo ":: Branch $image_branch already exists, skip creation."
+	V git checkout "$image_branch"
+else
+	V git checkout -b "$image_branch" "$mainline"
+fi
+
+topmost=$(git describe --abbrev=0 --match 'v*')
+[ "$topmost" = "$mainline" ] || fatal "Latest tag in branch ($topmost) does not match mainline tag ($mainline)"
+
+head_tag=$(git tag --points-at @)
+if [ "$head_tag" = "$topmost" ]; then
+	# We are on tagged commit, need to verify the tag.
+	verify_cmd="git verify-tag $head_tag"
+	printf 'ALT: %s\n\n' "$verify_cmd" > .git/GIT_VERIFY_OUTPUT
+	if $verify_cmd &>> .git/GIT_VERIFY_OUTPUT; then
+		sed -i '2,$s/^/  /' .git/GIT_VERIFY_OUTPUT
+		V git commit -s --allow-empty -F .git/GIT_VERIFY_OUTPUT
+	else
+		cat .git/GIT_VERIFY_OUTPUT
+		fatal "Verification failed."
+	fi
+else
+	echo ":: Last commit is not mainline tagged commit, no need to verify a tag."
+fi
+
+if git merge-base --is-ancestor "$patches_branch" @; then
+	echo ":: $patches_branch is already merged, skipping merge."
+else
+	V git merge --no-ff --no-edit "$patches_branch"
+fi
+
+prev_br=kernelbot/$prev_version/sisyphus
+git show-ref --verify --quiet "refs/remotes/$prev_br" ||
+	fatal "Branch $prev_br not found."
+
+# Record used commands.
+REC() {
+	local a b
+	a=$(git diff-index @ | b2sum -)
+	printf '++ \e[1;34m%s\e[m\n' "$*" >&2
+	printf '  %s\n' "$*" >> .git/KB_COMMANDS
+	eval "$@"
+	b=$(git diff-index @ | b2sum -)
+	if [ "$a" = "$b" ]; then
+		fatal "Last command ($*) did not change anything in the index."
+	fi
+}
+
+# Restore files from previous release.
+specfile=kernel-image.spec
+if git cat-file -e "@:$specfile" 2>/dev/null; then
+	echo ":: $specfile is already added."
+else
+	printf '%s\n\n' "ALT: Copy config and spec from $prev_br" > .git/KB_COMMANDS
+	[ -v kernelbot ] && echo '  git fetch kernelbot' >> .git/KB_COMMANDS
+	REC git restore -s "$prev_br" -S "$specfile" config'*' .gear
+	# Cannot update source or tag since it's not released.
+	V git commit -s -F .git/KB_COMMANDS
+	rm .git/KB_COMMANDS
+fi
+
+if grep -q 'torvalds/master' .gear/upstream-branch; then
+	echo ":: Release bits are already set."
+else
+	printf '%s\n\n' "ALT: Update release bits for $version" > .git/KB_COMMANDS
+	REC " echo torvalds/master > .gear/upstream-branch"
+	REC " echo sisyphus $version > .gear/release-targets"
+	V git commit -a -s -F .git/KB_COMMANDS
+	rm .git/KB_COMMANDS
+fi
+
+set -x
+kb-release
