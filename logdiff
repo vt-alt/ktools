@@ -59,7 +59,7 @@ def unmatched(a, bb)
   count = 0
   a.each do |x|
     y = x.ggsub(@s)
-    break if !a or bb[y]
+    break if bb[y]
     count += 1
   end if a
   count
