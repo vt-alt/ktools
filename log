@@ -4,7 +4,7 @@ shopt -s extglob
 
 grepcmd='grep'
 selector='fzf --highlight-line'
-unset mode offset difftool pattern
+unset mode offset difftool pattern sedcmds
 multi=
 for opt do
         shift
@@ -16,6 +16,7 @@ for opt do
 		--multi) multi=--multi ;;
 		--logdiff | --logdiff2) difftool=${opt#--} ;;
 		--diff-grep=*) pattern+=("${opt#*=}") ;;
+		--diff-sed=*) sedcmds+=("${opt#*=}") ;;
 		-f | --filename) print_filename=y ;;
 		--) break ;;
 		-*) echo >&2 "Error: unknown option: $opt"; exit 1 ;;
@@ -63,11 +64,21 @@ if [ -v offset ]; then
 elif (( $# )); then
 	files=("$@")
 fi
+
+transform() {
+	if [ -v pattern ]; then
+		grep "${pattern[@]}"
+	fi
+	if [ -v sedcmds ]; then
+		sed -E "${sedcmds[@]}"
+	fi
+}
+
 if [ -v difftool ]; then
 	(( ${#files[@]} == 2 )) || tui_selector --multi
 	if (( ${#files[@]} == 2 )); then
-		if [ -v pattern ]; then
-			"$difftool" <(grep "${pattern[@]}" "${files[0]}") <(grep "${pattern[@]}" "${files[1]}")
+		if [ -v pattern ] || [ -v sedcmds ]; then
+			"$difftool" <(transform < "${files[0]}") <(transform < "${files[1]}")
 		else
 			"$difftool" "${files[@]}"
 		fi | delta --max-line-length=99999
