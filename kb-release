@@ -38,7 +38,12 @@ topcommit=$(git log -1 --pretty='format:%s')
 # NB: Fetch may clean notes if note's fetch url starts with '+'.
 [ -v fetch ] && V git fetch kernelbot
 
-top_alt=$(git describe --abbrev=0 --first-parent --match='*alt*')
+top_alt=$(git describe --abbrev=0 --first-parent --match='*alt*' 2>/dev/null || :)
+
+if [ -z "$top_alt" ]; then
+	echo ":: No -alt tags, perhaps a first mainline release."
+	top_alt=$(git describe --abbrev=0 --first-parent --match='v*.*')
+fi
 topmost=$(git describe --abbrev=0)
 n=$(git rev-list --first-parent "$top_alt.." | wc -l)
 if [ "$n" -eq 0 ]; then
@@ -62,7 +67,7 @@ gear_describe() {
 gear_describe
 
 update=
-if [ "$topmost" = "$top_alt" ]; then
+if [[ $top_alt == *-alt* ]] && [ "$topmost" = "$top_alt" ]; then
 	echo ":: This should be a new Release (top tag is -alt tag)."
 	update=release
 else
@@ -132,7 +137,8 @@ if [ -n "$release" ]; then
 		nrel=${BASH_REMATCH[1]}
 		right=
 		echo ":: Release candidate type of release reset to $nrel (because of $topmost)."
-		changelog="- Update to $topmost ($tag_date)."
+		[[ $top_alt == *-alt* ]] && rebased='Update' || rebased='Rebase'
+		changelog="- $rebased to $topmost ($tag_date)."
 		unset release
 	elif [ "$release" = reset ]; then
 		br=$(git branch --show-current)
