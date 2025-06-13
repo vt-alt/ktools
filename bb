@@ -41,6 +41,7 @@ for opt do
 		--kflavour=*) kflavour=${opt#*=} ;;
 		--tree-ish=* | -t=*) commit=("-t" "${opt#*=}") ;;
 		--ts=*) ts=${opt#*=} ;;
+		--no-log) no_log=y ;;
 		--) break ;;
 		-*) fatal "Unknown option: $opt" ;;
                 *) set -- "$@" "$opt";;
@@ -133,7 +134,7 @@ repo_clean() (
 )
 [ -v hsh_clean ] && repo_clean
 
-export branch set_target archive_date task components set_rpmargs do_rsync
+export branch set_target archive_date task components set_rpmargs do_rsync no_log
 if [ -n "${initroot-}" ]; then
 	log_config
 	pkg_install
@@ -183,13 +184,18 @@ for branch in "${branches[@]}"; do
 	# Reexport, since we did unset inside of the loop.
 	export branch set_target
 
-	for log in log log1 .log build.log; do
-		[[ -d "$log" ]] || break
-	done
-	L=.git/bb/log.$(date +%F_%H%M)
-	[ "sisyphus" = "$branch" ] && unset branch || L+=".$branch"
-	[ "$HOSTTYPE" = "$set_target" ] && unset set_target || L+=".$set_target"
-	ln -sf "$L" -T "$log"
+	if [ -v no_log ]; then
+		log=/dev/null
+	else
+		for log in log log1 .log build.log; do
+			[[ -d "$log" ]] || break
+		done
+		L=.git/bb/log.$(date +%F_%H%M)
+		[ "sisyphus" = "$branch" ] && unset branch || L+=".$branch"
+		[ "$HOSTTYPE" = "$set_target" ] && unset set_target || L+=".$set_target"
+		ln -sf "$L" -T "$log"
+		unset L
+	fi
 
 	[ -v hsh_clean ] && repo_clean
 	printf '%s' "$sep"
