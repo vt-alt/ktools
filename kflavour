@@ -31,7 +31,7 @@ else
 
 	top=$(git rev-parse --show-toplevel)
 	rtbr=$(cut -d' ' -f1 "$top/.gear/release-targets")
-	if [ "$rtbr" != "$branch" ]; then
+	if ! grep -qFx -e "$branch" <<<"$rtbr"; then
 		echo >&2 "${RED}Warning: Branch from .gear/release-targets ($rtbr) != $branch${NORM}"
 	fi
 
@@ -39,7 +39,7 @@ else
 	if [ "$brflvr" = "next" ]; then
 		fvnew=$rtfv
 	else
-		if [ "$rtfv" != "$brflvr" ]; then
+		if ! grep -qFx -e "$brflvr" <<<"$rtfv"; then
 			echo >&2 "${RED}Warning: flavour from .gear/release-targets ($rtfv) != $brflvr${NORM}"
 		fi
 		fvnew=$brflvr
