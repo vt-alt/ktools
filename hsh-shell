@@ -25,7 +25,7 @@ TERM=${TERM#screen.}
 /usr/bin/hsh-shell "$@"
 ret=$?
 
-[ -n "$toplevel" ] || exit "$ret"
+[ -n "$toplevel" ] && [ -d .git/bb ] || exit "$ret"
 
 rotate() {
 	[ -s "${2?}" ] && ln -f "$2" "$2-"
