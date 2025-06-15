@@ -256,7 +256,7 @@ select_one() {
 		# Download requested RPM into cache.
 		URL=https://git.altlinux.org/tasks/archive/done/_$((TASK/1024))/$TASK/build/$SUBTASK/$arch/rpms/
 		echo >&2 "+ $URL"
-		st_rpms=$(gum spin -- curl -sSf "$URL" | sed -En 's/<[^>]*>//gp' | grep -E '^[[:space:]][^[:space:]/]+.rpm\b')
+		st_rpms=$(gum spin -- curl -sSf "$URL" | sed -En 's/<[^>]*>/ /gp' | grep -E '^[[:space:]]+[^[:space:]/]+.rpm\b')
 		if [ "${1-}" = --rpms ]; then
 			printf '%s\n' "$st_rpms" | column -t
 			return
