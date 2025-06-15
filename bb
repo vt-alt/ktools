@@ -88,8 +88,10 @@ if [ -v archive_date ]; then
 		:
 	elif [[ $archive_date == */* ]]; then
 		archive_date+="/01"
+	elif [[ $archive_date =~ ([[:digit:]]{4})([[:digit:]]{2})?([[:digit:]]{2})? ]]; then
+		archive_date=${BASH_REMATCH[1]}/${BASH_REMATCH[2]:-01}/${BASH_REMATCH[3]:-01}
 	else
-		archive_date+="/01/01"
+		fatal "Unknwon date format $archive_date"
 	fi
 fi
 
