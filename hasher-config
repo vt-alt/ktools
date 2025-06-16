@@ -50,9 +50,15 @@ cat > "$sources_list" <<-EOF
 	rpm $url noarch $components
 EOF
 if [ -n "${task-}" ]; then
-	[ -n "${do_rsync-}" ] &&
-		echo "rpm rsync://git.altlinux.org/tasks/$task/build repo/$def_target task" ||
-		echo "rpm http://git.altlinux.org/tasks/$task/build/repo $def_target task"
+	if [ -n "${do_rsync-}" ]; then
+		echo "rpm rsync://git.altlinux.org/tasks/$task/build repo/$def_target task"
+	else
+		url="http://git.altlinux.org/tasks/$task/build/repo/"
+		redirect_url=$(curl -sI -o /dev/null -w '%{redirect_url}' "$url")
+		url="${redirect_url:-$url}"
+		echo "rpm ${url%/} $def_target task"
+		unset url redirect_url
+	fi
 fi >> "$sources_list"
 
 if [ -z "$disttag" ]; then
