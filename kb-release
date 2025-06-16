@@ -137,6 +137,7 @@ if [ -n "$release" ]; then
 		nrel=${BASH_REMATCH[1]}
 		right=
 		echo ":: Release candidate type of release reset to $nrel (because of $topmost)."
+		sed -iE "/^%define kernel_latest/s/\t[[:alnum:]]\+/\tmainline/" "$specfile"
 		[[ $top_alt == *-alt* ]] && rebased='Update' || rebased='Rebase'
 		changelog="- $rebased to $topmost ($tag_date)."
 		unset release
