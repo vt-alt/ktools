@@ -228,7 +228,7 @@ for branch in "${branches[@]}"; do
 	if [ -v ci ]; then
 		mapfile -t pkgi < <(
 			if [[ $ci == checkinstall ]]; then
-				sed -En 's!^\S+ Wrote:\s/usr/src/RPM/RPMS/[[:graph:]/]+/(\S+-checkinstall)-\S+\.rpm\s.*!\1!p'
+				sed -En 's!^\S+ Wrote:\s/usr/src/RPM/RPMS/[[:graph:]/]+/(\S+-checkinstall|\S+-ci-.*debuginfo)-\S+\.rpm\s.*!\1!p'
 			elif [[ $ci == all ]]; then
 				sed -En 's!^\S+ Wrote:\s/usr/src/RPM/RPMS/[[:graph:]/]+/(\S+)-[^-]+-alt\S+\.rpm\s.*!\1!p' |
 				grep -v '-debuginfo'
