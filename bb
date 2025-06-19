@@ -36,8 +36,8 @@ for opt do
 		--date=*|--archive=*) archive_date=${opt#*=} ;;
 		--components=*) components=${opt#*=} ;;
 		--rsync) do_rsync=y ;;
-		--disable[-=]*) set_rpmargs+="--disable ${opt#--*[-=]}" ;;
-		--kernel-latest=*) set_rpmargs+="--define 'kernel_latest $arg'" ;;
+		--enable*|--disable*|--with*) opt=${opt#--}; set_rpmargs+=" --${opt/[-=]/ }" ;;
+		--kernel-latest=*) set_rpmargs+=" --define 'kernel_latest $arg'" ;;
 		--kflavour=*) kflavour=${opt#*=} ;;
 		--tree-ish=* | -t=*) commit=("-t" "${opt#*=}") ;;
 		--ts=*) ts=${opt#*=} ;;
@@ -97,6 +97,7 @@ fi
 
 mkdir -p "${TMPDIR:-/tmp}/hasher"
 
+[ -v set_rpmargs ] && set_rpmargs=${set_rpmargs# }
 log_config() {
 	echo "+ branch=${branch-} target=${set_target-} date=${archive_date-} task=${task-}"
 	if [ -v set_rpmargs ]; then echo "+ rpmargs=$set_rpmargs"; fi
