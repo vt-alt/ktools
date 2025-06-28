@@ -10,6 +10,7 @@ for opt do
         case "$opt" in
 		--evr=*) EVR=${opt#*=} ;;
 		--skip-debuginfo) SKIPDEBUGINFO=1 ;;
+		--debuginfo) NO_SKIPDEBUGINFO=y ;;
 		--skip-match=*) SKIPMATCH=${opt#*=} ;;
 		--skip-ver)   SEDVER=--- ;;
 		--skip-ver=*) SEDVER=${opt#*=} ;;
@@ -59,9 +60,10 @@ export QUOTING_STYLE=shell-escape
 sep=
 
 if [ "$#" -eq 0 ]; then
-       SKIPDEBUGINFO=1
+	[ -v NO_SKIPDEBUGINFO ] ||
+       SKIPDEBUGINFO="with --skip-debuginfo"
        set -- --fileclass
-       echo "Default comparison is $* with --skip-debuginfo"
+       echo "Default comparison is $* ${SKIPDEBUGINFO-}"
 elif [ "$*" = "-P" ]; then
        set -- --provides
 fi
