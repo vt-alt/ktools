@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# Under 'run' git will set
+#   GIT_EXEC_PATH=/usr/libexec/git-core
+#   GIT_PREFIX=
+# and sometimes create '.git/BISECT_RUN'.
+
+cr=$'\n'
+for opt do
+        shift
+        case "$opt" in
+		--prep) bb_prep=y ;;
+		*) set -- "$@" "$opt"
+        esac
+done
+set -x
+[ -e .git/BISECT_LOG ] || exit 255
+
+# Show progress in screen's title.
+step=$(grep -c -v '^#' .git/BISECT_LOG)
+echo -ne "\033kbisect[$step]\033\\"
+
+# git bisect checks out pristine upstream tree, thus we need to modify it to
+# build. Copy configs and spec from the starting commit.
+read -r bisect_start < ".git/BISECT_START"
+git checkout "$bisect_start" -- kernel-image.spec .gear config'*'
+
+# Disable debug to speed up builds and lower memory requirements.
+sed -i '/CONFIG_DEBUG_INFO/d' config
+echo "CONFIG_DEBUG_INFO_NONE=y" >> config
+sed -i '/_stripped_files_terminate_build/d' kernel-image.spec
+
+# Need to update versioning so package builds correctly.
+{ set -; } 2>/dev/null
+VERSION=$(sed -n '/^VERSION =/s/.*= //p' Makefile)
+PATCHLEVEL=$(sed -n '/^PATCHLEVEL =/s/.*= //p' Makefile)
+SUBLEVEL=$(sed -n '/^SUBLEVEL =/s/.*= //p' Makefile)
+sed -E "s/^(%define kernel_base_version).*/\1\t$VERSION.$PATCHLEVEL/" -i kernel-image.spec
+sed -E "s/^(%define kernel_sublevel).*/\1\t.$SUBLEVEL/" -i kernel-image.spec
+sed -E "s/^(Release: .*)/\1.bisect/" -i kernel-image.spec
+message="- git bisect run on:$cr"
+if [ -e .git/BISECT_RUN ]; then
+	message+=$(sed 's/^/  /' < .git/BISECT_RUN)
+else
+	message+=$(git log -1 --oneline | sed 's/^/  /')
+fi
+message+="$cr- git bisect log:$cr"
+message+=$(sed 's/^/  /' < .git/BISECT_LOG)
+set -x
+safe-add-changelog -e "$message" kernel-image.spec
+gear-store-tags -ac
+
+# Enough if in manual prepare-only mode.
+[ -v bb_prep ] && exit 0
+
+set -o pipefail
+bb --wait-lock "$@" |& sed "s/^/$step▲/"
+status=$?
+
+# This is a functional testing, not a build testing, so
+# skip if %check didn't run.
+grep -qsF 'Executing(%check):' "$(log -f -0)" || exit 125
+
+git reset --hard
+exit $status
