@@ -10,6 +10,7 @@ fatal() {
 pkgi=()
 commit=("--commit")
 ts='%T'
+wait_lock="--no-wait-lock"
 for opt do
         shift
 	arg=${opt#*=}
@@ -45,6 +46,7 @@ for opt do
 		--tree-ish=* | -t=*) commit=("-t" "${opt#*=}") ;;
 		--ts=*) ts=${opt#*=} ;;
 		--no-log) no_log=y ;;
+		--wait-lock | --no-wait-lock) wait_lock="$opt" ;;
 		--) break ;;
 		-*) fatal "Unknown option: $opt" ;;
                 *) set -- "$@" "$opt";;
@@ -112,7 +114,7 @@ pkg_install() {
 		((${#pkgi[@]})) &&
 			echo -e "\n:: CI ${branch-Sisyphus} packages one by one: ${pkgi[*]}"
 		for pkg in "${pkgi[@]}"; do
-			(echo; set -x; hsh --no-wait-lock --initroot ${no_cache:+--no-cache})
+			(echo; set -x; hsh $wait_lock --initroot ${no_cache:+--no-cache})
 			build_state="CI install-one $pkg"
 			echo
 			cd /var/empty
@@ -121,7 +123,7 @@ pkg_install() {
 	else
 		((${#pkgi[@]})) &&
 			echo -e "\n:: CI ${branch-Sisyphus} packages all at once: ${pkgi[*]}"
-		[ -n "${noinitroot-}" ] || (echo; set -x; hsh --no-wait-lock --initroot ${no_cache:+--no-cache})
+		[ -n "${noinitroot-}" ] || (echo; set -x; hsh $wait_lock --initroot ${no_cache:+--no-cache})
 		echo
 		build_state="CI install-all ${pkgi[*]}"
 		((!${#pkgi[@]})) || (
@@ -147,7 +149,7 @@ if [ -n "${initroot-}" ]; then
 	exit
 elif [ -v gear_hsh ]; then
 	log_config
-	(set -x; gear --hasher "${commit[@]}" -- "${gear_hsh[@]}" --no-wait-lock)
+	(set -x; gear --hasher "${commit[@]}" -- "${gear_hsh[@]}" $wait_lock)
 	pkg_install
 	exit
 fi
@@ -216,7 +218,7 @@ for branch in "${branches[@]}"; do
 	} &> "$log"
 	{
 		{ log_config; } 2>/dev/null
-		gear-hsh --no-wait-lock "${commit[@]}" "${@}"
+		gear-hsh $wait_lock "${commit[@]}" "${@}"
 	} |& {
 		{ set +x; } 2>/dev/null
 		ts "$ts" | tee -a "$log"
