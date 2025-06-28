@@ -199,6 +199,7 @@ for branch in "${branches[@]}"; do
 		L=.git/bb/log.$(date +%F_%H%M)
 		[ "sisyphus" = "$branch" ] && unset branch || L+=".$branch"
 		[ "$HOSTTYPE" = "$set_target" ] && unset set_target || L+=".$set_target"
+		[ -e .git/BISECT_LOG ] && L+=".bisect"
 		ln -sf "$L" -T "$log"
 		unset L
 	fi
@@ -207,6 +208,7 @@ for branch in "${branches[@]}"; do
 	printf '%s' "$sep"
 	build_state="gear-hsh"
 	{
+		[ -e .git/BISECT_LOG ] && (set -x; cat .git/BISECT_LOG)
 		set -x
 		git diff
 		# shellcheck disable=SC2094
