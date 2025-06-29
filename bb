@@ -32,7 +32,7 @@ for opt do
 		--ci) ci=checkinstall ;;
 		--ci-all) ci=all ;;
 		--ci-command=*) ci_command="${opt#*=}" ;;
-		--clean) hsh_clean=y ;;
+		--clean | --repo-clean) hsh_clean=y ;;
 		--fresh) fresh=y ;;
 		--date=*|--archive=*) archive_date=${opt#*=} ;;
 		--components=*) components=${opt#*=} ;;
@@ -191,6 +191,8 @@ for branch in "${branches[@]}"; do
 	set_target=$target
 	# Reexport, since we did unset inside of the loop.
 	export branch set_target
+
+	[ -v hsh_clean ] && repo_clean
 
 	if [ -v no_log ]; then
 		log=/dev/null
