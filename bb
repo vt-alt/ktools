@@ -24,6 +24,7 @@ for opt do
 		--task=*) task="${opt#*=}" ;;
 		--build-srpm-only | -bs) gear_hsh=("hsh" "--build-srpm-only") ;;
 		--install-only) gear_hsh=("hsh-rebuild" "$opt") ;;
+		--build-check | -bt | -bi) build_check=y ;;
 		--no-cache) no_cache=1 ;;
 		--ini*) initroot=only ;;
 		--no-ini*) noinitroot=ci ;;
@@ -171,14 +172,36 @@ fi
 [ -e kernel-image.spec -o -v kflavour ] && kflavour ${kflavour-}
 sync
 
+unset rebuild_prog
+if [ -v build_check ]; then
+	rebuild_prog=$(mktemp --suffix=.hsh)
+	readonly rebuild_prog
+	cat > "$rebuild_prog" <<-"EOF"
+		#!/bin/bash -le
+		set -x
+		rpmi -i -- "$@"
+		specfile=( "$HOME"/RPM/SPECS/*.spec )
+		[ -f "$specfile" ]
+		export -n target
+		read -r SOURCE_DATE_EPOCH < "$HOME/in/SOURCE_DATE_EPOCH"
+		export SOURCE_DATE_EPOCH
+		time rpmbuild -bi --target="$target" "$specfile"
+	EOF
+	set -- "--rebuild-prog=$rebuild_prog"
+fi
+
 set -o pipefail
 unset build_state
 aterr() {
 	local red=$'\e[1;31m' norm=$'\e[m'
 	echo "${red}FAILED ($(basename "$PWD")) ${branch-} ${set_target-} state=${build_state-}${norm}"
 }
-[ -v NOBEEP ] || trap 'beep' EXIT
 trap '{ set +x; } 2>/dev/null; aterr' ERR
+atexit() {
+	[ -v rebuild_prog ] && rm -- "$rebuild_prog"
+	[ -v NOBEEP ] || beep
+}
+trap '{ set +x; } 2>/dev/null; atexit' EXIT
 sep=
 
 for target in "${targets[@]}"; do
