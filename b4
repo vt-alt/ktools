@@ -1,0 +1,22 @@
+#!/bin/bash
+set -eu
+unset message_id
+for i in "$@"; do
+	[[ $i == *@* ]] && message_id=$i
+done
+unset opt
+if [ -v message_id ]; then
+	for midmask in \
+		https://lore.altlinux.org/devel-kernel \
+		https://lore.kernel.org/all
+	do
+		if http_code=$(curl -sI -o /dev/null -w '%{http_code}' "$midmask/$message_id/") &&
+		   [[ $http_code == "200" ]]; then
+			opt=( -c "b4.midmask=$midmask/%s" )
+			break
+		fi
+	done
+fi
+PATH=$HOME/.local/bin:$PATH
+set -x
+b4 "${opt[@]}" "$@"
