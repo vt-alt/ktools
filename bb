@@ -239,7 +239,7 @@ for branch in "${branches[@]}"; do
 		set -x
 		git diff
 		# shellcheck disable=SC2094
-		git 'log' -1
+		git 'log' -1 --decorate
 	} &> "$log"
 	{
 		{ log_config; } 2>/dev/null
