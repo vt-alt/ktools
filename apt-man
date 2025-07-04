@@ -12,9 +12,11 @@ PAGES=$CACHE/man-$repo-$arch
 
 addtab=
 wordsep='.*'
+unset update
 for opt; do
 	shift
 	case "$opt" in
+		--update) update=y ;;
 		-p) addtab=$'\t' ;;
 		-w|-x) wordsep='\b' ;&
 		-*) set -- "$@" "$opt" ;;
@@ -22,9 +24,9 @@ for opt; do
 	esac
 done
 
-if [ -z "$(find "$PAGES" -type f -ctime -7 2>/dev/null)" ]; then
+if [ -v update ] || [ -z "$(find "$PAGES" -type f -ctime -7 2>/dev/null)" ]; then
 	mkdir -p "$CACHE"
-	cat /ALT/"$repo"/{"$arch",noarch}/base/contents_index \
+	gum spin --show-output -s minidot --title="Downloading..." -- cat /ALT/"$repo"/{"$arch",noarch}/base/contents_index \
 	| grep '^/usr/share/.*/man' > "$PAGES-"
 	mv -f "$PAGES-" "$PAGES"
 fi
