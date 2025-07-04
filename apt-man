@@ -31,13 +31,23 @@ if [ -v update ] || [ -z "$(find "$PAGES" -type f -ctime -7 2>/dev/null)" ]; the
 	mv -f "$PAGES-" "$PAGES"
 fi
 
-label=$(grep "^/usr/share/.*/man.*$addtab$wordsep$pat" "$@" "$PAGES" \
-	| fzf --height=~100%)
-read file pkgname <<<$label
-for arch in $arch noarch; do
-	dir=/ALT/$repo/files/$arch/RPMS
-	pkg=( "$dir"/"$pkgname"-+([^-])-alt*."$arch".rpm )
-	if [ -v pkg ]; then
-		exec rpmpeek "$pkg" man ".$file"
-	fi
+if [ -v LESS ]; then
+	# Unset --quit-if-one-screen
+	LESS=${LESS/F}
+fi
+line_no=$(mktemp) && trap "rm $line_no" EXIT
+while true; do
+	[ -s "$line_no" ] && read -r pos <"$line_no" || pos=1
+	label=$(grep "^/usr/share/.*/man.*$addtab$wordsep$pat" "$@" "$PAGES" \
+		| fzf --height=~100% \
+			--bind 'focus:execute-silent:echo $(({n}+1)) >'"$line_no" \
+			--bind "load:pos:$pos")
+	read file pkgname <<<$label
+	for a in $arch noarch; do
+		dir=/ALT/$repo/files/$a/RPMS
+		pkg=( "$dir"/"$pkgname"-+([^-])-alt*."$a".rpm )
+		if [ -v pkg ]; then
+			rpmpeek "$pkg" man ".$file"
+		fi
+	done
 done
