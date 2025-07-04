@@ -41,6 +41,7 @@ for opt do
 		--verbose) set_rpmargs+=" --verbose" ;;
 		--define=*) set_rpmargs+=" --define '$arg'" ;;
 		--disable-lto | --no-lto) set_rpmargs+=" --define 'optflags_lto %nil'" ;;
+		--no-check) opt='--without-check' ;;&
 		--enable*|--disable*|--with*) opt=${opt#--}; set_rpmargs+=" --${opt/[-=]/ }" ;;
 		--kernel-latest=*) set_rpmargs+=" --define 'kernel_latest $arg'" ;;
 		--kflavour=*) kflavour=${opt#*=} ;;
