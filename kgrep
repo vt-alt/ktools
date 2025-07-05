@@ -114,6 +114,7 @@ else
 	color=--color=always
 	export _color=$color
 	HLARCH=
+	_grep=grep
 
 	pos=1
 	while true; do
