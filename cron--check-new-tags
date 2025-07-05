@@ -19,7 +19,7 @@ if [ -z "$*" ]; then
 		fossology sysstat crash gum libkdumpfile psmisc moreutils       	\
 		rt-tests yara aide fsverity-utils bpftrace burp ima-evm-utils		\
 		tuned wget          fscrypt fscryptctl fio       kvmtool ubdsrv libnbd	\
-		musl klibc toybox               ugrep vgrep vim-plugin-ale nbdkit	\
+		musl klibc toybox               ugrep vgrep vim-plugin-ale       	\
 		drgn dropbear            libseccomp busybox cbonsai                    	\
 		tiv      cbmc      uftrace just etckeeper autorestic resticprofile	\
 		restic gitui            webhook rustic bin-marcosnils bzip3		\
