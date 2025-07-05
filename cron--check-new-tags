@@ -20,7 +20,7 @@ if [ -z "$*" ]; then
 		rt-tests yara aide fsverity-utils bpftrace burp ima-evm-utils		\
 		tuned wget          fscrypt fscryptctl fio       kvmtool ubdsrv libnbd	\
 		musl klibc toybox               ugrep vgrep vim-plugin-ale nbdkit	\
-		drgn dropbear            libseccomp busybox cbonsai certspotter        	\
+		drgn dropbear            libseccomp busybox cbonsai                    	\
 		tiv      cbmc      uftrace just etckeeper autorestic resticprofile	\
 		restic gitui            webhook rustic bin-marcosnils bzip3		\
 		libcpucycles libmceliece libntirpc nfs-ganesha gperftools coccinelle	\
