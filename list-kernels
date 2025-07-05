@@ -44,7 +44,7 @@ for i; do
 		continue
 	fi
 	case $i in
-		std-def|std-debug|std-pae|un-def|rt|kvm|std-kvm|xenomai|centos|ovz-el|ovz-el7|mp|+([[:digit:]]).+([[:digit:]]))
+		std-def|std-debug|std-pae|un-def|rt|kvm|std-kvm|xenomai|centos|ovz-el|ovz-el7|mp|talos|pine|rocknix|rk3588|rbs-def|rpi-def|rpi-un|sunxi|rk|repka4|lt11i|+([[:digit:]]).+([[:digit:]]))
 			flavours+=" $i"
 			continue
 			;;
