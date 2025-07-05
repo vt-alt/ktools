@@ -64,9 +64,9 @@ do_kgrep() {
 			figlet -t "$root${remote:+ : $remote}"
 			if [ -d .git ]; then
 				if [ "$br" = '' ]; then
-					(set -x; git pull --rebase)
+					(set -x; git pull --rebase ||:)
 				elif [ -n "$remote" ]; then
-					(set -x; git fetch "$remote")
+					(set -x; git fetch "$remote" ||:)
 				else
 					echo -e >&2 "\e[1;31m- $PWD unknown how to update branch $branch\e[m"
 					continue
