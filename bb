@@ -46,6 +46,7 @@ for opt do
 		--kernel-latest=*) set_rpmargs+=" --define 'kernel_latest $arg'" ;;
 		--kflavour=*) kflavour=${opt#*=} ;;
 		--tree-ish=* | -t=*) commit=("-t" "${opt#*=}") ;;
+		--no-ts) ts= ;;
 		--ts=*) ts=${opt#*=} ;;
 		--no-log) no_log=y ;;
 		--wait-lock | --no-wait-lock) wait_lock="$opt" ;;
@@ -57,7 +58,7 @@ done
 unset opt arg
 type -p ts >/dev/null ||
 	ts() { awk -v t="${1-%T}" '{ print strftime(t), $0}; fflush()'; }
-
+[ -n "$ts" ] || ts() { cat; }
 [ "${bb_ts-}" = pwd ] && ts="($(basename "$PWD"))"
 
 task_to_branch() {
