@@ -39,6 +39,8 @@ for opt do
 		--components=*) components=${opt#*=} ;;
 		--rsync) do_rsync=y ;;
 		--verbose) set_rpmargs+=" --verbose" ;;
+		--nprocs=*) NPROCS=${opt#*=} ;;
+		-j[0-9]*) NPROCS=${opt#-j} ;;
 		--define=*) set_rpmargs+=" --define '$arg'" ;;
 		--disable-lto | --no-lto) set_rpmargs+=" --define 'optflags_lto %nil'" ;;
 		--no-check) opt='--without-check' ;;&
@@ -60,6 +62,9 @@ type -p ts >/dev/null ||
 	ts() { awk -v t="${1-%T}" '{ print strftime(t), $0}; fflush()'; }
 [ -n "$ts" ] || ts() { cat; }
 [ "${bb_ts-}" = pwd ] && ts="($(basename "$PWD"))"
+
+# shellcheck disable=SC2089
+[ -v NPROCS ] && set_rpmargs+=" --define '__nprocs $NPROCS'"
 
 task_to_branch() {
 	curl -sSLf "https://git.altlinux.org/tasks/${1?}/task/repo"
