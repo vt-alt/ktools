@@ -43,6 +43,8 @@ for opt do
 		-j[0-9]*) NPROCS=${opt#-j} ;;
 		--define=*) set_rpmargs+=" --define '$arg'" ;;
 		--disable-lto | --no-lto) set_rpmargs+=" --define 'optflags_lto %nil'" ;;
+		--lto) opt='-flto=auto' ;;&
+		-fanalyzer | -flto* | -ffat-lto-objects) cflags+=" $opt" ;;
 		--no-check) opt='--without-check' ;;&
 		--enable*|--disable*|--with*) opt=${opt#--}; set_rpmargs+=" --${opt/[-=]/ }" ;;
 		--kernel-latest=*) set_rpmargs+=" --define 'kernel_latest $arg'" ;;
@@ -62,6 +64,8 @@ type -p ts >/dev/null ||
 	ts() { awk -v t="${1-%T}" '{ print strftime(t), $0}; fflush()'; }
 [ -n "$ts" ] || ts() { cat; }
 [ "${bb_ts-}" = pwd ] && ts="($(basename "$PWD"))"
+
+[ -v cflags ] && set_rpmargs+=" --define 'optflags_optimization -O2 $cflags'"
 
 # shellcheck disable=SC2089
 [ -v NPROCS ] && set_rpmargs+=" --define '__nprocs $NPROCS'"
