@@ -22,7 +22,7 @@ branches= flavours= arches=
 all_arch=
 unset logs configs grep_mode query rpmpeek include
 unset aptcachecmd show_no_match
-unset verbose show_date
+unset verbose show_date no_filename
 for i; do
 	shift
 	[ "$i" = sisyphus ] && i=Sisyphus
@@ -77,6 +77,7 @@ for i; do
 		--other) include='*' ;;
 		--whatdepends |	--depends | --showpkg | --showsrc | --show | --policy | --pkgnames)
 		       	aptcachecmd=${i#--} ;;
+		--no-filename) no_filename=y ;;
 		-*) echo "No option $i"; exit 1 ;;
 	esac
 done
@@ -128,6 +129,7 @@ if [ -v configs ]; then
 		prefix=$package-${prefix##*"$package"-}
 		prefix=${prefix%.rpm}
 		pref="$branch/$prefix:"
+		[ -v no_filename ] && pref=
 		[ -v show_date ] && pref="$(date -r "$i" +%F) $pref"
 		if [ -v grep_mode ]; then
 			[ -t 1 ] || unset GREP_COLORS
