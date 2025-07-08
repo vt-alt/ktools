@@ -24,6 +24,7 @@ onto=
 reset=
 grep_args=()
 grep_pathspec=()
+show_notes=
 for opt do
         shift
         case "$opt" in
@@ -52,6 +53,7 @@ for opt do
 		--allow-diverged) allow_diverged=y ;;
 		--all) all=y ;&
 		--stable | --stable-rc) stable=${opt#--} ;;
+		--notes) show_notes=--notes ;;
 		-*) echo >&2 "Unknown option: $opt"; exit 1 ;;
                 *) set -- "$@" "$opt";;
         esac
@@ -316,7 +318,7 @@ for lbr in $branches; do
 			fi
 			if [ "$n" -gt 0 ]; then
 				echo " -log-$log_msg-"
-				git log --no-decorate --oneline --first-parent "$log_from..$lbr"
+				git log $show_notes --no-decorate --oneline --first-parent "$log_from..$lbr"
 			fi
 		fi
 		unset n log_from log_msg
