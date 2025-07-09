@@ -33,13 +33,16 @@ for i in "$@"; do
 	cd "$HOME/src"
 	cd "$i"
 	n=$(printf '%-15s' "$i:")
-	origin=
-	watchfile=
-	if [ -d .git/refs/remotes/upstream ]; then
+	origin=$(git config --local --get new-tags.remote ||:)
+	if [ -n "$origin" ]; then
+		:
+	elif [ -d .git/refs/remotes/upstream ]; then
 		origin=upstream
 	elif [ -d .git/refs/remotes/origin ]; then
 		origin=origin
-	else
+	fi
+	watchfile=
+	if [ -z "$origin" ]; then
 		set +f
 		for watchfile in .gear/"$i"*.watch "$i"*.watch .gear/autobuild.watch .gear/*.watch *.watch ; do
 			[ -e "$watchfile" ] && break
@@ -48,11 +51,7 @@ for i in "$@"; do
 		set -f
 	fi
 	if [ -n "$origin" ]; then
-		if [ "$i" = kernel-image-rt ]; then
-			new-tags rt | cut -f1-2 | grep -P 'v5.10.*rt\d+$'
-		else
-			new-tags $origin | grep -v -e -beta -e oss-fuzz -e dev
-		fi | sed "s/^/$n /" > "$t"
+		new-tags "$origin" | sed "s/^/$n /" > "$t"
 	elif [ -n "$watchfile" ]; then
 		rpm-uscan --report | tail -1 | sed "s/^/$n /" > "$t"
 	else
