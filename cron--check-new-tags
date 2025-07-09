@@ -30,9 +30,9 @@ if [ -z "$*" ]; then
 fi
 for i in "$@"; do
 	# echo >&2 "$i"
-	cd $HOME/src
-	cd $i
-	n=$(printf %-15s $i:)
+	cd "$HOME/src"
+	cd "$i"
+	n=$(printf '%-15s' "$i:")
 	origin=
 	watchfile=
 	if [ -d .git/refs/remotes/upstream ]; then
@@ -48,24 +48,24 @@ for i in "$@"; do
 		set -f
 	fi
 	if [ -n "$origin" ]; then
-		if [ $i = kernel-image-rt ]; then
+		if [ "$i" = kernel-image-rt ]; then
 			new-tags rt | cut -f1-2 | grep -P 'v5.10.*rt\d+$'
 		else
 			new-tags $origin | grep -v -e -beta -e oss-fuzz -e dev
-		fi | sed "s/^/$n /" > $t
+		fi | sed "s/^/$n /" > "$t"
 	elif [ -n "$watchfile" ]; then
-		rpm-uscan --report | tail -1 | sed "s/^/$n /" > $t
+		rpm-uscan --report | tail -1 | sed "s/^/$n /" > "$t"
 	else
-		echo "$n unknown watching method" > $t
+		echo "$n unknown watching method" > "$t"
 	fi
-	if [ -t 0 ]; then cat $t; fi
-	cat $t >> $a
+	if [ -t 0 ]; then cat "$t"; fi
+	cat "$t" >> "$a"
 	if [ ! -t 1 ]; then sleep 11; fi
 done
-if [ ! -t 0 -a -s "$a" ]; then
+if [ ! -t 0 ] && [ -s "$a" ]; then
 	sort "$a" -o "$a"
-	count=$(wc -l < $a)
-	names=$(cut -d: -f1 $a | sort -u | tr '\n' ' ')
-	column -t < $a | mail -s "new-tags ($count) $names" vt@altlinux.org
+	count=$(wc -l < "$a")
+	names=$(cut -d: -f1 "$a" | sort -u | tr '\n' ' ')
+	column -t < "$a" | mail -s "new-tags ($count) $names" vt@altlinux.org
 fi
-rm -f -- $t $a
+rm -f -- "$t" "$a"
