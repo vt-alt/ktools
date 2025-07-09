@@ -1,14 +1,19 @@
 #!/bin/bash
 
+exclude=$(git config --local --get-all new-tags.exclude ||:)
+remote=$(git config --local --get-all new-tags.remote ||:)
+
 set +o posix
-if [ "$1" ]; then
-	echo "$1"
+if [ -n "$*" ]; then
+	printf "%s\n" "$@"
+elif [ -n "$remote" ]; then
+	echo "$remote"
 else
-	git remote
+	git remote | grep -Ex -v 'gears|gitery'
 fi | while read -r remote; do
 	if ! git retry ls-remote --tags --refs "$remote"; then
 		echo >&2 "error on $PWD:$remote"
 	fi |
-	grep -v -f <(git show-ref --tags -s) |
+	grep -v -f <(git show-ref --tags -s) ${exclude:+-e "$exclude"} |
 	sed "s!\$!\\t$remote!"
 done
