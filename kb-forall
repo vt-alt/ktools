@@ -26,6 +26,7 @@ reset=
 grep_args=()
 grep_pathspec=()
 show_notes=
+no_notes=
 for opt do
         shift
         case "$opt" in
@@ -56,6 +57,7 @@ for opt do
 		--all) all=y ;&
 		--stable | --stable-rc) stable=${opt#--} ;;
 		--notes) show_notes=--notes ;;
+		--no-notes) no_notes=y ;;
 		-*) echo >&2 "Unknown option: $opt"; exit 1 ;;
                 *) set -- "$@" "$opt";;
         esac
@@ -348,7 +350,7 @@ for lbr in $branches; do
 			if [ "$pick" = "apply" ]; then
 				if git cherry-pick $signedoff $pickedline "$commit" >>.log 2>&1; then
 					result=$(git rev-parse --short @)
-					if git notes list "$commit" &>/dev/null; then
+					if [ -z "$no_notes" ] && git notes list "$commit" &>/dev/null; then
 						git notes copy "$commit" @
 						result+='+note'
 						notes+=1
