@@ -7,6 +7,7 @@ fatal() {
 	exit 1
 }
 
+cr=$'\n'
 pkgi=()
 commit=("--commit")
 ts='%T'
@@ -247,8 +248,14 @@ for branch in "${branches[@]}"; do
 	build_state="gear-hsh"
 	{
 		[ -e .git/BISECT_LOG ] && (set -x; cat .git/BISECT_LOG)
+		ref=$(git stash create "$log$cr$cr$(log_config)")
+		if [ -n "$ref" ]; then
+			git update-ref "refs/bb/$ref" "$ref"
+			echo "$ref"
+		fi
+		unset ref
 		set -x
-		git diff
+		git diff -U1 --no-prefix --word-diff --color=always
 		# shellcheck disable=SC2094
 		git 'log' -1 --decorate
 	} &> "$log"
