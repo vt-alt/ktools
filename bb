@@ -55,6 +55,7 @@ for opt do
 		--ts=*) ts=${opt#*=} ;;
 		--no-log) no_log=y ;;
 		--wait-lock | --no-wait-lock) wait_lock="$opt" ;;
+		--net | --network) export share_network=1 ;;
 		--) break ;;
 		-*) fatal "Unknown option: $opt" ;;
                 *) set -- "$@" "$opt";;
