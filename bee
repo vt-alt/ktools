@@ -1,0 +1,50 @@
+#!/bin/bash
+set -efu +o posix
+export LC_ALL=C
+
+repo=Sisyphus
+arch=x86_64
+export base_url=https://git.altlinux.org/beehive/logs/$repo/$arch/archive/
+export cachedir=$HOME/.cache/bee
+
+listdirs() {
+	local y=${1-}
+	curl -fSs "$base_url${y%/}${y:+/}" |
+		grep -Po -ie '<a class="link" href="\K\d+(?=">)'
+}
+
+download_file_xz() {
+	local f=$1
+	local tmpf="$cachedir/.$$.dl"
+	local url="$base_url$f"
+	echo ": $url" >&2
+	curl -fsSR "$url" -o "$tmpf"
+	mkdir -p "$cachedir/$(dirname "$f")"
+	xz "$tmpf"
+	mv "$tmpf.xz" "$cachedir/$f.xz"
+
+}
+export -f download_file_xz
+
+download_year() {
+	local year=$1
+	for d in $(listdirs "$year"); do
+		local f="$y/$d/time.list"
+		[ -e "$cachedir/$f.xz" ] && continue
+		echo "$f"
+	done
+}
+
+download_all() {
+	for y in $(listdirs); do
+		[ -e "$cachedir/$((y+1))" ] && continue
+		download_year "$y"
+	done |
+		xargs -P22 -n1 bash -c 'download_file_xz "$@"' --
+}
+
+read -r year mday <<< "$(date "+%Y %m%d")"
+
+if [ ! -e "$cachedir/$year/$mday" ]; then
+	download_all
+fi
