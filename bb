@@ -25,7 +25,7 @@ for opt do
 		--task=*) task="${opt#*=}" ;;
 		--build-srpm-only | -bs) gear_hsh=("hsh" "--build-srpm-only") ;;
 		--install-only) gear_hsh=("hsh-rebuild" "$opt") ;;
-		--build-check | -bt | -bi) build_check=y ;;
+		-b[abcipst] | --short-circuit) rpmb+=" $opt" ;;
 		--no-cache) no_cache=1 ;;
 		--ini|--init|--initroot) initroot=only ;;
 		--no-ini*) noinitroot=ci ;;
@@ -190,19 +190,19 @@ fi
 sync
 
 unset rebuild_prog
-if [ -v build_check ]; then
+if [ -v rpmb ]; then
 	rebuild_prog=$(mktemp --suffix=.hsh)
 	readonly rebuild_prog
-	cat > "$rebuild_prog" <<-"EOF"
+	cat > "$rebuild_prog" <<-EOF
 		#!/bin/bash -le
-		set -x
-		rpmi -i -- "$@"
-		specfile=( "$HOME"/RPM/SPECS/*.spec )
-		[ -f "$specfile" ]
+		( set -x; rpmi -i -- "\$@" )
+		specfile=( "\$HOME"/RPM/SPECS/*.spec )
+		[ -f "\$specfile" ]
 		export -n target
-		read -r SOURCE_DATE_EPOCH < "$HOME/in/SOURCE_DATE_EPOCH"
+		read -r SOURCE_DATE_EPOCH < "\$HOME/in/SOURCE_DATE_EPOCH"
 		export SOURCE_DATE_EPOCH
-		time rpmbuild -bi --target="$target" "$specfile"
+		set -x
+		time rpmbuild $rpmb --target="\$target" "\$specfile"
 	EOF
 	set -- "--rebuild-prog=$rebuild_prog"
 fi
