@@ -27,7 +27,7 @@ for opt do
 		--install-only) gear_hsh=("hsh-rebuild" "$opt") ;;
 		--build-check | -bt | -bi) build_check=y ;;
 		--no-cache) no_cache=1 ;;
-		--ini*) initroot=only ;;
+		--ini|--init|--initroot) initroot=only ;;
 		--no-ini*) noinitroot=ci ;;
 		--rpmi=*|--ci=*) pkgi+=(${arg//,/ }) ;;
 		--no-beep) NOBEEP=y ;;
@@ -157,16 +157,20 @@ repo_clean() (
 [ -v hsh_clean ] && repo_clean
 
 export branch set_target archive_date task components set_rpmargs do_rsync no_log
+unset initonly
 if [ -n "${initroot-}" ]; then
 	log_config
 	pkg_install
-	exit
-elif [ -v gear_hsh ]; then
+	initonly=y
+fi
+if [ -v gear_hsh ]; then
 	log_config
 	(set -x; gear --hasher "${commit[@]}" -- "${gear_hsh[@]}" $wait_lock)
+	noinitroot=y
 	pkg_install
-	exit
+	initonly=y
 fi
+[ -v initonly ] && exit
 
 toplevel=$(git rev-parse --show-toplevel)
 [ "$toplevel" -ef . ] || {
