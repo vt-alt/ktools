@@ -26,7 +26,8 @@ if [ -z "$*" ]; then
 		libcpucycles libmceliece libntirpc nfs-ganesha gperftools coccinelle	\
 		yajl shunit2 rasdaemon kopia rustic_server ollama git-branchless	\
 		coccigrep firmware-linux lolcat    aichat lib25519 libntruprime argc	\
-		librandombytes       ollama-python cpu_features            sd
+		librandombytes       ollama-python cpu_features            sd wabt	\
+		wasmedge
 fi
 for i in "$@"; do
 	# echo >&2 "$i"
