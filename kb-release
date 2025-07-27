@@ -130,6 +130,11 @@ if [ -n "$release" ]; then
 		left=alt1
 		nrel=
 		echo ":: Release (mainline) reset to $left (because of $topmost)."
+		topver=${topmost#v}
+		sed -iE "/^diff:/s/v[0-9.]\+:/$topmost:/" ".gear/rules"
+		sed -iE "/^%define kernel_src_version/s/\t[0-9.]\+/\t$topver/" "$specfile"
+		echo "stable/linux-$topver.y" > .gear/upstream-branch
+		gear-update-tag -ac
 		changelog="- Update to $topmost ($tag_date) release."
 		unset release
 	elif [[ $topmost =~ -rc([[:digit:]]+)$ ]]; then
