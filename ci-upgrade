@@ -1,0 +1,43 @@
+#!/bin/bash
+set -efu +o posix
+
+fatal() { echo >&2 "${0##*/}: error: $*"; exit 1; }
+
+unset task docker_opts docker_rmi
+for opt do
+        shift
+	arg=${opt#*=}
+        case "$opt" in
+		--task) task=$(awk '{print $1}' .git/.girar-build | tail -1) ;;
+		--task=*) task=$arg ;;
+		--no-cache) docker_opts+=" $opt" ;;
+		--no-cache=*) docker_opts+=" --no-cache-filter=$arg" ;;
+		--prune) docker builder prune -a -f ;;
+		--rm | --rmi) docker_rmi=y ;;
+		-*) fatal "unknown option: $opt" ;;
+                *) fatal "unknown argument: $opt" ;;
+        esac
+done
+
+pkgnames() { cut -f1 | sort -u | grep -ve '-debuginfo$' | xargs -r; }
+
+repo=$(curl -sSf "https://git.altlinux.org/tasks/$task/task/repo")
+pre_install=$(curl -sSf "https://git.altlinux.org/tasks/$task/plan/rm-bin" | pkgnames)
+install=$(curl -sSf "https://git.altlinux.org/tasks/$task/plan/add-bin" | pkgnames)
+# Version to automatically invalidate Docker cache, apt-repo ignores that argument.
+version=$(curl -sSf "https://git.altlinux.org/tasks/$task/task/version")
+
+# shellcheck disable=SC2086
+docker build ${docker_opts-} --progress=plain -t "task$task" -f - . <<-EOF
+	FROM alt:$repo AS pre
+	SHELL ["/bin/bash", "-xec"]
+	RUN apt-get update && apt-get install -y apt-repo $pre_install
+	FROM pre AS task
+	RUN apt-repo add $task $version && apt-get update
+	RUN apt-get install -y $install
+EOF
+
+if [ -v docker_rmi ]; then
+	docker rmi "task$task"
+	echo "🔴 To clear caches run: docker builder prune -a -f"
+fi
