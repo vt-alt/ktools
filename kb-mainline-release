@@ -68,7 +68,7 @@ latest_kernel_image=$(
 		tail -1
 	)
 echo "Latest known kernel-image package is $latest_kernel_image"
-[ "$prev_version" = "$latest_kernel_image" ] || fatal "This does not match previous mainline release."
+[ "$prev_version" = "$latest_kernel_image" ] || fatal "This shall match previous release as the tool only creates new branches."
 [ "$version" != "$latest_kernel_image" ] || fatal "This does not differ from current mainline release."
 
 if git show-ref --verify --quiet "refs/heads/$patches_branch"; then
