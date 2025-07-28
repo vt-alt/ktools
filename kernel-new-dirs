@@ -17,7 +17,8 @@ git_new_dirs() {
 	| grep '^+[^+]' | grep -Pe "${3-}" | grep -Ev 'testing/selftests|tools/perf|lib/perf' || :
 }
 
-p=HEAD
+cd ~/src/kernel-image
+p=torvalds/master
 while read -r v; do
 	echo "  $v --> $p:"
        	git_new_dirs "$v" "$p" ${1-\\+tools}
