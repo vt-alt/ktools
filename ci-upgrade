@@ -3,7 +3,7 @@ set -efu +o posix
 
 fatal() { echo >&2 "${0##*/}: error: $*"; exit 1; }
 
-unset task docker_opts docker_rmi
+unset task docker_opts keep
 for opt do
         shift
 	arg=${opt#*=}
@@ -12,8 +12,7 @@ for opt do
 		--task=*) task=$arg ;;
 		--no-cache) docker_opts+=" $opt" ;;
 		--no-cache=*) docker_opts+=" --no-cache-filter=$arg" ;;
-		--prune) docker builder prune -a -f ;;
-		--rm | --rmi) docker_rmi=y ;;
+		--keep) keep=y ;;
 		-*) fatal "unknown option: $opt" ;;
                 *) fatal "unknown argument: $opt" ;;
         esac
@@ -37,7 +36,7 @@ docker build ${docker_opts-} --progress=plain -t "task$task" -f - . <<-EOF
 	RUN apt-get install -y $install
 EOF
 
-if [ -v docker_rmi ]; then
+if [ ! -v keep ]; then
 	docker rmi "task$task"
 	echo "🔴 To clear caches run: docker builder prune -a -f"
 fi
