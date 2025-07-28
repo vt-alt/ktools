@@ -19,7 +19,7 @@ for opt do
         esac
 done
 
-pkgnames() { cut -f1 | sort -u | grep -ve '-debuginfo$' | xargs -r; }
+pkgnames() { cut -f1 | sort -u | grep -Eve '-(debuginfo|checkinstall)$' | xargs -r; }
 
 repo=$(curl -sSf "https://git.altlinux.org/tasks/$task/task/repo")
 pre_install=$(curl -sSf "https://git.altlinux.org/tasks/$task/plan/rm-bin" | pkgnames)
