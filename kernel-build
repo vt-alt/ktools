@@ -113,6 +113,10 @@ for tag; do
 	if [ -v deps ]; then
 		V ssh -n $girar task deps $task add "$deps"
 	fi
+	PPIDID=$PPID:$(date -r "/proc/$PPID" +%s)
+	TS=$(date --iso-8601=minutes)
+	printf "%s\t%s\t%s\t%s\n" "$task" "$TS" "$PPIDID" "0" >> .git/.girar-build
+	ln -srf "$PWD" -T "$HOME/.girar-build-repo"
 	runcmd="ssh -n $girar task run --fail-late $commit $task $msg"
 	if [ -v runthetask ]; then
 		V $runcmd
