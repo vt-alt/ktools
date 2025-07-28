@@ -65,7 +65,7 @@ if [ -z "$disttag" ]; then
 	disttag="$branch+100500.100.1.1"
 fi
 set_rpmargs+=" --define 'disttag $disttag'"
-set_rpmargs+=" --define '_debuginfo_payload w7T.xzdio'"
+set_rpmargs+=" --define '_debuginfo_payload w1T.xzdio'"
 
 if [ -n "${set_rpmargs-}" ]; then
        rpmargs=$set_rpmargs
