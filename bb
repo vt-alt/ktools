@@ -12,6 +12,7 @@ pkgi=()
 commit=("--commit")
 ts='%T'
 wait_lock="--no-wait-lock"
+ci_mountpoints="--mountpoints=/proc,/sys,/dev/pts,/dev/kvm"
 for opt do
         shift
 	arg=${opt#*=}
@@ -34,6 +35,7 @@ for opt do
 		--ci) ci=checkinstall ;;
 		--ci-all) ci=all ;;
 		--ci-command=*) ci_command="${opt#*=}" ;;
+		--ci-script=*) ci_script=$arg ;;
 		--clean | --repo-clean) hsh_clean=y ;;
 		--no-repo) set_repo=/var/empty ;;
 		--set-repo=*) set_repo=$arg ;;
@@ -58,6 +60,8 @@ for opt do
 		--no-log) no_log=y ;;
 		--wait-lock | --no-wait-lock) wait_lock="$opt" ;;
 		--net | --network) export share_network=1 ;;
+		--pty) ci_pty=--pty ;;
+		--rooter) ci_rooter=--rooter ;;
 		--) break ;;
 		-*) fatal "Unknown option: $opt" ;;
                 *) set -- "$@" "$opt";;
@@ -151,6 +155,25 @@ pkg_install() {
 	unset build_state
 }
 
+aterr() {
+	local red=$'\e[1;31m' norm=$'\e[m'
+	echo "${red}FAILED ($(basename "$PWD")) ${branch-} ${set_target-} state=${build_state-}${norm}"
+}
+trap '{ set +x; } 2>/dev/null; aterr' ERR
+set -E
+
+run_ci_script() {
+	if [ -v ci_script ]; then
+		echo
+		echo ":: CI script for ${branch-Sisyphus}:"
+		build_state="ci-script"
+		# shellcheck disable=SC2086
+		hsh-run ${ci_rooter-} $ci_mountpoints ${ci_pty-} $wait_lock --execute="$ci_script" </dev/null
+		unset build_state
+		echo
+	fi
+}
+
 repo_clean() (
 	set +f
 	mkdir -p ~/repo
@@ -159,6 +182,8 @@ repo_clean() (
 [ -v hsh_clean ] && repo_clean
 
 export branch set_target archive_date task components set_rpmargs set_repo do_rsync no_log
+unset build_state
+
 unset initonly
 if [ -n "${initroot-}" ]; then
 	log_config
@@ -172,7 +197,10 @@ if [ -v gear_hsh ]; then
 	pkg_install
 	initonly=y
 fi
-[ -v initonly ] && exit
+if [ -v initonly ]; then
+	run_ci_script
+	exit
+fi
 
 toplevel=$(git rev-parse --show-toplevel)
 [ "$toplevel" -ef . ] || {
@@ -210,12 +238,6 @@ if [ -v rpmb ]; then
 fi
 
 set -o pipefail
-unset build_state
-aterr() {
-	local red=$'\e[1;31m' norm=$'\e[m'
-	echo "${red}FAILED ($(basename "$PWD")) ${branch-} ${set_target-} state=${build_state-}${norm}"
-}
-trap '{ set +x; } 2>/dev/null; aterr' ERR
 atexit() {
 	[ -v rebuild_prog ] && rm -- "$rebuild_prog"
 	[ -v NOBEEP ] || beep
@@ -295,6 +317,7 @@ for branch in "${branches[@]}"; do
 	fi
 	((${#pkgi[@]})) &&
 		pkg_install |& ts "$ts" | tee -a "$log"
+	run_ci_script |& ts "$ts" | tee -a "$log"
 	sep=$'\n'
 done
 done
