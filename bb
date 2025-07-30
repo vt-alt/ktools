@@ -52,7 +52,7 @@ for opt do
 		--enable*|--disable*|--with*) opt=${opt#--}; set_rpmargs+=" --${opt/[-=]/ }" ;;
 		--kernel-latest=*) set_rpmargs+=" --define 'kernel_latest $arg'" ;;
 		--kflavour=*) kflavour=${opt#*=} ;;
-		--tree-ish=* | -t=*) commit=("-t" "${opt#*=}") ;;
+		--tree-ish=* | --tag=* | -t=*) commit=("-t" "${opt#*=}") ;;
 		--no-ts) ts= ;;
 		--ts=*) ts=${opt#*=} ;;
 		--no-log) no_log=y ;;
