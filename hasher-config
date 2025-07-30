@@ -1,5 +1,9 @@
 # vi:ft=bash:
-def_repo="$HOME/repo"
+if [ -n "$set_repo" ]; then
+	def_repo=$set_repo
+else
+	def_repo="$HOME/repo"
+fi
 workdir="${TMPDIR-/tmp/.private/$USER}/hasher"
 
 if [[ $HOSTNAME =~ mskdc ]]; then

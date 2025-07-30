@@ -35,6 +35,8 @@ for opt do
 		--ci-all) ci=all ;;
 		--ci-command=*) ci_command="${opt#*=}" ;;
 		--clean | --repo-clean) hsh_clean=y ;;
+		--no-repo) set_repo=/var/empty ;;
+		--set-repo=*) set_repo=$arg ;;
 		--fresh) fresh=y ;;
 		--date=*|--archive=*) archive_date=${opt#*=} ;;
 		--components=*) components=${opt#*=} ;;
@@ -156,7 +158,7 @@ repo_clean() (
 )
 [ -v hsh_clean ] && repo_clean
 
-export branch set_target archive_date task components set_rpmargs do_rsync no_log
+export branch set_target archive_date task components set_rpmargs set_repo do_rsync no_log
 unset initonly
 if [ -n "${initroot-}" ]; then
 	log_config
