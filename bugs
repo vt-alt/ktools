@@ -1,0 +1,65 @@
+#!/bin/bash
+# Search API: https://docs.github.com/en/rest/search
+# Another API: https://docs.github.com/en/rest/issues
+# https://docs.github.com/en/search-github/getting-started-with-searching-on-github/understanding-the-search-syntax
+# https://docs.github.com/en/search-github/searching-on-github/searching-issues-and-pull-requests
+
+set -efu +o posix
+fatal() { echo >&2 "! $*"; exit 1; }
+
+unset date ref is state
+setx=
+at=created
+for opt do
+	shift
+	arg=${opt#*=}
+	case "$opt" in
+		--tag=*) ref=$arg ;;
+		--date=*) date=$arg ;;
+		--remote=*) remote=$arg ;;
+		--updated) at=updated ;;
+		--pr) is=pr ;;
+		--issue | --issues) is=issue ;;
+		--open) state=open ;;
+		--closed) state=closed ;;
+		-v) setx='set -x' ;;
+		-*) fatal "Unknwon option: $opt" ;;
+		*) set -- "$@" "$opt";;
+	esac
+done
+
+if [ ! -v remote ]; then
+	remote=$(git remote -v | grep -Po "https://github\.com/\S+" -m1)
+fi
+repo=${remote#*github.com/}
+repo=${repo%/}
+repo=${repo%.git}
+
+if [ -v date ]; then
+	echo >&2 "Using date from command line"
+elif [ -v ref ]; then
+	echo >&2 "Using committer date from tag"
+	date=$(git log -1 --format=%cd --date=short "$ref")
+elif changelog_date=$(git show | grep -A2 '%changelog' | grep -Po 'Updated? to \S+ \(\K\S+(?=\))' ); then
+	echo >&2 "Using update date from the latest %changelog entry"
+	date=$changelog_date
+fi
+[ -v date ] || fatal "Specify date or a tag to get committer date from it."
+
+Q="repo:$repo $at:>=$date"
+[ -v state ] && Q+=" state:$state"
+[ -v is ] && Q+=" is:$is"
+
+echo "Query is: $Q"
+Q=$(jq -sRr @uri <<<"$Q")
+($setx; curl -sSf "https://api.github.com/search/issues?q=$Q&sort=created&per_page=99")|
+	jq -r '.items[] | [
+		.number,
+		(.created_at | fromdate | strftime("%F")),
+		(.updated_at | fromdate | strftime("%F")),
+		(.state | ascii_upcase),
+		(if .pull_request? then if .pull_request.merged_at then "M" else "pr" end else "*" end),
+		.comments,
+		.title
+	] | @tsv' | column -t -s $'\t'
+
