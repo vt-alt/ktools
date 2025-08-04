@@ -323,7 +323,13 @@ for lbr in $branches; do
 			fi
 			if [ "$n" -gt 0 ]; then
 				echo " -log-$log_msg-"
-				git log $show_notes --no-decorate --oneline --first-parent "$log_from..$lbr"
+				if [ -n "$show_notes" ]; then
+					git log $show_notes --no-decorate --oneline --first-parent "$log_from..$lbr"
+				else
+					git log --color=always --format=' %C(yellow)%h%Creset %C(bold)%x01%N%x01%Creset %s' \
+						--first-parent "$log_from..$lbr" |
+						sed -Ez 's/\x1\x1/ /g;s/\x1[^\x1]+\x1/N/g'
+				fi
 			fi
 		fi
 		unset n log_from log_msg
