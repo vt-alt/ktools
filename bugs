@@ -40,7 +40,7 @@ if [ -v date ]; then
 elif [ -v ref ]; then
 	echo >&2 "Using committer date from tag"
 	date=$(git log -1 --format=%cd --date=short "$ref")
-elif changelog_date=$(git show | grep -A2 '%changelog' | grep -Po 'Updated? to \S+ \(\K\S+(?=\))' ); then
+elif changelog_date=$(git show | grep -A4 '%changelog' | grep -Po '^\+.*Updated? to \S+ \(\K\S+(?=\))' ); then
 	echo >&2 "Using update date from the latest %changelog entry"
 	date=$changelog_date
 fi
