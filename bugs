@@ -7,6 +7,17 @@
 set -efu +o posix
 fatal() { echo >&2 "! $*"; exit 1; }
 
+  BRIGHT=$'\e[1m'
+     RED=$'\e[31m'
+   GREEN=$'\e[32m'
+  YELLOW=$'\e[33m'
+    BLUE=$'\e[34m'
+ MAGENTA=$'\e[35m'
+    CYAN=$'\e[36m'
+   WHITE=$'\e[37m'
+    NORM=$'\e[m'
+export BRIGHT RED GREEN YELLOW BLUE MAGENTA CYAN WHITE NORM
+
 unset date ref is state
 setx=
 at=created
@@ -60,5 +71,10 @@ Q=$(jq -sRr @uri <<<"$Q")
 		(if .pull_request? then if .pull_request.merged_at then "M" else "pr" end else "*" end),
 		.comments,
 		.title
-	] | @tsv' | column -t -s $'\t'
+	] | @tsv' | column -t -s $'\t' |
+	sed -E \
+		-e "s/([^e]bug|crash|error|regress|fail)/$BRIGHT$RED&$NORM/i" \
+		-e "s/(fix)/$BRIGHT$GREEN&$NORM/i" \
+		-e "s/(implement|add|sync)/$YELLOW&$NORM/i"
+
 
