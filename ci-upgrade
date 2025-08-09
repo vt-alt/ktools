@@ -3,40 +3,67 @@ set -efu +o posix
 
 fatal() { echo >&2 "${0##*/}: error: $*"; exit 1; }
 
-unset task docker_opts keep
+unset task docker_opts keep from_hsh
 for opt do
         shift
 	arg=${opt#*=}
         case "$opt" in
 		--task) task=$(awk '{print $1}' .git/.girar-build | tail -1) ;;
 		--task=*) task=$arg ;;
+		--hsh | --local) from_hsh=y ;;
 		--no-cache) docker_opts+=" $opt" ;;
 		--no-cache=*) docker_opts+=" --no-cache-filter=$arg" ;;
-		--keep) keep=y ;;
+		--keep) keep= ;;
 		-*) fatal "unknown option: $opt" ;;
                 *) fatal "unknown argument: $opt" ;;
         esac
 done
 
-pkgnames() { cut -f1 | sort -u | grep -Eve '-(debuginfo|checkinstall)$' | xargs -r; }
+pkgnames() { cut -f1 | sort -u | grep -Eve '-(debuginfo|checkinstall)' | xargs -r; }
 
-repo=$(curl -sSf "https://git.altlinux.org/tasks/$task/task/repo")
-pre_install=$(curl -sSf "https://git.altlinux.org/tasks/$task/plan/rm-bin" | pkgnames)
-install=$(curl -sSf "https://git.altlinux.org/tasks/$task/plan/add-bin" | pkgnames)
-# Version to automatically invalidate Docker cache, apt-repo ignores that argument.
-version=$(curl -sSf "https://git.altlinux.org/tasks/$task/task/version")
+if [ -v from_hsh ]; then
+	# Test local build, only authoritative records are in the build log.
+	eval "$(hsh --printenv)"
+	repo=$(grep -m1 -Po 'branch=\K\S*(?= target=)' log)
+	pre_install=$(sed -En 's!^\S+ Wrote:\s/usr/src/RPM/RPMS/[[:graph:]/]+/(\S+)-[^-]+-alt\S+\.rpm\s.*!\1!p' log | pkgnames)
+	install=$(sed -En 's!^\S+ Wrote:\s/usr/src/RPM/RPMS/[[:graph:]/]+/(\S+-[^-]+-alt\S+\.rpm)\s.*!/repo/\1!p' log | pkgnames)
+	name="hsh.${pre_install%% *}"
+	echo >&2 "+ docker run --name=$name ..."
+	# shellcheck disable=SC2086,SC2154
+	docker run ${keep---rm} \
+		--name="$name" \
+		-v "$def_repo/$HOSTTYPE/RPMS.hasher:/repo" \
+		"alt:${repo:-sisyphus}" \
+		bash -exc "
+			apt-get update
+			apt-get install -y $pre_install
+			apt-get install -y $install
+		"
+	# docker container ls -a
+	if [ ! -v keep ]; then
+		echo "🔴 To clear containers run: docker container prune -f"
+	fi
+else
+	repo=$(curl -sSf "https://git.altlinux.org/tasks/$task/task/repo")
+	pre_install=$(curl -sSf "https://git.altlinux.org/tasks/$task/plan/rm-bin" | pkgnames)
+	install=$(curl -sSf "https://git.altlinux.org/tasks/$task/plan/add-bin" | pkgnames)
+	# Version to automatically invalidate Docker cache, apt-repo ignores that argument.
+	version=$(curl -sSf "https://git.altlinux.org/tasks/$task/task/version")
 
-# shellcheck disable=SC2086
-docker build ${docker_opts-} --progress=plain -t "task$task" -f - . <<-EOF
-	FROM alt:$repo AS pre
-	SHELL ["/bin/bash", "-xec"]
-	RUN apt-get update && apt-get install -y apt-repo $pre_install
-	FROM pre AS task
-	RUN apt-repo add $task $version && apt-get update
-	RUN apt-get install -y $install
-EOF
-
-if [ ! -v keep ]; then
-	docker rmi "task$task"
-	echo "🔴 To clear caches run: docker builder prune -a -f"
+	echo >&2 "+ docker build -t task$task ..."
+	# shellcheck disable=SC2086
+	docker build ${docker_opts-} --progress=plain -t "task$task" -f - . <<-EOF
+		FROM alt:$repo AS pre
+		SHELL ["/bin/bash", "-xec"]
+		RUN apt-get update && apt-get install -y apt-repo $pre_install
+		FROM pre AS task
+		RUN apt-repo add $task $version && apt-get update
+		RUN apt-get install -y $install
+	EOF
+	# docker image ls
+	if [ ! -v keep ]; then
+		docker rmi "task$task"
+		echo "🔴 To clear caches run: docker builder prune -a -f"
+	fi
 fi
+
