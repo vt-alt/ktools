@@ -56,7 +56,6 @@ Q=$(jq -sRr @uri <<<"$Q")
 	jq -r '.items[] | [
 		.number,
 		(.created_at | fromdate | strftime("%F")),
-		(.updated_at | fromdate | strftime("%F")),
 		(.state | ascii_upcase),
 		(if .pull_request? then if .pull_request.merged_at then "M" else "pr" end else "*" end),
 		.comments,
