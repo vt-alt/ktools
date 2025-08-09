@@ -68,9 +68,9 @@ Q=$(jq -sRr @uri <<<"$Q")
 		.number,
 		(.created_at | fromdate | strftime("%F")),
 		(.state | ascii_upcase),
-		(.author_association | if . == "NONE" then "-" else (gsub("(?i)[aeiou]"; "") | .[:2]) end),
+		(.author_association | if . == "NONE" then "\u00A0" else (gsub("(?i)[aeiou]"; "") | .[:2]) end),
 		if (.user.login | length) > 8 then .user.login[0:7] + "…" else .user.login end,
-		(if .pull_request? then if .pull_request.merged_at then "M" else "pr" end else "*" end),
+		(if .pull_request? then if .pull_request.merged_at then "M" else "pr" end else "\u00A0" end),
 		.comments,
 		.title
 	] | @tsv' | column -t -s $'\t' |
