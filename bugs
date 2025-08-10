@@ -24,6 +24,7 @@ at=created
 for opt do
 	shift
 	arg=${opt#*=}
+	# shellcheck disable=SC2209
 	case "$opt" in
 		--tag=*) ref=$arg ;;
 		--date=*) date=$arg ;;
@@ -46,12 +47,19 @@ repo=${remote#*github.com/}
 repo=${repo%/}
 repo=${repo%.git}
 
+# shellcheck disable=SC2166
 if [ -v date ]; then
 	echo >&2 "Using date from command line"
 elif [ -v ref ]; then
 	echo >&2 "Using committer date from tag"
 	date=$(git log -1 --format=%cd --date=short "$ref")
-elif changelog_date=$(git show | grep -A4 '%changelog' | grep -Po '^\+.*Updated? to \S+ \(\K\S+(?=\))' ); then
+elif [ -e .gear-rules -o -e .gear/rules ]; then
+	# shellcheck disable=SC1091
+	. gear-utils-sh-functions
+	export disable_specsubst=1
+	chdir_to_toplevel
+	specfile=$(guess_specfile; echo "$specfile")
+	changelog_date=$(grep -A2 '%changelog' "$specfile" | grep -Po '(First import|Updated? to) \S+ \(\K\S+(?=\))')
 	echo >&2 "Using update date from the latest %changelog entry"
 	date=$changelog_date
 fi
