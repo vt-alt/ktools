@@ -135,7 +135,7 @@ if git cat-file -e "@:$specfile" 2>/dev/null; then
 else
 	printf '%s\n\n' "ALT: Copy config and spec from $prev_br" > .git/KB_COMMANDS
 	[ -v kernelbot ] && echo '  git fetch kernelbot' >> .git/KB_COMMANDS
-	REC git restore -s "$prev_br" -S "$specfile" config'*' .gear
+	REC git restore -s "$prev_br" -SW "$specfile" config'*' .gear
 	# Cannot update source or tag since it's not released.
 	V git commit -s -F .git/KB_COMMANDS
 	rm .git/KB_COMMANDS
