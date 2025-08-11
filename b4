@@ -12,7 +12,8 @@ if [ -v message_id ]; then
 	do
 		if http_code=$(curl -sI -o /dev/null -w '%{http_code}' "$midmask/$message_id/") &&
 		   [[ $http_code == "200" ]]; then
-			opt=( -c "b4.midmask=$midmask/%s" )
+			opt=( -c "b4.midmask=$midmask/%s"
+			      -c "b4.linkmask=$midmask/%s" )
 			break
 		fi
 	done
