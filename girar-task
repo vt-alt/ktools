@@ -1,0 +1,41 @@
+#!/bin/bash
+set -efu +o posix
+
+fatal() { echo >&2 "${0##*/}: error: $*"; exit 1; }
+cr=$'\n'
+
+mode=
+copy_source=
+for opt do
+        shift
+	arg=${opt#*=}
+        case "$opt" in
+		--task=*) task=$arg ;;
+		--del | --rebuild | --copy) mode=${opt#--} ;;
+		--copy=*) mode=copy; copy_source=$arg ;;
+		--) break ;;
+		-*) fatal "Unknown arg: $opt" ;;
+		*) set -- "$@" "$opt" ;;
+	esac
+done
+
+task_brief=$(ssh -n girar task show --brief "$task")
+task_full=$(ssh -n girar task show "$task")
+
+echo "$task_brief" | head -1 | grep -qw 'owner=kernelbot' && girar=girarbot || girar=girar
+
+for pkg; do
+	subtask_line=$(echo "$task_brief" | grep -w "$pkg") || fatal "'$pkg' does not match anything in task $task"
+	# 4100:kernel-modules-zfs-un-def.git=sisyphus/kernel-modules-zfs-un-def-2.2.2-alt2
+	read -r -d: subtask <<<"$subtask_line"
+	subtask_info=$(echo "$task_full" | grep "^\s*$subtask:")
+	pkgname=$(echo "$subtask_info" | grep -Po 'dir=/gears/./\K(.*)(?=\.git)')
+	[ -n "$pkgname" ] || fatak "Unable to determien package name for:$cr$subtask_info"
+	if [ -n "$mode" ]; then
+		(set -x; ssh -n "$girar" task delsub "$task" "$subtask")
+		# shellcheck disable=SC2086
+		(set -x; ssh -n "$girar" task add "$task" "$mode" "$pkgname" $copy_source)
+	else
+		echo "$subtask_info"
+	fi
+done
