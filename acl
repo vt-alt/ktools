@@ -1,0 +1,27 @@
+#!/bin/bash
+
+repo=sisyphus
+for o do
+        shift
+        case "$o" in
+		--*) repo=${o#--} ;;
+		*) set -- "$@" "$o"
+	esac
+done
+bin_list=/ALT/$repo/files/list/bin.list
+pkg_list=/ALT/acl/list.packages.$repo
+group_list=/ALT/acl/list.groups.$repo
+for m; do
+	if [[ "$m" == @* ]]; then
+		grep --color=auto -e "^$m" "$group_list"
+		continue
+	fi
+	cut -f1,5 "$bin_list" |
+		sed -E 's/-[^-]+-alt[^-]+//' |
+		uniq |
+		grep -P -e "$m" |
+		cut -f2 |
+		sed 's/.*/^&\t/' |
+		grep -f- "$pkg_list" |
+		grep --color=auto -e "$m" -e ''
+done
