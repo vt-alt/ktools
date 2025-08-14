@@ -2,6 +2,8 @@
 
 exclude=$(git config --local --get-all new-tags.exclude ||:)
 remote=$(git config --local --get-all new-tags.remote ||:)
+# Track any updates on this branch.
+branch=$(git config --local --get-all new-tags.branch ||:)
 
 set +o posix
 if [ -n "$*" ]; then
@@ -11,6 +13,12 @@ elif [ -n "$remote" ]; then
 else
 	git remote | grep -Ex -v 'gears|gitery'
 fi | while read -r remote; do
+	if [ -n "${branch-}" ]; then
+		read -r remote_sha remote_ref <<<"$(git retry ls-remote "$remote" "$branch")"
+		read -r local_sha _ <<<"$(git show-ref "$remote/$branch")"
+		[ "$remote_sha" = "$local_sha" ] ||
+			echo -e "$remote_sha\t$remote_ref\t$remote"
+	fi
 	if ! git retry ls-remote --tags --refs "$remote"; then
 		echo >&2 "error on $PWD:$remote"
 	fi |
