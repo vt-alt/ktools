@@ -13,6 +13,7 @@ commit=("--commit")
 ts='%T'
 wait_lock="--no-wait-lock"
 ci_mountpoints="--mountpoints=/proc,/sys,/dev/pts,/dev/kvm"
+hsh_cmd=hsh
 for opt do
         shift
 	arg=${opt#*=}
@@ -26,6 +27,7 @@ for opt do
 		--task=*) task="${opt#*=}" ;;
 		--build-srpm-only | -bs) gear_hsh=("hsh" "--build-srpm-only") ;;
 		--install-only) gear_hsh=("hsh-rebuild" "$opt") ;;
+		--rebuild) hsh_cmd=hsh-rebuild ;;
 		-b[abcipst] | --short-circuit) rpmb+=" $opt" ;;
 		--no-cache) no_cache=1 ;;
 		--ini|--init|--initroot) initroot=only ;;
@@ -290,7 +292,7 @@ for branch in "${branches[@]}"; do
 	} &> "$log"
 	{
 		{ log_config; } 2>/dev/null
-		gear-hsh $wait_lock "${commit[@]}" "${@}"
+		gear --hasher "${commit[@]}" -- "$hsh_cmd" $wait_lock "${@}"
 	} |& {
 		{ set +x; } 2>/dev/null
 		ts "$ts" | tee -a "$log"
