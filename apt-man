@@ -27,7 +27,7 @@ done
 if [ -v update ] || [ -z "$(find "$PAGES" -type f -ctime -7 2>/dev/null)" ]; then
 	mkdir -p "$CACHE"
 	gum spin --show-output -s minidot --title="Downloading..." -- cat /ALT/"$repo"/{"$arch",noarch}/base/contents_index \
-	| grep '^/usr/share/.*/man' > "$PAGES-"
+	| grep -e '^/usr/share/.*/man' -e '^/usr/lib/.*man/man[[:digit:]].*\.[[:digit:]]' > "$PAGES-"
 	mv -f "$PAGES-" "$PAGES"
 fi
 
@@ -38,7 +38,7 @@ fi
 line_no=$(mktemp) && trap "rm $line_no" EXIT
 while true; do
 	[ -s "$line_no" ] && read -r pos <"$line_no" || pos=1
-	label=$(grep "^/usr/share/.*/man.*$addtab$wordsep$pat" "$@" "$PAGES" \
+	label=$(grep -e "^/usr/.*/man.*$addtab$wordsep$pat" "$@" "$PAGES" \
 		| fzf --height=~100% \
 			--bind 'focus:execute-silent:echo $(({n}+1)) >'"$line_no" \
 			--bind "load:pos:$pos")
