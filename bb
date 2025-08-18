@@ -52,7 +52,7 @@ for opt do
 		--disable-lto | --no-lto) set_rpmargs+=" --define 'optflags_lto %nil'" ;;
 		--lto) opt='-flto=auto' ;;&
 		-fanalyzer | -flto* | -ffat-lto-objects) cflags+=" $opt" ;;
-		--no-check) opt='--without-check' ;;&
+		--no-check) opt='--without-check' ;&
 		--enable*|--disable*|--with*) opt=${opt#--}; set_rpmargs+=" --${opt/[-=]/ }" ;;
 		--kernel-latest=*) set_rpmargs+=" --define 'kernel_latest $arg'" ;;
 		--kflavour=*) kflavour=${opt#*=} ;;
