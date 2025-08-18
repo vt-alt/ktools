@@ -3,6 +3,17 @@ set -efu +o posix
 
 fatal() { echo >&2 "${0##*/}: error: $*"; exit 1; }
 
+  BRIGHT=$'\e[1m'
+     RED=$'\e[31m'
+   GREEN=$'\e[32m'
+  YELLOW=$'\e[33m'
+    BLUE=$'\e[34m'
+ MAGENTA=$'\e[35m'
+    CYAN=$'\e[36m'
+   WHITE=$'\e[37m'
+    NORM=$'\e[m'
+export BRIGHT RED GREEN YELLOW BLUE MAGENTA CYAN WHITE NORM
+
 unset task docker_opts keep from_hsh
 for opt do
         shift
@@ -30,6 +41,9 @@ update_pre_install() {
 		pre_install+=" $pre_add"
 	return 0
 }
+
+trap 'echo "$BRIGHT$RED❌ FAIL$NORM"' ERR
+trap 'beep' EXIT
 
 if [ -v from_hsh ]; then
 	# Test local build, only authoritative records are in the build log.
@@ -75,7 +89,7 @@ else
 	# docker image ls
 	if [ ! -v keep ]; then
 		docker rmi "task$task"
-		echo "🔴 To clear caches run: docker builder prune -a -f"
+		echo "$YELLOW🔴$NORM To clear caches run: docker builder prune -a -f"
 	fi
 fi
-
+echo "$BRIGHT$GREEN✅ OK$NORM"
