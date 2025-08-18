@@ -21,11 +21,22 @@ done
 
 pkgnames() { cut -f1 | sort -u | grep -Eve '-(debuginfo|checkinstall)' | xargs -r; }
 
+update_pre_install() {
+	local pre_ins pre_add
+	# Git config ci.pre-install overrides, ci.pre-install-add adds.
+	pre_ins=$(git config --local --get ci.pre-install) &&
+		pre_install=$pre_ins
+	pre_add=$(git config --local --get ci.pre-install-add) &&
+		pre_install+=" $pre_add"
+	return 0
+}
+
 if [ -v from_hsh ]; then
 	# Test local build, only authoritative records are in the build log.
 	eval "$(hsh --printenv)"
 	repo=$(grep -m1 -Po 'branch=\K\S*(?= target=)' log)
 	pre_install=$(sed -En 's!^\S+ Wrote:\s/usr/src/RPM/RPMS/[[:graph:]/]+/(\S+)-[^-]+-alt\S+\.rpm\s.*!\1!p' log | pkgnames)
+	update_pre_install
 	install=$(sed -En 's!^\S+ Wrote:\s/usr/src/RPM/RPMS/[[:graph:]/]+/(\S+-[^-]+-alt\S+\.rpm)\s.*!/repo/\1!p' log | pkgnames)
 	name="hsh.${pre_install%% *}"
 	echo >&2 "+ docker run --name=$name ..."
@@ -46,6 +57,7 @@ if [ -v from_hsh ]; then
 else
 	repo=$(curl -sSf "https://git.altlinux.org/tasks/$task/task/repo")
 	pre_install=$(curl -sSf "https://git.altlinux.org/tasks/$task/plan/rm-bin" | pkgnames)
+	update_pre_install
 	install=$(curl -sSf "https://git.altlinux.org/tasks/$task/plan/add-bin" | pkgnames)
 	# Version to automatically invalidate Docker cache, apt-repo ignores that argument.
 	version=$(curl -sSf "https://git.altlinux.org/tasks/$task/task/version")
