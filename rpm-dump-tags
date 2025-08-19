@@ -4,5 +4,5 @@ pkg="${1:?}"
 [ -e "$pkg" ] && p=-p
 
 for i in $(rpm --querytags); do
-	rpm -q $p "$pkg" --qf "$i=%{$i:shescape}\n"
+	{ rpm -q $p "$pkg" --qf "$i[ %{$i:shescape}]\n"; } 2>/dev/null
 done
