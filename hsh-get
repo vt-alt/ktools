@@ -6,13 +6,21 @@ gear_describe() {
 }
 gear_describe
 
+if [[ $name == kernel-image-* ]]; then
+	toplevel=$(git rev-parse --show-toplevel)
+	kernel_src_version=$(grep -Po 'kernel_src_version\s+\K\S+' "$toplevel/kernel-image.spec")
+	builddir="$name-$version-$release/kernel-source-$kernel_src_version"
+else
+	builddir="$name-$version"
+fi
+
 prefix=$(git rev-parse --show-prefix)
 {
        	hsh-run -- bash -c "$(cat)" |
-		tar xvf -
+		tar xvvf -
 } <<EOF
 	set -e
-	cd /usr/src/RPM/BUILD/"$name-$version"
+	cd /usr/src/RPM/BUILD/"$builddir"
 	cd kernel-source-* 2>/dev/null ||:
 	cd ./"$prefix"
 	tar cfo - $*
