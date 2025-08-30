@@ -78,7 +78,7 @@ Q=$(jq -sRr @uri <<<"$Q")
 		if .state == "open" then "⚪" else "✓" end,
 		(.author_association | if . == "NONE" then "\u00A0" else (gsub("(?i)[aeiou]"; "") | .[:2]) end),
 		if (.user.login | length) > 8 then .user.login[0:7] + "…" else .user.login end,
-		(if .pull_request? then if .pull_request.merged_at then "✅" else "🔄" end else "\u00A0" end),
+		(if .pull_request? then if .pull_request.merged_at then "✅" else "⚡" end else "\u00A0" end),
 		.comments,
 		.title
 	] | @tsv' | column -t -s $'\t' |
@@ -87,6 +87,7 @@ Q=$(jq -sRr @uri <<<"$Q")
 		-e "s/(fix)/$BRIGHT$GREEN&$NORM/i" \
 		-e "s/(implement|add|sync)/$YELLOW&$NORM/i" \
 		-e "s/(✅|✓)/$GREEN&$NORM/g" \
-		-e "s/(🔄|⚪)/$BRIGHT$BLUE&$NORM/g"
+		-e "s/(🔄|⚪)/$BRIGHT$BLUE&$NORM/g" \
+		-e "s/(⚡)/$YELLOW&$NORM/g"
 
 
