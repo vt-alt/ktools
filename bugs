@@ -28,6 +28,7 @@ for opt do
 	case "$opt" in
 		--tag=*) ref=$arg ;;
 		--date=*) date=$arg ;;
+		-[[:digit:]]*) date=$(date --date="$opt day" +%F) ;;
 		--remote=*) remote=$arg ;;
 		--updated) at=updated ;;
 		--pr) is=pr ;;
