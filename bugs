@@ -77,7 +77,7 @@ Q=$(jq -sRr @uri <<<"$Q")
 		.number,
 		(.created_at | fromdate | strftime("%F")),
 		if .state == "open" then "⚪" else "✓" end,
-		(.author_association | if . == "NONE" then "\u00A0" else (gsub("(?i)[aeiou]"; "") | .[:2]) end),
+		(.author_association | if . == "NONE" then "\u00A0" elif . == "CONTRIBUTOR" then "cn" else (gsub("(?i)[aeiou]"; "") | .[:2]) end),
 		if (.user.login | length) > 8 then .user.login[0:7] + "…" else .user.login end,
 		(if .pull_request? then if .pull_request.merged_at then "✅" else "⚡" end else "\u00A0" end),
 		.comments,
