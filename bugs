@@ -21,6 +21,7 @@ export BRIGHT RED GREEN YELLOW BLUE MAGENTA CYAN WHITE NORM
 unset date ref is state
 setx=
 at=created
+date_cmp='>='
 for opt do
 	shift
 	arg=${opt#*=}
@@ -28,6 +29,7 @@ for opt do
 	case "$opt" in
 		--tag=*) ref=$arg ;;
 		--date=*) date=$arg ;;
+		=[[:digit:]]*) opt=${opt/=/-}; date_cmp='' ;&
 		-[[:digit:]]*) date=$(date --date="$opt day" +%F) ;;
 		--remote=*) remote=$arg ;;
 		--updated) at=updated ;;
@@ -66,7 +68,7 @@ elif [ -e .gear-rules -o -e .gear/rules ]; then
 fi
 [ -v date ] || fatal "Specify date or a tag to get committer date from it."
 
-Q="repo:$repo $at:>=$date"
+Q="repo:$repo $at:$date_cmp$date"
 [ -v state ] && Q+=" state:$state"
 [ -v is ] && Q+=" is:$is"
 
