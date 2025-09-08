@@ -88,7 +88,13 @@ if [ -v difftool ]; then
 		exit 1
 	fi
 fi
-(( ${#files[@]} <= 1 )) || tui_selector
+if (( ${#files[@]} > 1 )); then
+	if [ -t 1 ]; then
+		tui_selector
+	else
+		files=(${files[-1]})
+	fi
+fi
 (( ${#files[@]} )) || exit
 if [ -v print_filename ]; then
 	realpath "${files[@]}"
