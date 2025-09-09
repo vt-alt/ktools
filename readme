@@ -1,0 +1,33 @@
+#!/bin/bash
+# Show documentation updates
+set -efu
+
+remote='origin'
+patterns=('**.md' '**.rst' ':(icase)**/readme')
+unset opts
+unset range
+for opt do
+        shift
+        case "$opt" in
+		--md) patterns=('**.md') ;;
+		--readme|--readmes) patterns=(':(icase)**/readme*') ;;
+		--txt) patterns=('**.txt') ;;
+		--stat|--oneline|-p|--no-merges) opts+=("$opt") ;;
+		--remote=*) remote=${opt#*=} ;;
+		*..*|@|HEAD|*/*) range="$opt" ;;
+	esac
+done
+[ -v opts ] || opts=( '-p' )
+
+[ -v range ] ||
+remote_head=$(
+	git for-each-ref --sort=-committerdate --format='%(refname:short)' "refs/remotes/$remote" \
+	| grep -m1 -F -e /master -e /main
+)
+
+[ -d vendor ] && patterns+=(':!vendor')
+
+set -x
+# shellcheck disable=SC2086
+git log "${opts[@]}" "${range-@.."$remote_head"}" -- "${patterns[@]}"
+
