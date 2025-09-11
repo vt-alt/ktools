@@ -27,7 +27,7 @@ if [ -z "$*" ]; then
 		yajl shunit2 rasdaemon kopia rustic_server ollama git-branchless	\
 		coccigrep firmware-linux lolcat    aichat lib25519 libntruprime argc	\
 		librandombytes       ollama-python cpu_features            sd wabt	\
-		wasmedge sendme fq real-ucode binwalk3
+		wasmedge sendme fq real-ucode binwalk3 codex
 fi
 for i in "$@"; do
 	# echo >&2 "$i"
