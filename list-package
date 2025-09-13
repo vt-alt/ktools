@@ -127,7 +127,7 @@ resolver_filter() {
 
 packages=${packages# }
 if [ -z "$packages" ]; then
-	gear_describe
+	NAME=$(git config --local --get gear.package) || gear_describe
 	packages=$NAME
 fi
 
