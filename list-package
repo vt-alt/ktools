@@ -90,9 +90,9 @@ done
 
 gear_describe()
 {
-	local tag='' descr=$(gear --describe 2>&1)
+	local tag='' descr=$(gear --describe --commit 2>&1)
 	if [ "$descr" = "gear: specsubst directive requires a tag" ]; then
-		tag=$(git describe --abbrev=0 --tags --exclude '*debug*')
+		tag=$(git describe --abbrev=0 --tags --exclude '*debug*' --exclude 'gb-*')
 	elif [ "$descr" = "gear: No specfiles found" ]; then
 		tag=$(git tag -l --sort=creatordate '*-alt*' | tail -1)
 	fi
