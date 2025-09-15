@@ -22,6 +22,6 @@ fi | while read -r remote; do
 	if ! git retry ls-remote --tags --refs "$remote"; then
 		echo >&2 "error on $PWD:$remote"
 	fi |
-	grep -v -f <(git show-ref --tags -s) ${exclude:+-e "$exclude"} |
+	grep -v -f <(git show-ref --tags | sed 's/ /\t/') ${exclude:+-e "$exclude"} |
 	sed "s!\$!\\t$remote!"
 done
