@@ -14,6 +14,8 @@ for opt do
 		--txt) patterns=('**.txt') ;;
 		--stat|--oneline|-p|--no-merges) opts+=("$opt") ;;
 		--remote=*) remote=${opt#*=} ;;
+		-g|--gears) range=gears/sisyphus.. ;;
+		-[[:digit:]]) range=$(git tag -l --sort=creatordate '*-alt*' | tail $opt | head -1).. ;;
 		*..*|@|HEAD|*/*) range="$opt" ;;
 	esac
 done
