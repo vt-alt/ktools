@@ -9,6 +9,7 @@ unset range
 for opt do
         shift
         case "$opt" in
+		--adoc) patterns=('**.adoc') ;;
 		--md) patterns=('**.md') ;;
 		--readme|--readmes) patterns=(':(icase)**/readme*') ;;
 		--txt) patterns=('**.txt') ;;
