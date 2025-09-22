@@ -18,7 +18,7 @@ for opt do
 		--kernelbot) kernelbot=y ;;
 		-f | --force) force="-f" ;;
 		--task=*) usertask="${opt#*=}" ;;
-		--commit) commit=--commit kernelbot=y ;;
+		--commit) commit=--commit kernelbot=y push_branch=y ;;
 		--share*) shared=y ;;
 		--repo=* | --branch=*) branch="${opt#*=}" ;;
 		--no-kmodules) unset kmodules ;;
@@ -36,7 +36,6 @@ if [ -v kernelbot ]; then
 	remote=kernelbot
 	repo=/people/kernelbot/packages/kernel-image
 	approver=girarbot
-	push_branch=y
 	girar=girarbot
 else
 	remote=gitery
