@@ -18,7 +18,7 @@ fatal() { echo >&2 "! $*"; exit 1; }
     NORM=$'\e[m'
 export BRIGHT RED GREEN YELLOW BLUE MAGENTA CYAN WHITE NORM
 
-unset date ref is state
+unset date ref is state specfile
 setx=
 at=created
 date_cmp='>='
@@ -43,12 +43,29 @@ for opt do
 	esac
 done
 
+cdup=$(git rev-parse --show-cdup)
+# shellcheck disable=SC2030
+guess_specfile() (
+	# shellcheck disable=SC1091
+	. gear-utils-sh-functions
+	export disable_specsubst=1
+	chdir_to_toplevel
+	guess_specfile
+	echo "$cdup$specfile"
+)
+
 if [ ! -v remote ]; then
-	remote=$(git remote -v | grep -Po "https://github\.com/\S+" -m1)
+	remote=$(git remote -v | grep -Po "https://github\.com/\S+" -m1 ||:)
 fi
+if [ -z "$remote" ]; then
+	specfile=$(guess_specfile)
+	remote=$(grep -i '^(Url|Vcs):.*github.com' "$specfile" ||:)
+fi
+[ -n "$remote" ] || fatal "GitHub url not found."
 repo=${remote#*github.com/}
 repo=${repo%/}
 repo=${repo%.git}
+[ -n "$repo" ] || fatal "Unknown GitHub repo."
 
 # shellcheck disable=SC2166
 if [ -v date ]; then
@@ -56,12 +73,8 @@ if [ -v date ]; then
 elif [ -v ref ]; then
 	echo >&2 "Using committer date from tag"
 	date=$(git log -1 --format=%cd --date=short "$ref")
-elif [ -e .gear-rules -o -e .gear/rules ]; then
-	# shellcheck disable=SC1091
-	. gear-utils-sh-functions
-	export disable_specsubst=1
-	chdir_to_toplevel
-	specfile=$(guess_specfile; echo "$specfile")
+elif [ -e "$cdup.gear-rules" -o -e "$cdup.gear/rules" ]; then
+	[ -v specfile ] || specfile=$(guess_specfile)
 	changelog_date=$(grep -A2 '%changelog' "$specfile" | grep -Po '(First import|Updated? to) \S+ \(\K\S+(?=\))')
 	echo >&2 "Using update date from the latest %changelog entry"
 	date=$changelog_date
