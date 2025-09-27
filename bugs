@@ -75,7 +75,7 @@ elif [ -v ref ]; then
 	date=$(git log -1 --format=%cd --date=short "$ref")
 elif [ -e "$cdup.gear-rules" -o -e "$cdup.gear/rules" ]; then
 	[ -v specfile ] || specfile=$(guess_specfile)
-	changelog_date=$(grep -A2 '%changelog' "$specfile" | grep -Po '(First import|Updated? to) \S+ \(\K\S+(?=\))')
+	changelog_date=$(grep -A2 '%changelog' "$specfile" | grep -Pio '(import|updated? to) \S+ \(\K\S+(?=\))')
 	echo >&2 "Using update date from the latest %changelog entry"
 	date=$changelog_date
 fi
