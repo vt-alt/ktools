@@ -18,25 +18,27 @@ fatal() { echo >&2 "! $*"; exit 1; }
     NORM=$'\e[m'
 export BRIGHT RED GREEN YELLOW BLUE MAGENTA CYAN WHITE NORM
 
-unset date ref is state specfile
+unset date user_date ref is state specfile
 setx=
 at=created
 date_cmp='>='
+user_query=
 for opt do
 	shift
 	arg=${opt#*=}
 	# shellcheck disable=SC2209
 	case "$opt" in
 		--tag=*) ref=$arg ;;
-		--date=*) date=$arg ;;
+		--date=*) user_date=$arg ;;
 		=[[:digit:]]*) opt=${opt/=/-}; date_cmp='' ;&
-		-[[:digit:]]*) date=$(date --date="$opt day" +%F) ;;
+		-[[:digit:]]*) user_date=$(date --date="$opt day" +%F) ;;
 		--remote=*) remote=$arg ;;
 		--updated) at=updated ;;
 		--pr) is=pr ;;
 		--issue | --issues) is=issue ;;
 		--open) state=open ;;
 		--closed) state=closed ;;
+		--query=*) user_query=$arg ;;
 		-v) setx='set -x' ;;
 		-*) fatal "Unknwon option: $opt" ;;
 		*) set -- "$@" "$opt";;
@@ -68,11 +70,13 @@ repo=${repo%.git}
 [ -n "$repo" ] || fatal "Unknown GitHub repo."
 
 # shellcheck disable=SC2166
-if [ -v date ]; then
+if [ -v user_date ]; then
 	echo >&2 "Using date from command line"
+	date=$user_date
 elif [ -v ref ]; then
 	echo >&2 "Using committer date from tag"
 	date=$(git log -1 --format=%cd --date=short "$ref")
+	user_date=y
 elif [ -e "$cdup.gear-rules" -o -e "$cdup.gear/rules" ]; then
 	[ -v specfile ] || specfile=$(guess_specfile)
 	changelog_date=$(grep -A2 '%changelog' "$specfile" | grep -Pio '(import|updated? to) \S+ \(\K\S+(?=\))')
@@ -81,9 +85,14 @@ elif [ -e "$cdup.gear-rules" -o -e "$cdup.gear/rules" ]; then
 fi
 [ -v date ] || fatal "Specify date or a tag to get committer date from it."
 
-q="repo:$repo $at:$date_cmp$date"
+q="repo:$repo"
+if [ -n "$user_query" ]; then
+	q+=" $user_query"
+	[ -v user_date ] || unset date
+fi
+[ -v date ]  && q+=" $at:$date_cmp$date"
 [ -v state ] && q+=" state:$state"
-[ -v is ] && q+=" is:$is"
+[ -v is ]    && q+=" is:$is"
 
 echo "Query is: $q"
 Q=$(jq -sRr @uri <<<"$q")
