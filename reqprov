@@ -14,6 +14,7 @@ for opt do
 		--skip-match=*) SKIPMATCH=${opt#*=} ;;
 		--skip-ver)   SEDVER=--- ;;
 		--skip-ver=*) SEDVER=${opt#*=} ;;
+		--skip-disttag) SEDDT=y ;;
 		--strip=*) STRIP=${opt#*=} ;;
 		--diff=*) DIFF=${opt#*=} ;;
 		--repo=*) REPO=${opt#*=} ;;
@@ -77,6 +78,9 @@ sed_things() {
 		V=$(rpm -qp "$r" --qf '%{V}' | sed 's/\./\\./g')
 		R=$(rpm -qp "$r" --qf '%{R}' | sed 's/\./\\./g')
 		sed -Ei "s/($SEDVER-)?$V(-$SEDVER)?(-$R)?/VERSION-RELEASE/g" "$t"
+	fi
+	if [ -v SEDDT ]; then
+		sed -Ei "s/:[[:alnum:]]+\+[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+/:DISTTAG/g" "$t"
 	fi
 	if [ -v SKIPMATCH ]; then
 		sed -Ei "\!$SKIPMATCH!d" "$t"
