@@ -71,8 +71,8 @@ for commit; do
 			continue
 		elif [ -z "$force" ]; then
 			echo >&2 "${MAGENTA}Already other note on commit '$commit', --force to override.${NORM}"
-			echo >&2"- $oldnote"
-			echo >&2"+ $note"
+			echo >&2 "- $oldnote"
+			echo >&2 "+ $note"
 			continue
 		fi
 	fi
