@@ -1,0 +1,41 @@
+#!/bin/bash
+set -efu +o posix
+
+cwd="/usr/src"
+if cdup=$(git rev-parse --show-cdup 2>/dev/null); then
+	if [ -e "${cdup}.gear-rules" ] || [ -e "${cdup}.gear/rules" ]; then
+		read -r name version release <<<"$(gear --describe --disable-specsubst 2>/dev/null)"
+		if [[ $name == kernel-image-* ]]; then
+			kernel_src_version=$(grep -Po 'kernel_src_version\s+\K\S+' "${cdup}kernel-image.spec")
+			builddir="$name-$version-$release/kernel-source-$kernel_src_version"
+		else
+			builddir="$name-$version"
+		fi
+		cwd+="/RPM/BUILD/$builddir"
+	fi
+	prefix=$(git rev-parse --show-prefix)
+	cwd+="${prefix:+/$prefix}"
+else
+	cwd+="/$(realpath --relative-base="$HOME" .)"
+fi
+printf -v qcwd '%q' "$cwd"
+
+# shellcheck disable=SC2064
+if tmp=$(mktemp -d --suffix=.rsync); then
+	readonly tmp
+	atexit() { rm -rf -- "$tmp"; }
+	trap atexit 0
+fi
+cat >"$tmp/rsh" <<-END
+	cat >"$tmp/entry" <<"EOF"
+		set -ex
+		cd $qcwd
+		{ set +x; } 2>/dev/null
+		exec "\$@"
+	EOF
+	shift
+	hsh-run --execute="$tmp/entry" -- "\$@"
+END
+chmod u+rx "$tmp/rsh"
+export RSYNC_RSH="$tmp/rsh"
+rsync "$@"
