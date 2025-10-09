@@ -22,7 +22,7 @@ pattern='' query='' show_pkg='' srpms='' bat='' invert_grep=''
 dts_proto=''
 SELECTOR="gum choose --height=$((LINES-5))"
 unset show_task aptcache spec logdiff offset sourcerpm resolve
-unset summary_task preview
+unset summary_task preview set_package
 sed_expressions=()
 for i; do
 	shift
@@ -39,6 +39,7 @@ for i; do
 		continue
 	fi
 	case "$i" in
+		--set=*) set_package=${i#*=} ;;
 		--src|--srpm*) srpms=y ;;
 		--sourcerpm) sourcerpm=y ;;
 		--resolve-src) resolve=src ;;
@@ -83,6 +84,11 @@ for i; do
 		*) packages+=" $i" ;;
 	esac
 done
+
+if [ -v set_package ]; then
+	(set -x; git config set --local gear.package "$set_package")
+	exit 0
+fi
 
 [ -z "${branches-}" ] && branches=$(cd $rroot; ls | grep -E -vwe "$skip" | sort -fu)
 : "${flavours:=*}"
