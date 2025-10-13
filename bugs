@@ -100,7 +100,7 @@ fi
 [ -v state ] && q+=" state:$state"
 [ -v is ]    && q+=" is:$is"
 
-echo "Query is: $q"
+echo >&2 "Query is: $q"
 Q=$(jq -sRr @uri <<<"$q")
 [ -v LESS ] || export LESS=-MMXRF
 
