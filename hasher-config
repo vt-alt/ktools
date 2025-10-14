@@ -42,9 +42,10 @@ cat > "$apt_config" <<-EOF
 EOF
 sources_list=$HOME/.hasher/sources-$def_target.list
 if [ -n "${archive_date-}" ]; then
-	[ -n "${do_rsync-}" ] &&
-		url="rsync://ftp.altlinux.org/alt-repo" ||
+	url="/archive/repo"
+	[ -d "$url" ] && url="file://$url" ||
 		url="http://ftp.altlinux.org/pub/distributions/archive"
+	[ -n "${do_rsync-}" ] && url="rsync://ftp.altlinux.org/alt-repo"
 	url+="/$branch/date/$archive_date/"
 else
 	url="file:/ALT/$branch"
