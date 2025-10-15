@@ -253,7 +253,7 @@ for lbr in $branches; do
 		if [ "$n" -ne 0 ]; then
 			printf '*%d' "$n"
 			nn=$(git log --format=%N "$topmost..$lbr" | grep -c .) &&
-				printf ':%d' "$nn"
+				printf ':%d%s' "$nn" "ⁿ"
 			unset nn
 		fi
 		nn=$(git rev-list --count "$topmost..$lbr")
