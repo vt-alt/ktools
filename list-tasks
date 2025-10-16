@@ -27,18 +27,27 @@ else
 end
 
 GetoptLong.new(
+  ['--all',             GetoptLong::NO_ARGUMENT],
   ['--cache',           GetoptLong::NO_ARGUMENT],
   ['--user',            GetoptLong::REQUIRED_ARGUMENT],
   ['--repo',            GetoptLong::REQUIRED_ARGUMENT],
+  ['--state',           GetoptLong::REQUIRED_ARGUMENT],
+  ['--building',        GetoptLong::NO_ARGUMENT],
   ['--verbose',         GetoptLong::NO_ARGUMENT],
 ).each do |opt, arg|
   case opt
+  when '--all'
+    @user = 'ALL'
   when '--cache'
     @cache = true
   when '--user'
     @user = arg
   when '--repo'
     @repo = arg
+  when '--building'
+    @state = 'building'
+  when '--state'
+    @state = arg
   when '--verbose'
     @verbose = true
   end
@@ -94,7 +103,8 @@ def run(cmd)
 end
 
 repoopt=@repo? "--repo=#{@repo}" : nil
-tasks = run("set -x; ssh girar task ls --brief --user=#{@user} #{repoopt}")
+state=@state? "--state=#{@state}" : nil
+tasks = run("set -x; ssh girar task ls --brief --user=#{@user} #{state} #{repoopt}")
 @kernellist = []
 tasks.split("\n").each do |task|
   id, _ = task.split(' ', 2)
@@ -111,6 +121,7 @@ tasks.split("\n").each do |task|
   t_obsolete2 = []
   d_text      = []
   t_repo   = task_info['repo']
+  t_owner  = task_info['owner']
   t_state  = task_info["state"]
   t_ok = case t_state
          when "EPERM", "DONE", "TESTED" then true
@@ -187,7 +198,10 @@ tasks.split("\n").each do |task|
   #   o_info << "!#{MAGEN}O:TASK#{NORM}"
   # end
 
-  puts "#{o_id} #{o_time} #{o_state} #{o_info} #{t_repo} #{t_text}"
+  print "#{o_id} #{o_time} #{o_state} #{o_info} "
+  print "#{t_owner}@" if t_owner != @user
+  print "#{t_repo}"
+  puts " #{t_text}"
   d_text.each {|e| puts "       #{RED}#{e.gsub("\n",' • ')} #{NORM}"}
 end
 
