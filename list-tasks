@@ -46,6 +46,7 @@ GetoptLong.new(
     @repo = arg
   when '--building'
     @state = 'building'
+    @user = 'ALL'
   when '--state'
     @state = arg
   when '--verbose'
@@ -115,6 +116,7 @@ tasks.split("\n").each do |task|
   t_kernels   = []
   t_modules   = []
   t_other     = []
+  t_dels      = []
   disapprove  = []
   approve     = []
   t_obsolete1 = []
@@ -130,17 +132,21 @@ tasks.split("\n").each do |task|
   o_time   = task_info['build_time'][/^[^T]*/] rescue 'NEVER'
   subtasks = task_info['subtasks'].clone
   subtasks = [] unless subtasks.is_a?(Hash)
-  subtasks.reject! {|k,v| !v['tag_name'] }
   subtasks.each do |sub_id, sub_info|
     dir = sub_info['dir']
     tag = sub_info['tag_name']
+    ttype = sub_info['type']
     disapprove << sub_info['disapproved_by'].map{ |e|
       d_url = "https://git.altlinux.org/tasks/#{id}/acl/disapproved/#{sub_id}/#{e}"
       d_text << URI.open(d_url).read
       e + "(#{sub_id})"
     } if sub_info['disapproved_by']
     approve    << sub_info['approved_by'] if sub_info['approved_by']
-    if dir =~ /kernel-image/ || tag =~ /kernel-image/
+    if ttype == 'delete'
+       t_dels << sub_info['package']
+    elsif !sub_info['tag_name']
+        next
+    elsif dir =~ /kernel-image/ || tag =~ /kernel-image/
         t_kernels   << tag
         @kernellist << tag if t_ok
         t_obsolete1 << obsoleted_repo(t_repo, tag)
@@ -153,16 +159,20 @@ tasks.split("\n").each do |task|
         t_other << tag
     end
   end
+  # Need subtasks.first
+  subtasks.reject! {|k,v| !v['tag_name'] }
   if !t_kernels.empty?
     t_text = t_kernels.join(',')
     t_text << " + #{t_modules.size} modules" if !t_modules.empty?
     t_text << " + #{t_other.size} other" if !t_other.empty?
+    t_text << " + #{t_dels.size} dels" if !t_dels.empty?
   elsif !subtasks.empty?
     t_combined = t_other + t_modules
     t_text = subtasks.first[1]['dir'].split('/').last + '=' + subtasks.first[1]['tag_name']
+    t_text << " + #{t_dels.size} dels" if !t_dels.empty?
     t_text << " + #{t_combined.size - 1} other" if t_other.size > 1
   else
-    t_text = "empty"
+    t_text = "empty[#{task_info['subtasks'].size rescue 0}]"
   end
   t_color = case t_state
             when "EPERM", "DONE", "TESTED" then GREEN
