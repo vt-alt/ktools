@@ -1,0 +1,28 @@
+#!/bin/bash
+set -ef +o posix
+
+girar=girarbot
+op=run
+color=green
+for opt do
+        shift
+        case "$opt" in
+		--test) op="test"; color=freen ;;
+		--abort) op="abort"; color=bright-magenta ;;
+		--commit) op="commit"; color=bright-yellow ;;
+		--rm | --delete | --remove) op="rm"; color=bright-red ;;
+		vt) girar=girar ;;
+		*) echo >&2 "Unknown option: $opt"; exit 1;;
+	esac
+done
+
+headerop="--header=$op"
+colorop="--color=header:$color"
+mapfile -t taskline < <(ssh "$girar" task ls | fzf --scheme=history --tac --multi "$headerop" "$colorop")
+for line in "${taskline[@]}"; do
+	task=${line%% *}
+	task=${task#\#}
+	(set -x;
+	 # shellcheck disable=SC2029
+	 ssh "$girar" task "$op" "$task")
+done
