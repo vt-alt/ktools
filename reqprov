@@ -18,6 +18,7 @@ for opt do
 		--strip=*) STRIP=${opt#*=} ;;
 		--diff=*) DIFF=${opt#*=} ;;
 		--repo=*) REPO=${opt#*=} ;;
+		-R) SEDVER=---; SEDDT=y; set -- -R ;;
 		--) break ;;
                 *) set -- "$@" "$opt";;
         esac
