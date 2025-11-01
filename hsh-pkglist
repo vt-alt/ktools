@@ -1,0 +1,38 @@
+#!/bin/bash
+# List built packages for the repo we are in
+set -eu +o posix
+
+allow_debuginfo=
+allow_checkinstall=
+invert_match=0
+for o do
+        shift
+        case "$o" in
+		--debuginfo)    allow_debuginfo=y ;;
+		--checkinstall) allow_checkinstall=y ;;
+		-v)             invert_match=1 ;;
+		*) set -- "$@" "$o"
+	esac
+done
+# shellcheck disable=SC2183,SC2046
+srcrpm=$(printf '%s-%s-%s.src.rpm' $(gear --describe --disable-specsubst))
+
+eval "$(hsh --printenv | grep -e '^def_repo=' -e '^workdir=')"
+# shellcheck disable=SC2154
+cd "$def_repo/${def_target:-$(arch)}/RPMS.hasher"
+
+for i in *.rpm; do
+        SOURCERPM=$(rpm -qp --qf '%{SOURCERPM}' "$i")
+        [ "$srcrpm" = "$SOURCERPM" ] || continue
+	[ -n "$allow_checkinstall" ] || [[ $i != *-checkinstall-* ]] || continue
+	[ -n "$allow_debuginfo" ]    || [[ $i != *-debuginfo-* ]]    || continue
+	if (( $# )); then
+		match=$invert_match
+		for m in "$@"; do
+			[[ $i =~ $m ]] && match=$((match ^ 1))
+		done
+		(( match )) || continue
+	fi
+        printf "%s/%s\n" "$PWD" "$i"
+done
+
