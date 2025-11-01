@@ -1,0 +1,6 @@
+#!/bin/bash
+set -efu +o posix
+
+pkg=$(hsh-pkglist "$@" | xargs)
+set -x
+su - -c "apt-get install $pkg"
