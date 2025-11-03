@@ -114,6 +114,13 @@ elif [ "$update" = version ]; then
 		minor=${ver##*.}
 		sed -iE "/^%define kernel_base_version/s/[[:digit:]].*/$major/" "$specfile"
 		sed -iE "/^%define kernel_sublevel/s/[[:digit:]].*/$minor/" "$specfile"
+		case "$minor" in
+			0) kernel_latest=mainline ;;
+			1) kernel_latest=latest1 ;;
+			2) kernel_latest=latest ;;
+		esac
+		sed -iE "/^%define kernel_latest/s/\t[[:alnum:]]\+/\t$kernel_latest/" "$specfile"
+		unset kernel_latest
 	else
 		fatal "Unknown version format: '$V'"
 	fi
@@ -142,7 +149,6 @@ if [ -n "$release" ]; then
 		nrel=${BASH_REMATCH[1]}
 		right=
 		echo ":: Release candidate type of release reset to $nrel (because of $topmost)."
-		sed -iE "/^%define kernel_latest/s/\t[[:alnum:]]\+/\tmainline/" "$specfile"
 		[[ $top_alt == *-alt* ]] && rebased='Update' || rebased='Rebase'
 		changelog="- $rebased to $topmost ($tag_date)."
 		unset release
