@@ -1,6 +1,13 @@
 #!/bin/bash
 set -efu +o posix
 
+for o do
+        shift
+        case "$o" in
+		-l|--list) hsh-pkglist --name "$@"; exit ;;
+		*) set -- "$@" "$o"
+	esac
+done
 pkg=$(hsh-pkglist "$@" | xargs)
 set -x
 su - -c "apt-get install $pkg"
