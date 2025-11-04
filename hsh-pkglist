@@ -5,11 +5,13 @@ set -eu +o posix
 allow_debuginfo=
 allow_checkinstall=
 invert_match=0
+unset tag
 for o do
         shift
         case "$o" in
 		--debuginfo)    allow_debuginfo=y ;;
 		--checkinstall) allow_checkinstall=y ;;
+		--*)            tag=${o#--} ;;
 		-v)             invert_match=1 ;;
 		*) set -- "$@" "$o"
 	esac
@@ -33,6 +35,11 @@ for i in *.rpm; do
 		done
 		(( match )) || continue
 	fi
-        printf "%s/%s\n" "$PWD" "$i"
+	if [ -v tag ]; then
+		q=$(sed -E 's/\w+/%{&}/g' <<< "$tag")
+		rpmquery --qf "$q\n" -p "$i"
+	else
+		printf "%s/%s\n" "$PWD" "$i"
+	fi
 done
 
