@@ -1,0 +1,26 @@
+#!/bin/bash
+set -efu +o posix
+
+cd "$HOME/src/kernel-image"
+list_branches() {
+	local format="${1-}%(refname)"
+	git branch -r --sort=-committerdate --format="$format" |
+		grep '\brefs/remotes/gears/' |
+		grep -v '\brefs/remotes/gears/source-' |
+		sed 's!\brefs/remotes/!!'
+}
+
+for o do
+        shift
+        case "$o" in
+		-l|--list) list_branches '%(creatordate:short) '; exit ;;
+		*) set -- "$@" "$o"
+	esac
+done
+
+echo >&2 ":: git log $* -- config*"
+while read -r br; do
+	printf -v prefix '%-30s ' "${br#gears/}"
+	git log --oneline --format='%h %cd - %s (%an)' --date=short "$@" "$br" -- "config*" | grep . | sed "s!^!$prefix!"
+done < <(list_branches)
+
