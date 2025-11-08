@@ -48,6 +48,7 @@ for opt do
 		--verbose) set_rpmargs+=" --verbose" ;;
 		--nprocs=*) NPROCS=${opt#*=} ;;
 		-j[0-9]*) NPROCS=${opt#-j} ;;
+		--kconfig) set_rpmargs+=" --define 'kconfig_hook exit 22'" ;;
 		--define=*) set_rpmargs+=" --define '$arg'" ;;
 		--disable-lto | --no-lto) set_rpmargs+=" --define 'optflags_lto %nil'" ;;
 		--lto) opt='-flto=auto' ;;&
