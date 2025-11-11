@@ -3,7 +3,7 @@
 set -efu
 
 remote='origin'
-patterns=('**.md' '**.rst' ':(icase)**/readme')
+patterns=('**.md' '**.rst' ':(icase)**news' ':(icase)**readme')
 unset opts
 unset range
 for opt do
@@ -11,7 +11,8 @@ for opt do
         case "$opt" in
 		--adoc) patterns=('**.adoc') ;;
 		--md) patterns=('**.md') ;;
-		--readme|--readmes) patterns=(':(icase)**/readme*') ;;
+		--readme) patterns=(':(icase)**readme*') ;;
+		--news) patterns=(':(icase)**news') ;;
 		--txt) patterns=('**.txt') ;;
 		--stat|--oneline|-p|--no-merges) opts+=("$opt") ;;
 		--remote=*) remote=${opt#*=} ;;
