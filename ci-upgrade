@@ -68,7 +68,7 @@ if [ -v from_hsh ]; then
 	if [ ! -v keep ]; then
 		echo "🔴 To clear containers run: docker container prune -f"
 	fi
-else
+elif [ -v task ]; then
 	repo=$(curl -sSf "https://git.altlinux.org/tasks/$task/task/repo")
 	pre_install=$(curl -sSf "https://git.altlinux.org/tasks/$task/plan/rm-bin" | pkgnames)
 	update_pre_install
@@ -91,5 +91,8 @@ else
 		docker rmi "task$task"
 		echo "$YELLOW🔴$NORM To clear caches run: docker builder prune -a -f"
 	fi
+else
+	echo >&2 "User --task or --hsh"
+	exit 1
 fi
 echo "$BRIGHT$GREEN✅ OK$NORM"
