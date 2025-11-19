@@ -314,25 +314,31 @@ for lbr in $branches; do
 		fi
 		printf ' %s' "$desc"
 		if [[ "$show_tags" =~ log ]]; then
-			log_msg='unreleased'
 			log_from=$topmost
 			if [[ "$show_tags" =~ push ]]; then
-				log_msg='unpushed'
 				log_from=$rbr
 				n=$(git rev-list --first-parent "$log_from..$lbr" | wc -l)
 			fi
 			if [ "$n" -gt 0 ]; then
-				echo " -log-$log_msg-"
+				echo " -log[$n]-"
 				if [ -n "$show_notes" ]; then
-					git log $show_notes --no-decorate --oneline --first-parent "$log_from..$lbr"
+					git log --line-prefix=' > ' $show_notes --no-decorate --oneline --first-parent "$rbr..$lbr"
+					[ "$log_from" = "$rbr" ] ||
+					git log --line-prefix='   ' $show_notes --no-decorate --oneline --first-parent "$topmost..$rbr"
 				else
-					git log --color=always --format=' %C(yellow)%h%Creset %C(bold)%x01%N%x01%Creset %s' \
-						--first-parent "$log_from..$lbr" |
-						sed -Ez 's/\x1\x1/ /g;s/\x1[^\x1]+\x1/N/g'
-				fi
+					git log --line-prefix=' > ' --color=always \
+						--format='%C(brightyellow)%h%Creset %C(bold)%x01%N%x01%Creset %s' \
+						--first-parent "$rbr..$lbr"
+					[ "$log_from" = "$rbr" ] ||
+					git log --line-prefix='   ' --color=always \
+						--format='%C(yellow)%h%Creset %C(bold)%x01%N%x01%Creset %s' \
+						--first-parent "$topmost..$rbr"
+
+				fi | sed -Ez 's/\x1\x1/ /g;s/\x1[^\x1]+\x1/N/g'
 			fi
+			unset log_from
 		fi
-		unset n log_from log_msg
+		unset n
 		# Kludgy.
 		if [ ${#list[@]} -eq 0 ]; then
 		       echo
