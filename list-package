@@ -22,7 +22,7 @@ pattern='' query='' show_pkg='' srpms='' bat='' invert_grep=''
 dts_proto=''
 SELECTOR="gum choose --height=$((LINES-5))"
 unset show_task aptcache spec logdiff offset sourcerpm resolve
-unset summary_task preview set_package
+unset summary_task preview set_package list_only
 sed_expressions=()
 for i; do
 	shift
@@ -47,6 +47,7 @@ for i; do
 		-a|--all-arch*) all_arch=y ;;
 		--full-time) lsopts+=" $i" ;;
 		-1|--names) lsopts= ;;
+		--list-only) list_only=y ;;
 		--peek|--rpmpeek) rpmpeek=y; lsopts=; break ;;
 		--less) lesser=y; lsopts= ;;
 		-[0-9]) offset=$i ;;
@@ -285,6 +286,12 @@ select_one() {
 		fi
 	fi
 }
+
+if [ -v list_only ]; then
+	select_one
+	printf '%s\n' "$RPM"
+	exit
+fi
 
 if [ -n "$rpmpeek" ]; then
 	select_one
