@@ -14,15 +14,24 @@ else
 	builddir="$name-$version"
 fi
 
+untar_opts=()
+for opt; do
+	shift
+	case "$opt" in
+		--*) untar_opts+=("$opt") ;;
+		*) set -- "$@" "$opt"
+	esac
+done
+
 prefix=$(git rev-parse --show-prefix)
 {
        	hsh-run -- bash -c "$(cat)" |
-		tar xvvf -
+		tar xvvf - "${untar_opts[@]}"
 } <<EOF
 	set -e
 	cd /usr/src/RPM/BUILD/"$builddir"
 	cd kernel-source-* 2>/dev/null ||:
 	cd ./"$prefix"
-	tar cfo - $*
+	tar cf - $*
 EOF
 
