@@ -1,0 +1,59 @@
+#!/bin/bash
+set -efu +o posix
+
+fatal() { echo >&2 "${0##*/}: error: $*"; exit 1; }
+
+  BRIGHT=$'\e[1m'
+     RED=$'\e[31m'
+   GREEN=$'\e[32m'
+  YELLOW=$'\e[33m'
+    BLUE=$'\e[34m'
+ MAGENTA=$'\e[35m'
+    CYAN=$'\e[36m'
+   WHITE=$'\e[37m'
+    NORM=$'\e[m'
+export BRIGHT RED GREEN YELLOW BLUE MAGENTA CYAN WHITE NORM
+
+br=$(git br --show-current)
+repo=${br##*/}
+flv=${br%%/*}
+arch=x86_64
+diffconfig_opts=()
+for opt do
+        shift
+	arg=${opt#*=}
+        case "$opt" in
+		-32) arch=i586 ;;
+		--repo=*) repo=$arg ;;
+		--arch=*) arch=$arg ;;
+		--skip-bb) skip_bb=y ;;
+		-m) diffconfig_opts=("$opt") ;;
+		-*) fatal "unknown option: $opt" ;;
+                *) fatal "unknown argument: $opt" ;;
+        esac
+done
+
+# shellcheck disable=SC2064
+tmp=$(mktemp -d) && trap "rm -rf '$tmp'" 0
+
+# shellcheck disable=SC2086
+rpm_a=$(list-package $repo $arch "kernel-image-$flv" --list-only)
+bn_a=$(basename "$rpm_a")
+echo >&2 "Compare with $rpm_a"
+f_a="$tmp/$bn_a"
+kernel-config "$rpm_a" > "$f_a"
+
+if [ ! -v skip_bb ]; then
+	gum spin --title="Building .config ($repo)..." -- bb --repo="$repo" --arch="$arch" --kconfig --no-log || :
+fi
+hsh-get '.config' --directory="$tmp"
+bn_b=".config"
+
+(
+	cd "$tmp"
+	PATH="$HOME/linux/torvalds/scripts:$PATH"
+	set -x
+	diffconfig "${diffconfig_opts[@]}" "$bn_a" "$bn_b"
+) | sed -e "s/\bm\b/$BRIGHT$GREEN&$NORM/g" \
+	-e "s/\by\b/$BRIGHT$YELLOW&$NORM/g" \
+	-e "s/\bn\b/$BRIGHT$RED&$NORM/g"
