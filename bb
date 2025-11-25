@@ -38,7 +38,7 @@ for opt do
 		--ci-all) ci=all ;;
 		--ci-command=*) ci_command="${opt#*=}" ;;
 		--ci-script=*) ci_script=$arg ;;
-		--clean | --repo-clean) hsh_clean=y ;;
+		--repo-clean) hsh_clean=y ;;
 		--no-repo) set_repo=/var/empty ;;
 		--set-repo=*) set_repo=$arg ;;
 		--fresh) fresh=y ;;
