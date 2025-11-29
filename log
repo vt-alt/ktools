@@ -4,7 +4,7 @@ shopt -s extglob
 
 grepcmd='grep'
 selector='fzf --highlight-line'
-unset mode offset difftool pattern sedcmds
+unset mode offset difftool pattern sedcmds rm_logs
 multi=
 for opt do
         shift
@@ -19,6 +19,7 @@ for opt do
 		--diff-sed=*) sedcmds+=("${opt#*=}") ;;
 		-f | --filename) print_filename=y ;;
 		--no-ts) LESSOPEN='|sed -E "s/^[0-9:]{8}\s//" %s' ;;
+		--rm) rm_logs=y ;;
 		--) break ;;
 		-*) echo >&2 "Error: unknown option: $opt"; exit 1 ;;
                 *) set -- "$@" "$opt";;
@@ -75,6 +76,22 @@ transform() {
 	fi
 }
 
+fix_last_log() {
+	if [ -L ../../log ] && [ ! -e ../../log ]; then
+		last_log=$(ls -1tr "log"* | tail -1)
+		ln -sf ".git/bb/$last_log" ../../log
+	fi
+}
+
+if [ -v rm_logs ]; then
+	multi=--multi
+	tui_selector --color=selected-fg:red,current-bg:red --prompt="delete selected logs> "
+	rm -v "${files[@]}"
+	fix_last_log
+	exit
+else
+	fix_last_log
+fi
 if [ -v difftool ]; then
 	(( ${#files[@]} == 2 )) || tui_selector --multi
 	if (( ${#files[@]} == 2 )); then
