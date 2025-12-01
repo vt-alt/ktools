@@ -159,7 +159,7 @@ if [ -e .git/refs/remotes/gitery/"$branch" ]; then
 	echo ":: gitery already have branch $branch"
 else
 	echo ":: gitery does not have branch $branch"
-	echo "Optionally run: git push -u gitery $branch"
+	echo -e "\e[1;36mOptionally run: git push -u gitery $branch\e[m"
 fi
 
-echo "RUN: girar-build"
+echo -e "\e[1;33mRUN: girar-build\e[m"
