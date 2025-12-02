@@ -19,6 +19,8 @@ repo=${br##*/}
 flv=${br%%/*}
 arch=x86_64
 diffconfig_opts=()
+dts=
+fzf=
 for opt do
         shift
 	arg=${opt#*=}
@@ -27,6 +29,8 @@ for opt do
 		--repo=*) repo=$arg ;;
 		--arch=*) arch=$arg ;;
 		--skip-bb) skip_bb=y ;;
+		--dts) dts=--dts ;;
+		--fzf) fzf=--fzf ;;
 		-m) diffconfig_opts=("$opt") ;;
 		-*) fatal "unknown option: $opt" ;;
                 *) fatal "unknown argument: $opt" ;;
@@ -37,7 +41,7 @@ done
 tmp=$(mktemp -d) && trap "rm -rf '$tmp'" 0
 
 # shellcheck disable=SC2086
-rpm_a=$(list-package $repo $arch "kernel-image-$flv" --list-only)
+rpm_a=$(list-package $repo $arch $dts $fzf "kernel-image-$flv" --list-only)
 bn_a=$(basename "$rpm_a")
 date_a=$(date -r "$rpm_a" +%F)
 f_a="$tmp/$bn_a"
