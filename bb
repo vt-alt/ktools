@@ -14,6 +14,7 @@ ts='%T'
 wait_lock="--no-wait-lock"
 ci_mountpoints="--mountpoints=/proc,/sys,/dev/pts,/dev/kvm"
 hsh_cmd=hsh
+unset kconfig
 for opt do
         shift
 	arg=${opt#*=}
@@ -48,7 +49,7 @@ for opt do
 		--verbose) set_rpmargs+=" --verbose" ;;
 		--nprocs=*) NPROCS=${opt#*=} ;;
 		-j[0-9]*) NPROCS=${opt#-j} ;;
-		--kconfig) set_rpmargs+=" --define 'kconfig_hook exit 22'" ;;
+		--kconfig) kconfig=y ;;
 		--define=*) set_rpmargs+=" --define '$arg'" ;;
 		--disable-lto | --no-lto) set_rpmargs+=" --define 'optflags_lto %nil'" ;;
 		--lto) opt='-flto=auto' ;;&
@@ -222,6 +223,22 @@ fi
 [ -e kernel-image.spec -o -v kflavour ] && kflavour ${kflavour-}
 sync
 
+if [ -v kconfig ]; then
+       if [ -e kernel-image.spec ]; then
+	       if grep -q '^%conf\b' kernel-image.spec; then
+		       rpmb+=" -bf"
+	       elif grep -q '%{?kconfig_hook}' kernel-image.spec; then
+		       rpmb+=" -bc"
+		       set_rpmargs+=" --define 'kconfig_hook exit'"
+	       else
+		       fatal "--kconfig support not avaiable in spec"
+	       fi
+       else
+	       fatal "--kconfig is only useful for kernel-image"
+
+       fi
+fi
+
 unset rebuild_prog
 if [ -v rpmb ]; then
 	rebuild_prog=$(mktemp --suffix=.hsh)
@@ -235,7 +252,7 @@ if [ -v rpmb ]; then
 		read -r SOURCE_DATE_EPOCH < "\$HOME/in/SOURCE_DATE_EPOCH"
 		export SOURCE_DATE_EPOCH
 		set -x
-		time rpmbuild $rpmb --target="\$target" "\$specfile"
+		time rpmbuild $rpmb ${set_rpmargs-} --target="\$target" "\$specfile"
 	EOF
 	set -- "--rebuild-prog=$rebuild_prog"
 fi
@@ -293,7 +310,7 @@ for branch in "${branches[@]}"; do
 	} &> "$log"
 	{
 		{ log_config; } 2>/dev/null
-		gear --hasher "${commit[@]}" -- "$hsh_cmd" $wait_lock "${@}"
+		gear --hasher "${commit[@]}" -- "$hsh_cmd" $wait_lock "$@"
 	} |& {
 		{ set +x; } 2>/dev/null
 		ts "$ts" | tee -a "$log"
