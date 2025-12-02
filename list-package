@@ -268,7 +268,11 @@ select_one() {
 			printf '%s\n' "$st_rpms" | column -t
 			return
 		fi
-		if [ "$(printf %s "$st_rpms" | grep -c .)" -gt 1 ]; then
+		if [ -z "$show_pkg" ]; then
+			local rpmbn=$(basename "$RPM")
+			rpmbn=${rpmbn%-*-*.*.rpm}
+			choice=$(printf %s "$st_rpms" | grep -m1 -P "\Q$rpmbn\E-[^-]+-[^-]+\.[^.]+\.rpm\b")
+		elif [ "$(printf %s "$st_rpms" | grep -c .)" -gt 1 ]; then
 			choice=$(printf %s "$st_rpms" | $SELECTOR) 
 		else
 			choice=$st_rpms
