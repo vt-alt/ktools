@@ -15,9 +15,11 @@ else
 fi
 
 untar_opts=()
+untar_verb=vv
 for opt; do
 	shift
 	case "$opt" in
+		-q) untar_verb= ;;
 		--*) untar_opts+=("$opt") ;;
 		*) set -- "$@" "$opt"
 	esac
@@ -25,8 +27,9 @@ done
 
 prefix=$(git rev-parse --show-prefix)
 {
-       	hsh-run -- bash -c "$(cat)" |
-		tar xvvf - "${untar_opts[@]}"
+	set -o pipefail
+	hsh-run -- bash -c "$(cat)" |
+		tar x${untar_verb}f - "${untar_opts[@]}"
 } <<EOF
 	set -e
 	cd /usr/src/RPM/BUILD/"$builddir"
@@ -34,4 +37,3 @@ prefix=$(git rev-parse --show-prefix)
 	cd ./"$prefix"
 	tar cf - $*
 EOF
-
