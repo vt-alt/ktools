@@ -44,7 +44,8 @@ f_a="$tmp/$bn_a"
 kernel-config "$rpm_a" > "$f_a"
 
 if [ ! -v skip_bb ]; then
-	gum spin --title="Building .config ($repo)..." -- bb --repo="$repo" --arch="$arch" --kconfig --no-log || :
+	gum spin --title="Building .config ($repo)..." -- bb --repo="$repo" --arch="$arch" --kconfig --no-log
+	echo "Built .config for $repo/$arch"
 fi
 hsh-get '.config' --directory="$tmp"
 bn_b=".config"
