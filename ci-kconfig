@@ -39,16 +39,22 @@ tmp=$(mktemp -d) && trap "rm -rf '$tmp'" 0
 # shellcheck disable=SC2086
 rpm_a=$(list-package $repo $arch "kernel-image-$flv" --list-only)
 bn_a=$(basename "$rpm_a")
-echo >&2 "Compare with $rpm_a"
+date_a=$(date -r "$rpm_a" +%F)
 f_a="$tmp/$bn_a"
 kernel-config "$rpm_a" > "$f_a"
+size_a=$(stat -c %s "$f_a")
+echo >&2 "Compare with $rpm_a ($size_a bytes, $date_a)"
 
 if [ ! -v skip_bb ]; then
-	gum spin --title="Building .config ($repo)..." -- bb --repo="$repo" --arch="$arch" --kconfig --no-log
+	gum spin --title="Building .config ($repo/$arch)..." -- bb --repo="$repo" --arch="$arch" --kconfig --no-log
 	echo "Built .config for $repo/$arch"
 fi
-hsh-get -q '.config' --directory="$tmp"
 bn_b=".config"
+f_b="$tmp/$bn_b"
+hsh-get -q "$bn_b" --directory="$tmp"
+size_b=$(stat -c %s "$f_b")
+date_b=$(date -r "$f_b" +'%F %R')
+echo >&2 "Compare with $bn_b ($size_b bytes, $date_b)"
 
 (
 	cd "$tmp"
