@@ -216,7 +216,7 @@ cache_rpm() {
 	if [ ! -e "$RPM" ]; then
 		URL+=$rpm
 		echo >&2 "$URL"
-		gum spin -- curl -sSf "$URL" -o "$RPM-"
+		gum spin -- curl -sSfR "$URL" -o "$RPM-"
 		mv "$RPM-" "$RPM"
 	fi
 	# Also changes ctime, to make file fesh for the cache.
