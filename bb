@@ -28,7 +28,7 @@ for opt do
 		--build-srpm-only | -bs) gear_hsh=("hsh" "--build-srpm-only") ;;
 		--install-only) gear_hsh=("hsh-rebuild" "$opt") ;;
 		--rebuild) hsh_cmd=hsh-rebuild ;;
-		-b[abcEiMpst] | --short-circuit) rpmb+=" $opt" ;;
+		-b[abcEiMpstf] | --short-circuit) rpmb+=" $opt" ;;
 		--no-cache) no_cache=1 ;;
 		--ini|--init|--initroot) initroot=only ;;
 		--no-ini*) noinitroot=ci ;;
