@@ -47,7 +47,7 @@ fi
 rpmpeek_config() {
 	local file=$1
 	gum spin \
-		--title="Extracting $1" \
+		--title="Extracting kconfig from $1" \
 		--show-output \
 		--show-error -- \
 		rpmpeek "$file" bash -c 'cat boot/config-*'
