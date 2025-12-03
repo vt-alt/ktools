@@ -18,6 +18,11 @@ for o do
 	esac
 done
 
+if [[ $* == [A-Z]* ]]; then
+	echo >&2 "Error: Perhaps, run: $(basename $0) -G'$*'"
+	exit 1
+fi
+
 echo >&2 ":: git log $* -- config*"
 while read -r br; do
 	printf -v prefix '%-30s ' "${br#gears/}"
