@@ -22,7 +22,7 @@ branches= flavours= arches=
 all_arch=
 unset logs configs grep_mode query rpmpeek include
 unset aptcachecmd show_no_match
-unset verbose show_date no_filename
+unset verbose show_date no_filename filegrep
 for i; do
 	shift
 	[ "$i" = sisyphus ] && i=Sisyphus
@@ -60,6 +60,7 @@ for i; do
 		--config*) configs= ;;
 		--grep=*)  configs="${i#*=}" ;;
 		--grep)    configs=; grep_mode=y; break ;;
+		--filegrep=*) filegrep="${i#*=}" ;;
 		--date)    show_date=y ;;
 		--show-no-match) show_no_match=y ;;
 		--no-cache) export NO_CACHE=y ;;
@@ -149,6 +150,18 @@ if [ -v rpmpeek ]; then
 	list=$(echo $list | tr ' ' '\n' | sort)
 	for rpm in $list; do
 		( set -x; rpmpeek "$rpm" "$@" )
+	done
+	exit
+fi
+if [ -v filegrep ]; then
+	list=$(echo $list | tr ' ' '\n' | sort)
+	[ -v show_no_match ] && show_no_match=" ($filegrep)"
+	for rpm in $list; do
+		rpmnorm="/ALT${rpm#$rroot}"
+		{
+			rpm -qp "$rpm" -l | grep --color=always -P $filegrep ||
+			echo "${RED}no match${show_no_match-}${NORM}"
+		} | sed "s|^|$rpmnorm\t|"
 	done
 	exit
 fi
