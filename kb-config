@@ -11,8 +11,12 @@ list_branches() {
 }
 
 for o do
-        shift
-        case "$o" in
+	shift
+	case "$o" in
+		--help)
+			echo >&2 "Use git log options such as -G / --shortstat / --numstat"
+			exit 1
+			;;
 		-l|--list) list_branches '%(creatordate:short) '; exit ;;
 		*) set -- "$@" "$o"
 	esac
