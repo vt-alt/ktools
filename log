@@ -32,11 +32,12 @@ logdir="$toplevel/.git/bb"
 mapfile -t files < <(ls -1tr "log"*)
 
 if [ -v mode ]; then
-	for o; do [[ $o = -l ]] && mode=LIST; done
+	for o; do [[ $o == -l ]] && mode=LIST; done
 	if [[ $mode == LIST ]]; then
-		mapfile -t files < <(grep "$@" "${files[@]}")
+		mapfile -t files < <(grep "$@" -- "${files[@]}")
+		set --
 	else
-		$grepcmd --color=auto "$@" "${files[@]}"
+		$grepcmd --color=auto "$@" -- "${files[@]}"
 		exit
 	fi
 fi
