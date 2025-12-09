@@ -27,8 +27,12 @@ done
 if [ -v update ] || [ -z "$(find "$PAGES" -type f -ctime -7 2>/dev/null)" ]; then
 	mkdir -p "$CACHE"
 	gum spin --show-output -s minidot --title="Downloading..." -- cat /ALT/"$repo"/{"$arch",noarch}/base/contents_index \
-	| grep -e '^/usr/share/.*/man' -e '^/usr/lib/.*man/man[[:digit:]].*\.[[:digit:]]' > "$PAGES-"
+	| grep  -e '^/usr/share/.*/man' \
+		-e '^/usr/lib/.*man/man[[:digit:]].*\.[[:digit:]]' \
+		-e '^/usr/share/doc/.*/.*\(HOWTO\|README\|txt\|md\|rst\)' \
+	| grep -E -v 'LICEN[CS]E|COPYING|AUTHOR|CHANGE[SL]|NEWS|CREDITS|CONTRIB|TODO|INSTALL|SECURITY' > "$PAGES-"
 	mv -f "$PAGES-" "$PAGES"
+	[ -v pat ] || exit
 fi
 
 if [ -v LESS ]; then
@@ -38,7 +42,8 @@ fi
 line_no=$(mktemp) && trap "rm $line_no" EXIT
 while true; do
 	[ -s "$line_no" ] && read -r pos <"$line_no" || pos=1
-	label=$(grep -e "^/usr/.*/man.*$addtab$wordsep$pat" "$@" "$PAGES" \
+	label=$(grep -e "^/usr/.*/man.*$addtab$wordsep$pat" \
+		     -e "^/usr/share/doc/$addtab$wordsep$pat" "$@" "$PAGES" \
 		| fzf --height=~100% \
 			--bind 'focus:execute-silent:echo $(({n}+1)) >'"$line_no" \
 			--bind "load:pos:$pos")
@@ -46,8 +51,9 @@ while true; do
 	for a in $arch noarch; do
 		dir=/ALT/$repo/files/$a/RPMS
 		pkg=( "$dir"/"$pkgname"-+([^-])-alt*."$a".rpm )
+		[[ $file =~ /man ]] && viewer=man || viewer=bat
 		if [ -v pkg ]; then
-			rpmpeek "$pkg" man ".$file"
+			rpmpeek "$pkg" "$viewer" ".$file"
 		fi
 	done
 done
