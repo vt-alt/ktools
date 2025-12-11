@@ -56,6 +56,7 @@ for opt do
 		-fanalyzer | -flto* | -ffat-lto-objects) cflags+=" $opt" ;;
 		--no-check) opt='--without-check' ;&
 		--enable*|--disable*|--with*) opt=${opt#--}; set_rpmargs+=" --${opt/[-=]/ }" ;;
+		--mainline|--latest1|--latest) arg=${arg#--} ;&
 		--kernel-latest=*) set_rpmargs+=" --define 'kernel_latest $arg'" ;;
 		--kflavour=*) kflavour=${opt#*=} ;;
 		--tree-ish=* | --tag=* | -t=*) commit=("-t" "${opt#*=}") ;;
