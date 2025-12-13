@@ -9,7 +9,10 @@ YELLOW=$'\e[1;33m'
   NORM=$'\e[m'
 
 br=$(git branch --show-current)
-[ -n "$br" ] || br=$(cat .git/BISECT_START)
+[ -n "$br" ] ||
+	br=$(cat .git/BISECT_START 2>/dev/null) ||
+	br=$(cat .git/KBB_START 2>/dev/null) ||
+	{ echo >&2 "kflavour: Unknown branch."; exit 1; }
 
 unset tagging
 if [ "${1-}" = --tag ]; then

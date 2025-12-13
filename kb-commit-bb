@@ -1,0 +1,104 @@
+#!/bin/bash
+# bb particular kernel commit
+
+set -efu +o posix
+
+cr=$'\n'
+unset spec_at configs_at checkout_at keep_debug bb_prep ensure_check reset_before reset_after
+for opt do
+	shift
+	case "$opt" in
+		--spec=*)		spec_at=${opt#*=} ;;
+		--configs=*)		configs_at=${opt#*=} ;;
+		--checkout=|--co=*|--commit=*)
+					checkout_at=${opt#*=} ;;
+		--debug)		keep_debug=y ;;
+		--prep)			bb_prep=y ;;
+		--check)		ensure_check=y ;;
+		--reset)		reset_before=y ;;
+		--reset-after)		reset_after=y ;;
+		-*)	set -- "$@" "$opt" ;;
+		*)	echo >&2 "Unknown argument $opt"; exit 1 ;;
+	esac
+done
+
+toplevel=$(git rev-parse --show-toplevel)
+[ "$toplevel" -ef . ] || {
+	echo >&2 "+ cd $toplevel"
+	cd "$toplevel"
+}
+
+cb=$(git branch --show-current)
+if [ -v reset_before ]; then
+	(set -x; git reset --hard)
+fi
+
+if ! git diff --quiet ||
+   ! git diff --quiet --cached; then
+	echo >&2 "Work tree is unclean."
+	exit 1
+fi
+
+[ -v checkout_at ] || { echo >&2 "--checkout= is required."; exit 1; }
+checkout_short=$(git rev-parse --short "$checkout_at")
+
+[ -v spec_at ]     ||
+[ -v configs_at ]  ||
+	spec_at=$(git tag --contains "$checkout_at" 'kernel-image-*' | head -1)
+[ -v spec_at ]     || spec_at=$configs_at
+[ -v configs_at ]  || configs_at=$spec_at
+
+atexit() {
+	if [ -v reset_after ]; then
+		(	set -x
+			git reset -q --hard
+			git switch -q -f "$cb" )
+		rm .git/KBB_START
+	else
+		echo >&2 "Run to cleanup workspace: git reset --hard; git checkout -f $cb"
+	fi
+}
+trap atexit EXIT
+
+(	set -x
+	git -c advice.detachedHead=false checkout -f "$checkout_at"
+	git checkout "$spec_at"    -- kernel-image.spec .gear
+	git checkout "$configs_at" -- config'*' )
+
+if [ ! -v keep_debug ]; then
+	# Disable debug to speed up builds and lower memory requirements.
+	sed -i '/CONFIG_DEBUG_INFO/d'      config
+	echo "CONFIG_DEBUG_INFO_NONE=y" >> config
+	sed -i '/_stripped_files_terminate_build/d' kernel-image.spec
+fi
+
+# Need to update versioning so package builds correctly.
+VERSION=$(sed -n '/^VERSION =/s/.*= //p' Makefile)
+PATCHLEVEL=$(sed -n '/^PATCHLEVEL =/s/.*= //p' Makefile)
+SUBLEVEL=$(sed -n '/^SUBLEVEL =/s/.*= //p' Makefile)
+sed -E "s/^(%define kernel_base_version).*/\1\t$VERSION.$PATCHLEVEL/" -i kernel-image.spec
+sed -E "s/^(%define kernel_sublevel).*/\1\t.$SUBLEVEL/" -i kernel-image.spec
+sed -E "s/^(Release: .*)/\1.commit_$checkout_short/" -i kernel-image.spec
+
+message="- kb-commit-bb on:$cr"
+message+=$(git log -1 --oneline | sed 's/^/  /')
+(	set -x
+	safe-add-changelog -e "$message" kernel-image.spec
+	gear-store-tags -ac )
+
+echo "$cb" > .git/KBB_START
+
+# Enough if in manual prepare-only mode.
+[ -v bb_prep ] && exit 0
+
+set -o pipefail
+bb --wait-lock "$@" |& sed "s/^/$checkout_short▲/"
+status=$?
+
+if [ -v ensure_check ]; then
+	# This is a functional testing, not a build testing, so
+	# skip if %check didn't run.
+	grep -qsF 'Executing(%check):' "$(log -f -0)" || exit 125
+fi
+
+exit $status
