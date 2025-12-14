@@ -10,6 +10,7 @@ list_branches() {
 		sed 's!\brefs/remotes/!!'
 }
 
+pathspec=( "config*" )
 for o do
 	shift
 	case "$o" in
@@ -18,18 +19,22 @@ for o do
 			exit 1
 			;;
 		-l|--list) list_branches '%(creatordate:short) '; exit ;;
+		--pathspec=*)
+			# shellcheck disable=SC2206
+			pathspec=( ${o#*=} )
+			;;
 		*) set -- "$@" "$o"
 	esac
 done
 
 if [[ $* == [A-Z]* ]]; then
-	echo >&2 "Error: Perhaps, run: $(basename $0) -G'$*'"
+	echo >&2 "Error: Perhaps, run: $(basename "$0") -G'$*'"
 	exit 1
 fi
 
-echo >&2 ":: git log $* -- config*"
+echo >&2 ":: git log $* -- ${pathspec[*]}"
 while read -r br; do
 	printf -v prefix '%-30s ' "${br#gears/}"
-	git log --oneline --format='%h %cd - %s (%an)' --date=short "$@" "$br" -- "config*" | grep . | sed "s!^!$prefix!"
+	git log --oneline --format='%h %cd - %s (%an)' --date=short "$@" "$br" -- "${pathspec[@]}" | grep . | sed "s!^!$prefix!"
 done < <(list_branches)
 
