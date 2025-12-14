@@ -26,6 +26,7 @@ for opt do
 	arg=${opt#*=}
         case "$opt" in
 		-32) arch=i586 ;;
+		--flv=*) flv=$arg ;;
 		--repo=*) repo=$arg ;;
 		--arch=*) arch=$arg ;;
 		--skip-bb) skip_bb=y ;;
