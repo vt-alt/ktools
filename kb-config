@@ -11,7 +11,7 @@ list_branches() {
 }
 
 pathspec=( "config*" )
-unset show_unmatched
+unset show_unmatched show_tag
 for o do
 	shift
 	case "$o" in
@@ -25,6 +25,7 @@ for o do
 			pathspec=( ${o#*=} )
 			;;
 		--show-no-match) show_unmatched=y ;;
+		--tag) show_tag=y ;;
 		*) set -- "$@" "$o"
 	esac
 done
@@ -37,6 +38,13 @@ fi
 echo >&2 ":: git log $* -- ${pathspec[*]}"
 while read -r br; do
 	printf -v prefix '%-30s ' "${br#gears/}"
+	if [ -v show_tag ]; then
+		tag=$(git tag --points-at "$br" 'kernel-image-*' | head -1)
+		tag=${tag#kernel-image-}
+		tag=${tag%%-alt*}
+		printf -v tag '%-20s' "[$tag]"
+		prefix+="$tag "
+	fi
 	if git log --oneline --format='%h %cd - %s (%an)' --date=short "$@" "$br" -- "${pathspec[@]}" | grep .; then
 		:
 	elif [ -v show_unmatched ]; then
