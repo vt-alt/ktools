@@ -11,6 +11,7 @@ list_branches() {
 }
 
 pathspec=( "config*" )
+unset show_unmatched
 for o do
 	shift
 	case "$o" in
@@ -23,6 +24,7 @@ for o do
 			# shellcheck disable=SC2206
 			pathspec=( ${o#*=} )
 			;;
+		--show-no-match) show_unmatched=y ;;
 		*) set -- "$@" "$o"
 	esac
 done
@@ -35,6 +37,10 @@ fi
 echo >&2 ":: git log $* -- ${pathspec[*]}"
 while read -r br; do
 	printf -v prefix '%-30s ' "${br#gears/}"
-	git log --oneline --format='%h %cd - %s (%an)' --date=short "$@" "$br" -- "${pathspec[@]}" | grep . | sed "s!^!$prefix!"
+	if git log --oneline --format='%h %cd - %s (%an)' --date=short "$@" "$br" -- "${pathspec[@]}" | grep .; then
+		:
+	elif [ -v show_unmatched ]; then
+		echo "No match"
+	fi | sed "s!^!$prefix!"
 done < <(list_branches)
 
