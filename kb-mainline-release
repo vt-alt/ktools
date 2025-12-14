@@ -76,7 +76,7 @@ if git show-ref --verify --quiet "refs/heads/$patches_branch"; then
 else
 	echo ":: Need to create $patches_branch"
 	V git checkout -b "$patches_branch" "$prev_patches_branch"
-	V git rebase "$mainline"
+	V git rebase --merge "$mainline"
 fi
 
 if git show-ref --verify --quiet "refs/heads/$image_branch"; then
