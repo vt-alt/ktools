@@ -20,6 +20,7 @@ for o do
 			exit 1
 			;;
 		-l|--list) list_branches '%(creatordate:short) '; exit ;;
+		--spec) pathspec=( 'kernel-image.spec' ) ;;
 		--pathspec=*)
 			# shellcheck disable=SC2206
 			pathspec=( ${o#*=} )
