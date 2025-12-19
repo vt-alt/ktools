@@ -1,0 +1,16 @@
+#!/bin/bash
+
+ref=$(git for-each-ref --sort=-committerdate --format='%(refname:short)' 'refs/remotes/origin' \
+	| grep -m1 -F -e /master -e /main)
+args=()
+for a; do
+	[[ $a == -- ]] && break || args+=("$a")
+	shift
+done
+set -- "${args[@]}" "$ref" "$@"
+
+# By the luck `@.. origin/master` does the same as `@..origin/master`, thus we
+# can use `tigo @..`. This works becasue `@..` is A..B range and actually
+# exludes reachability from `@` (A), so it downs to `^@ origin/master`.
+
+exec tig "$@"
