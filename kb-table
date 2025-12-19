@@ -5,6 +5,7 @@ set -efu
 cd "$HOME/src/kernel-image"
 
 unset fetch
+first_parent=--first-parent
 for opt do
         shift
         case "$opt" in
@@ -15,6 +16,7 @@ for opt do
 		--match=*) pattern=${opt#*=} ;;
 		--br=* | --branch=*) branch=${opt#*=} ;;
 		--log) show_log=y ;;
+		--no-first-parent) first_parent= ;;
 		-*) echo >&2 "Unknown option: $opt"; exit 1 ;;
                 *) set -- "$@" "$opt";;
         esac
@@ -57,6 +59,7 @@ fi
 _atexit() {
 	if [ "$cb" != "$(git branch --show-current)" ]; then
 		echo >&2 "Exiting..."
+		V git reset -q --hard
 		V git switch -q -f "$cb"
 	fi
 }
@@ -152,4 +155,4 @@ while read -r commit; do
 		echo -ne '\e[m'
 	done
 	echo
-done < <(git rev-list --abbrev-commit --first-parent --no-walk --no-merges "$branch" "^${bottom[$branch]}")
+done < <(git rev-list --abbrev-commit $first_parent --no-walk --no-merges "$branch" "^${bottom[$branch]}")
