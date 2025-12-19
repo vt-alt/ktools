@@ -6,10 +6,12 @@ cd "$HOME/src/kernel-image"
 
 unset fetch
 first_parent=--first-parent
+s_width=80
 for opt do
         shift
         case "$opt" in
 		--width=*) COLUMNS=${opt#*=} ;;
+		--subject-width=*) s_width=${opt#*=} ;;
                 --fetch) fetch=y ;;
                 --check) pick=check ;;
                 --head) show_head=y ;;
@@ -44,8 +46,8 @@ if [ ! -v COLUMNS ]; then
 	[ -v COLUMNS ] || COLUMNS=236
 fi
 declare -i lead_width=$((COLUMNS - (branch_width + 1) * branch_count - 2))
-((lead_width>10)) || lead_width=16
-((lead_width<80)) || lead_width=80
+((lead_width>10))      || lead_width=16
+((lead_width<s_width)) || lead_width=$s_width
 declare -i subj_width=lead_width-11 # Without YYYY-MM-DD date.
 
 if ! git diff --quiet ||
