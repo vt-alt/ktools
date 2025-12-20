@@ -1,23 +1,22 @@
 #!/bin/bash
 
-toplevel=$(git rev-parse --show-toplevel 2>/dev/null)
-if [ -n "$toplevel" ] && cd "$toplevel"; then
-	if [[ $* == *--rooter* ]]; then
-		hist=/root/.bash_history
-		opt=(--rooter)
-		f=.git/bb/.bash_history--rooter
-		if [ -s "$f" ]; then
-			hsh-run --rooter -- /usr/bin/test -e "$hist" </dev/null ||
-				hsh-run --rooter -- /bin/dd of="$hist" status=none < "$f"
-		fi
-	else
-		hist=/usr/src/.bash_history
-		opt=()
-		f=.git/bb/.bash_history
-		if [ -s "$f" ]; then
-			hsh-run -- /usr/bin/test -e "$hist" </dev/null ||
-				hsh-copy "$f" </dev/null
-		fi
+toplevel=$(git rev-parse --show-toplevel 2>/dev/null) && h="$toplevel/.git/bb" || h="$HOME/.cache/hsh-shell"
+mkdir -p "$h"
+if [[ $* == *--rooter* ]]; then
+	hist=/root/.bash_history
+	opt=(--rooter)
+	f=$h/.bash_history--rooter
+	if [ -s "$f" ]; then
+		hsh-run --rooter -- /usr/bin/test -e "$hist" </dev/null ||
+			hsh-run --rooter -- /bin/dd of="$hist" status=none < "$f"
+	fi
+else
+	hist=/usr/src/.bash_history
+	opt=()
+	f=$h/.bash_history
+	if [ -s "$f" ]; then
+		hsh-run -- /usr/bin/test -e "$hist" </dev/null ||
+			hsh-copy "$f" </dev/null
 	fi
 fi
 
@@ -25,7 +24,7 @@ TERM=${TERM#screen.}
 /usr/bin/hsh-shell "$@"
 ret=$?
 
-[ -n "$toplevel" ] && [ -d .git/bb ] || exit "$ret"
+[ -d "$h" ] || exit "$ret"
 
 rotate() {
 	[ -s "${2?}" ] && ln -f "$2" "$2-"
