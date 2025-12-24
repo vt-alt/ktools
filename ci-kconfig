@@ -21,6 +21,7 @@ arch=x86_64
 diffconfig_opts=()
 dts=
 fzf=
+tag=
 for opt do
         shift
 	arg=${opt#*=}
@@ -32,6 +33,7 @@ for opt do
 		--skip-bb) skip_bb=y ;;
 		--dts) dts=--dts ;;
 		--fzf) fzf=--fzf ;;
+		--tag=*) tag=-t=$arg ;;
 		-m) diffconfig_opts=("$opt") ;;
 		-*) fatal "unknown option: $opt" ;;
                 *) fatal "unknown argument: $opt" ;;
@@ -51,7 +53,7 @@ size_a=$(stat -c %s "$f_a")
 echo >&2 "Compare with $rpm_a ($size_a bytes, $date_a)"
 
 if [ ! -v skip_bb ]; then
-	gum spin --title="Building .config ($repo/$arch)..." -- bb --repo="$repo" --arch="$arch" --kconfig --no-log
+	gum spin --title="Building .config ($repo/$arch)..." -- bb --repo="$repo" --arch="$arch" $tag --kconfig --no-log
 	echo "Built .config for $repo/$arch"
 fi
 bn_b=".config"
