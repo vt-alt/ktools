@@ -5,18 +5,21 @@ set -efu +o posix
 
 cr=$'\n'
 unset spec_at configs_at checkout_at keep_debug bb_prep ensure_check reset_before reset_after
+unset repo
 for opt do
 	shift
+	arg=${opt#*=}
 	case "$opt" in
-		--spec=*)		spec_at=${opt#*=} ;;
-		--configs=*)		configs_at=${opt#*=} ;;
+		--spec=*)		spec_at=$arg ;;
+		--configs=*)		configs_at=$arg ;;
 		--checkout=|--co=*|--commit=*)
-					checkout_at=${opt#*=} ;;
+					checkout_at=$arg ;;
 		--debug)		keep_debug=y ;;
 		--prep)			bb_prep=y ;;
 		--check)		ensure_check=y ;;
 		--reset)		reset_before=y ;;
 		--reset-after)		reset_after=y ;;
+		--repo=*)		repo=$arg ;;
 		-*)	set -- "$@" "$opt" ;;
 		*)	echo >&2 "Unknown argument $opt"; exit 1 ;;
 	esac
@@ -34,6 +37,9 @@ if [ -s .git/BISECT_START ]; then
 else
 	cb=$(git branch --show-current)
 fi
+[ ! -v repo ] && [[ $cb == */* ]] && repo=${cb##*/}
+[ -n "${repo-}" ] && set -- "$@" "--repo=$repo"
+
 if [ -v reset_before ]; then
 	(set -x; git reset --hard)
 fi
