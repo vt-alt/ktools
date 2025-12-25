@@ -28,7 +28,12 @@ toplevel=$(git rev-parse --show-toplevel)
 	cd "$toplevel"
 }
 
-cb=$(git branch --show-current)
+if [ -s .git/BISECT_START ]; then
+	read -r cb < ".git/BISECT_START"
+	checkout_at=@
+else
+	cb=$(git branch --show-current)
+fi
 if [ -v reset_before ]; then
 	(set -x; git reset --hard)
 fi
@@ -44,26 +49,31 @@ checkout_short=$(git rev-parse --short "$checkout_at")
 
 [ -v spec_at ]     ||
 [ -v configs_at ]  ||
-	spec_at=$(git tag --contains "$checkout_at" 'kernel-image-*' | head -1)
+	spec_at=$(git tag --contains "$checkout_at" --merged="$cb" 'kernel-image-*' | head -1)
 [ -v spec_at ]     || spec_at=$configs_at
 [ -v configs_at ]  || configs_at=$spec_at
 
+# We don't need to checkout before/after bisect.
 atexit() {
 	if [ -v reset_after ]; then
-		(	set -x
-			git reset -q --hard
-			git switch -q -f "$cb" )
+		(set -x; git reset -q --hard)
+		[ -s .git/BISECT_START ] ||
+		(set -x; git switch -q -f "$cb")
 		rm .git/KBB_START
 	else
-		echo >&2 "Run to cleanup workspace: git reset --hard; git checkout -f $cb"
+		echo -n >&2 "Run to cleanup workspace: git reset --hard"
+		[ -s .git/BISECT_START ] ||
+		echo -n >&2 "; git checkout -f $cb"
+		echo -e >&2 '\a'
 	fi
 }
 trap atexit EXIT
 
-(	set -x
-	git -c advice.detachedHead=false checkout -f "$checkout_at"
-	git checkout "$spec_at"    -- kernel-image.spec .gear
-	git checkout "$configs_at" -- config'*' )
+[ -s .git/BISECT_START ] ||
+	(set -x; git -c advice.detachedHead=false checkout -f "$checkout_at")
+
+	(set -x; git checkout "$spec_at"    -- kernel-image.spec .gear)
+	(set -x; git checkout "$configs_at" -- config'*' )
 
 if [ ! -v keep_debug ]; then
 	# Disable debug to speed up builds and lower memory requirements.
@@ -81,7 +91,16 @@ sed -E "s/^(%define kernel_sublevel).*/\1\t.$SUBLEVEL/" -i kernel-image.spec
 sed -E "s/^(Release: .*)/\1.commit_$checkout_short/" -i kernel-image.spec
 
 message="- kb-commit-bb on:$cr"
-message+=$(git log -1 --oneline | sed 's/^/  /')
+if [ -s .git/BISECT_RUN ]; then
+	message+=$(sed 's/^/  /' < .git/BISECT_RUN)
+else
+	message+=$(git log -1 --oneline | sed 's/^/  /')
+fi
+if [ -s .git/BISECT_LOG ]; then
+	message+="$cr- git bisect log:$cr"
+	message+=$(sed 's/^/  /' < .git/BISECT_LOG)
+fi
+
 (	set -x
 	safe-add-changelog -e "$message" kernel-image.spec
 	gear-store-tags -ac )
