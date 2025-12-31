@@ -7,6 +7,7 @@ list_branches() {
 	git branch -r --sort=-committerdate --format="$format" |
 		grep '\brefs/remotes/gears/' |
 		grep -v '\brefs/remotes/gears/source-' |
+		grep -v '\brefs/remotes/gears/.*/HEAD' |
 		sed 's!\brefs/remotes/!!'
 }
 
