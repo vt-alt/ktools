@@ -1,0 +1,83 @@
+#!/bin/bash
+set -efu +o posix
+
+fatal() { echo >&2 "${0##*/}: error: $*"; exit 1; }
+
+sshd=tinyssh
+mode=install,run
+port=5022
+runas=--rooter
+for opt do
+	shift
+	arg=${opt#*=}
+	case "$opt" in
+		--dropbear-musl) sshd=dropbear-musl ;;
+		--dropbear)      sshd=dropbear ;;
+		--tinyssh)       sshd=tinyssh ;;
+		--run) mode=run ;;
+		--port=*) port=$arg ;;
+		--builder) runas=--builder ;;
+		--rooter)  runas=--rooter ;;
+		-*) fatal "unknown option: $opt" ;;
+		*)  fatal "unknown argument: $opt" ;;
+	esac
+done
+
+USERKEY=$HOME/.ssh/id_hasher
+if [ ! -e "$USERKEY" ]; then
+	# ssh cannot parse dropbear keys
+	#   ssh: Load key ".ssh/id_dropbear": error in libcrypto
+	(set -x; ssh-keygen -t ed25519 -f "$USERKEY")
+fi
+
+if [[ $sshd == dropbear* ]]; then
+	if [[ $mode == *install* ]]; then
+		# dropbear will only allow to ssh to rooter:
+		#   /usr/src must be owned by user or root, and not writable by group or others
+		# we cannot change these permissions.
+		hsh-install "$sshd" rsync
+		DROPDIR=/etc/dropbear
+		HOSTDIR=$HOME/.local/$DROPDIR
+		HOSTKEY=$HOSTDIR/dropbear_ed25519_host_key
+		if [ ! -e "$HOSTKEY" ]; then
+			mkdir -p "$HOSTDIR"
+			(set -x; dropbearkey -t ed25519 -f "$HOSTKEY")
+		fi
+		( set -x
+		hsh-rsync -a "$HOSTDIR" rooter:/etc
+		hsh-rsync -a "$USERKEY.pub" "${runas#--}:.ssh/authorized_keys" )
+	fi
+
+	if [[ $mode == *run* ]]; then
+		( set -x
+		share_network=1 hsh-run --pty --mountpoints=/proc,/dev/pts,/dev/kvm "$runas" -- \
+			/usr/sbin/dropbear -r /etc/dropbear/dropbear_ed25519_host_key -F -E -p "localhost:$port" )
+	fi
+fi
+if [[ $sshd == tinyssh ]]; then
+	if [[ $mode == *install* ]]; then
+		# tinyssh only allows ssh to rooter:
+		#   warning: auth: bad mode: directory writable by group or others: /usr/src/ (access denied){subprocess_auth.c:69}
+		#   warning: auth: bad owner: /usr/ (access denied){subprocess_auth.c:75}
+		#   fatal: authentication failed (connection reset){main_tinysshd.c:251}
+		hsh-install "$sshd" busybox rsync
+		TINYDIR=/etc/tinyssh
+		HOSTDIR=$HOME/.local/$TINYDIR
+		HOSTKEYS=$HOSTDIR/sshkeydir
+		if [ ! -e "$HOSTKEYS/ed25519.pk" ]; then
+			mkdir -p "$HOSTDIR"
+			(set -x; /usr/sbin/tinysshd-makekey "$HOSTKEYS")
+		fi
+		( set -x
+		hsh-rsync -a "$HOSTDIR" rooter:/etc
+		hsh-rsync -a "$USERKEY.pub" "${runas#--}:.ssh/authorized_keys" )
+	fi
+	if [[ $mode == *run* ]]; then
+		# tinyssh cannot create tty in hasher, so no ssh -t nor interactive shell
+		#   chown("/dev/pts/1", 501, 501) = -1 EROFS (Read-only file system)
+		#   +++ exited with 111 +++
+		( set -x
+		share_network=1 hsh-run --pty --mountpoints=/proc,/dev/pts,/dev/kvm "$runas" -- \
+			busybox tcpsvd localhost "$port" /usr/sbin/tinysshd -v /etc/tinyssh/sshkeydir )
+	fi
+fi
