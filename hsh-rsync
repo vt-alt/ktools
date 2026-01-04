@@ -1,4 +1,11 @@
 #!/bin/bash
+# SPDX-License-Identifier: CC0-1.0
+#
+# Experimental rsync wrapper for hasher
+#
+# For example, rsync current dir into hasher ~/work:
+#   hsh-rsync -a . builder:work
+
 set -efu +o posix
 
 cwd="/usr/src"
@@ -27,14 +34,22 @@ if tmp=$(mktemp -d --suffix=.rsync); then
 	trap atexit 0
 fi
 cat >"$tmp/rsh" <<-END
-	cat >"$tmp/entry" <<"EOF"
+	case "\$1" in
+		home)    qcwd=/usr/src ;;
+		builder) qcwd='~' ;;
+		root)    qcwd=/;   o=--rooter ;;
+		rooter)  qcwd='~'; o=--rooter ;;
+		*) printf -v qcwd '%q' $qcwd ;;
+	esac
+	cat >"$tmp/entry" <<EOF
+		PS4='+ hsh-rsync: '
 		set -ex
-		cd $qcwd
+		cd \$qcwd
 		{ set +x; } 2>/dev/null
-		exec "\$@"
+		exec "\\\$@"
 	EOF
 	shift
-	hsh-run --execute="$tmp/entry" -- "\$@"
+	hsh-run \$o --execute="$tmp/entry" -- "\$@"
 END
 chmod u+rx "$tmp/rsh"
 export RSYNC_RSH="$tmp/rsh"
