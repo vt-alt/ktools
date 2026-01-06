@@ -20,6 +20,22 @@ else
 	fi
 fi
 
+workdir="${TMPDIR-/tmp/.private/$USER}/hasher"
+[ -d "$workdir" ] || workdir="$HOME/hasher"
+workdir_sh="$workdir/chroot/.host/shell"
+{
+	cat > "$workdir_sh" &&
+	chmod a+rx "$workdir_sh" &&
+	set -- --shell=/.host/shell "$@"
+} <<-EOF
+	{ cd ~
+	  cd $(basename "$PWD")
+	  cd ~/RPM/BUILD/*
+	  cd ~/RPM/BUILD/*-*
+	  cd kernel-source-*; } 2>/dev/null
+	exec -a -bash bash
+EOF
+
 TERM=${TERM#screen.}
 /usr/bin/hsh-shell "$@"
 ret=$?
