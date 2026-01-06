@@ -3,10 +3,10 @@ set -efu +o posix
 
 fatal() { echo >&2 "${0##*/}: error: $*"; exit 1; }
 
-sshd=tinyssh
+sshd=dropbear
 mode=install,run
 port=5022
-runas=--rooter
+runas=--builder
 for opt do
 	shift
 	arg=${opt#*=}
@@ -44,14 +44,15 @@ if [[ $sshd == dropbear* ]]; then
 			(set -x; dropbearkey -t ed25519 -f "$HOSTKEY")
 		fi
 		( set -x
-		hsh-rsync -a "$HOSTDIR" rooter:/etc
+		hsh-rsync -r --chmod=a+r "$HOSTDIR" rooter:/etc
 		hsh-rsync -a "$USERKEY.pub" "${runas#--}:.ssh/authorized_keys" )
 	fi
 
 	if [[ $mode == *run* ]]; then
+		cmd="exec /usr/sbin/dropbear -r /etc/dropbear/dropbear_ed25519_host_key -F -E -p localhost:$port"
+		[ "$runas" = --builder ] && cmd="exec fakeroot sh -c 'chmod go-w /usr/src; $cmd'"
 		( set -x
-		share_network=1 hsh-run --pty --mountpoints=/proc,/dev/pts,/dev/kvm "$runas" -- \
-			/usr/sbin/dropbear -r /etc/dropbear/dropbear_ed25519_host_key -F -E -p "localhost:$port" )
+		share_network=1 hsh-run --mountpoints=/proc,/dev/pts,/dev/kvm "$runas" -- sh -c "$cmd" )
 	fi
 fi
 if [[ $sshd == tinyssh ]]; then
@@ -69,15 +70,16 @@ if [[ $sshd == tinyssh ]]; then
 			(set -x; /usr/sbin/tinysshd-makekey "$HOSTKEYS")
 		fi
 		( set -x
-		hsh-rsync -a "$HOSTDIR" rooter:/etc
+		hsh-rsync -r --chmod=a+r "$HOSTDIR" rooter:/etc
 		hsh-rsync -a "$USERKEY.pub" "${runas#--}:.ssh/authorized_keys" )
 	fi
 	if [[ $mode == *run* ]]; then
+		cmd="exec busybox tcpsvd localhost $port /usr/sbin/tinysshd -v /etc/tinyssh/sshkeydir"
+		[ "$runas" = --builder ] && cmd="exec fakeroot sh -c 'chmod go-w /usr/src; $cmd'"
 		# tinyssh cannot create tty in hasher, so no ssh -t nor interactive shell
 		#   chown("/dev/pts/1", 501, 501) = -1 EROFS (Read-only file system)
 		#   +++ exited with 111 +++
 		( set -x
-		share_network=1 hsh-run --pty --mountpoints=/proc,/dev/pts,/dev/kvm "$runas" -- \
-			busybox tcpsvd localhost "$port" /usr/sbin/tinysshd -v /etc/tinyssh/sshkeydir )
+		share_network=1 hsh-run --mountpoints=/proc,/dev/pts,/dev/kvm "$runas" -- sh -c "$cmd" )
 	fi
 fi
