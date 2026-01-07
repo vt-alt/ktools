@@ -7,7 +7,7 @@ allow_checkinstall=
 invert_match=0
 allow_all=
 show_srpm=
-unset tag
+unset tag target
 for o do
         shift
         case "$o" in
@@ -15,6 +15,8 @@ for o do
 		--src)          show_srpm=y ;;
 		--debuginfo)    allow_debuginfo=y ;;
 		--checkinstall) allow_checkinstall=y ;;
+		-32)            target=i586 ;;
+		--target=*)     target=${o#*=} ;;
 		--*)            tag=${o#--} ;;
 		-v)             invert_match=1 ;;
 		*) set -- "$@" "$o"
@@ -24,15 +26,17 @@ done
 # shellcheck disable=SC2183,SC2046
 srcrpm=$(printf '%s-%s-%s.src.rpm' $(gear --describe --disable-specsubst))
 
-eval "$(hsh --printenv | grep -e '^def_repo=' -e '^workdir=')"
+eval "$(hsh --printenv | grep -e '^def_repo=' -e '^workdir=' -e '^def_target=')"
 
 # shellcheck disable=SC2154
 if [ -n "$show_srpm" ]; then
 	cd "$def_repo/SRPMS.hasher"
 else
-	cd "$def_repo/${def_target:-$(arch)}/RPMS.hasher"
+	[ -v target ] || target=${def_target-}
+	cd "$def_repo/${target:-$(arch)}/RPMS.hasher"
 fi
 
+shopt -s nullglob
 for i in *.rpm; do
 	if [ -n "$show_srpm" ]; then
 		[ "$srcrpm" = "$(basename "$i")" ] || continue
