@@ -5,10 +5,12 @@ set -eu +o posix
 allow_debuginfo=
 allow_checkinstall=
 invert_match=0
+allow_all=
 unset tag
 for o do
         shift
         case "$o" in
+		-a|--all)       allow_all=y ;;
 		--debuginfo)    allow_debuginfo=y ;;
 		--checkinstall) allow_checkinstall=y ;;
 		--*)            tag=${o#--} ;;
@@ -26,8 +28,10 @@ cd "$def_repo/${def_target:-$(arch)}/RPMS.hasher"
 for i in *.rpm; do
         SOURCERPM=$(rpm -qp --qf '%{SOURCERPM}' "$i")
         [ "$srcrpm" = "$SOURCERPM" ] || continue
-	[ -n "$allow_checkinstall" ] || [[ $i != *-checkinstall-* ]] || continue
-	[ -n "$allow_debuginfo" ]    || [[ $i != *-debuginfo-* ]]    || continue
+	if [ -z "$allow_all" ]; then
+		[ -n "$allow_checkinstall" ] || [[ $i != *-checkinstall-* ]] || continue
+		[ -n "$allow_debuginfo" ]    || [[ $i != *-debuginfo-* ]]    || continue
+	fi
 	if (( $# )); then
 		match=$invert_match
 		for m in "$@"; do
