@@ -7,7 +7,7 @@ allow_checkinstall=
 invert_match=0
 allow_all=
 show_srpm=
-unset tag target repo today
+unset tag target repo today task mount umount
 for o do
         shift
         case "$o" in
@@ -17,9 +17,14 @@ for o do
 		--checkinstall) allow_checkinstall=y ;;
 		-32)            target=i586 ;;
 		--target=*)     target=${o#*=} ;;
+		-A)             target='*' ;;
 		--repo)         repo=Sisyphus ;;
 		--repo=*)       repo=${o#*=} ;;
 		--pub|--ftp)    today=y ;;
+		--task)         task=$(awk '{print $1}' .git/.girar-build | tail -1) ;;
+		--task=*)       task=${o#*=} ;;
+		--mount)        mount=y ;;
+		--umount)       umount=y ;;
 		--*)            tag=${o#--} ;;
 		-v)             invert_match=1 ;;
 		*) set -- "$@" "$o"
@@ -32,17 +37,57 @@ eval "$(hsh --printenv | grep -e '^def_repo=' -e '^workdir=' -e '^def_target=')"
 read -r name version release <<<"$(gear --describe --disable-specsubst)"
 srcrpm="$name-$version-$release.src.rpm"
 
+fuse_root=~/mnt/tasks
+if [ -v umount ]; then
+	(set -x; fuserumount3 -q "$fuse_root/.fuse")
+	exit
+fi
+
 list=()
 shopt -s nullglob
+shopt -s lastpipe
 # shellcheck disable=SC2154
-if [ -v repo ]; then
+if [ -v task ]; then
+	[ -v tag ] && mount=y
+	set -o pipefail
+	export NO_PROXY='*'
+	export HTTPDIRFS_LOG_LEVEL=3
+	base_url="http://git.altlinux.org/tasks/${task:?}"
+
+	if [ -n "$show_srpm" ]; then
+		add_src=$(curl -sL "$base_url/plan/add-src")
+		read -r _ _ _ pkg st <<<"$add_src"
+		list+=("$pkg")
+	else
+		curl -sL "$base_url/plan/add-bin" |
+			while read -r _ _ ar _ pkg _st _; do
+				[[ $ar == @(noarch|$target) ]] || continue
+				list+=("$pkg")
+				st=$_st
+			done
+	fi
+	if [ -v mount ]; then
+		mkdir -p "$fuse_root/.fuse"
+		fuserumount3 -q "$fuse_root/.fuse" || :
+		find "$fuse_root" -type l -delete
+		httpdirfs --cache-clear
+		httpdirfs --cache "$base_url/build/${st:?}" "$fuse_root/.fuse"
+		mkdir -p "$fuse_root/$task/build"
+		ln -sr "$fuse_root/.fuse" -T "$fuse_root/$task/build/$st"
+		# shellcheck disable=SC2124
+		list=("${list[@]/#/"$fuse_root/$task/"}")
+	else
+		[ -v list ] &&
+		printf "$base_url/%s\n" "${list[@]}" | LC_ALL=C sort -V
+		exit
+	fi
+elif [ -v repo ]; then
 	read -r name _ <<<"$(gear --describe --disable-specsubst)"
 	[ -v today ] && repo_base="/mnt/space/pub/distributions/ALTLinux/$repo" || repo_base="/ALT/$repo"
 	repo_srpm=$(ugrep -z -P "^\Q$name\E\t" "$repo_base/files/list/src.list.xz" | awk '{print $3}')
 	if [ -n "$show_srpm" ]; then
 		list=("$repo_base/files/SRPMS/$repo_srpm")
 	else
-		shopt -s lastpipe
 		ugrep -z -F "$repo_srpm" "$repo_base/files/list/bin.list.xz" |
 		awk -v srpm="$repo_srpm" '$5 == srpm' |
 			while read -r _ _ ar bp _; do
