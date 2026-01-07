@@ -8,6 +8,7 @@ invert_match=0
 allow_all=
 show_srpm=
 unset tag target repo today task mount umount
+unset with_filenames
 for o do
         shift
         case "$o" in
@@ -25,6 +26,7 @@ for o do
 		--task=*)       task=${o#*=} ;;
 		--mount)        mount=y ;;
 		--umount)       umount=y ;;
+		-H)             with_filenames=y ;;
 		--*)            tag=${o#--} ;;
 		-v)             invert_match=1 ;;
 		*) set -- "$@" "$o"
@@ -119,8 +121,9 @@ for i in "${list[@]}"; do
 		(( match )) || continue
 	fi
 	if [ -v tag ]; then
-		q=$(sed -E 's/\w+/%{&}/g' <<< "$tag")
-		rpmquery --qf "$q\n" -p "$i"
+		q="[ $(sed -E 's/\w+/%{&}/g' <<< "$tag")\n]"
+		[ -v with_filenames ] && q="${i//[%\}\{\]\[]/\\&}:$q"
+		rpmquery --qf "$q" -p "$i"
 	else
 		printf "%s\n" "$i"
 	fi
