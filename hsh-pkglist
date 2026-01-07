@@ -7,7 +7,7 @@ allow_checkinstall=
 invert_match=0
 allow_all=
 show_srpm=
-unset tag target repo
+unset tag target repo today
 for o do
         shift
         case "$o" in
@@ -17,8 +17,9 @@ for o do
 		--checkinstall) allow_checkinstall=y ;;
 		-32)            target=i586 ;;
 		--target=*)     target=${o#*=} ;;
-		--repo)         repo=sisyphus ;;
+		--repo)         repo=Sisyphus ;;
 		--repo=*)       repo=${o#*=} ;;
+		--pub|--ftp)    today=y ;;
 		--*)            tag=${o#--} ;;
 		-v)             invert_match=1 ;;
 		*) set -- "$@" "$o"
@@ -36,15 +37,17 @@ shopt -s nullglob
 # shellcheck disable=SC2154
 if [ -v repo ]; then
 	read -r name _ <<<"$(gear --describe --disable-specsubst)"
-	repo_srpm=$(grep -P "^\Q$name\E\t" "/ALT/$repo/files/list/src.list" | awk '{print $3}')
+	[ -v today ] && repo_base="/mnt/space/pub/distributions/ALTLinux/$repo" || repo_base="/ALT/$repo"
+	repo_srpm=$(ugrep -z -P "^\Q$name\E\t" "$repo_base/files/list/src.list.xz" | awk '{print $3}')
 	if [ -n "$show_srpm" ]; then
-		list=("/ALT/$repo/files/SRPMS/$repo_srpm")
+		list=("$repo_base/files/SRPMS/$repo_srpm")
 	else
 		shopt -s lastpipe
-		awk -v srpm="$repo_srpm" '$5 == srpm' "/ALT/$repo/files/list/bin.list" |
+		ugrep -z -F "$repo_srpm" "$repo_base/files/list/bin.list.xz" |
+		awk -v srpm="$repo_srpm" '$5 == srpm' |
 			while read -r _ _ ar bp _; do
 				[[ $ar == @(noarch|$target) ]] || continue
-				list+=("/ALT/$repo/files/$ar/RPMS/$bp")
+				list+=("$repo_base/files/$ar/RPMS/$bp")
 			done
 	fi
 elif [ -n "$show_srpm" ]; then
