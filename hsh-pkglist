@@ -7,7 +7,7 @@ allow_checkinstall=
 invert_match=0
 allow_all=
 show_srpm=
-unset tag target
+unset tag target repo
 for o do
         shift
         case "$o" in
@@ -17,49 +17,64 @@ for o do
 		--checkinstall) allow_checkinstall=y ;;
 		-32)            target=i586 ;;
 		--target=*)     target=${o#*=} ;;
+		--repo)         repo=sisyphus ;;
+		--repo=*)       repo=${o#*=} ;;
 		--*)            tag=${o#--} ;;
 		-v)             invert_match=1 ;;
 		*) set -- "$@" "$o"
 	esac
 done
 
-# shellcheck disable=SC2183,SC2046
-srcrpm=$(printf '%s-%s-%s.src.rpm' $(gear --describe --disable-specsubst))
-
 eval "$(hsh --printenv | grep -e '^def_repo=' -e '^workdir=' -e '^def_target=')"
+[ -v target ] || target=${def_target-}
 
-# shellcheck disable=SC2154
-if [ -n "$show_srpm" ]; then
-	cd "$def_repo/SRPMS.hasher"
-else
-	[ -v target ] || target=${def_target-}
-	cd "$def_repo/${target:-$(arch)}/RPMS.hasher"
-fi
+read -r name version release <<<"$(gear --describe --disable-specsubst)"
+srcrpm="$name-$version-$release.src.rpm"
 
+list=()
 shopt -s nullglob
-for i in *.rpm; do
+# shellcheck disable=SC2154
+if [ -v repo ]; then
+	read -r name _ <<<"$(gear --describe --disable-specsubst)"
+	repo_srpm=$(grep -P "^\Q$name\E\t" "/ALT/$repo/files/list/src.list" | awk '{print $3}')
 	if [ -n "$show_srpm" ]; then
-		[ "$srcrpm" = "$(basename "$i")" ] || continue
+		list=("/ALT/$repo/files/SRPMS/$repo_srpm")
 	else
+		shopt -s lastpipe
+		awk -v srpm="$repo_srpm" '$5 == srpm' "/ALT/$repo/files/list/bin.list" |
+			while read -r _ _ ar bp _; do
+				[[ $ar == @(noarch|$target) ]] || continue
+				list+=("/ALT/$repo/files/$ar/RPMS/$bp")
+			done
+	fi
+elif [ -n "$show_srpm" ]; then
+	list=("$def_repo/SRPMS.hasher/$srcrpm")
+else
+	cd "$def_repo/${target:-$(arch)}/RPMS.hasher"
+	for i in *.rpm; do
 		SOURCERPM=$(rpm -qp --qf '%{SOURCERPM}' "$i")
 		[ "$srcrpm" = "$SOURCERPM" ] || continue
-		if [ -z "$allow_all" ]; then
-			[ -n "$allow_checkinstall" ] || [[ $i != *-checkinstall-* ]] || continue
-			[ -n "$allow_debuginfo" ]    || [[ $i != *-debuginfo-* ]]    || continue
-		fi
-		if (( $# )); then
-			match=$invert_match
-			for m in "$@"; do
-				[[ $i =~ $m ]] && match=$((match ^ 1))
-			done
-			(( match )) || continue
-		fi
+		list+=("$def_repo/${target:-$(arch)}/RPMS.hasher/$i")
+	done
+fi
+
+for i in "${list[@]}"; do
+	if [ -z "$allow_all" ]; then
+		[ -n "$allow_checkinstall" ] || [[ $i != *-checkinstall-* ]] || continue
+		[ -n "$allow_debuginfo" ]    || [[ $i != *-debuginfo-* ]]    || continue
+	fi
+	if (( $# )); then
+		match=$invert_match
+		for m in "$@"; do
+			[[ $i =~ $m ]] && match=$((match ^ 1))
+		done
+		(( match )) || continue
 	fi
 	if [ -v tag ]; then
 		q=$(sed -E 's/\w+/%{&}/g' <<< "$tag")
 		rpmquery --qf "$q\n" -p "$i"
 	else
-		printf "%s/%s\n" "$PWD" "$i"
+		printf "%s\n" "$i"
 	fi
 done
 
