@@ -18,9 +18,9 @@ for o do
 		-32)            target=i586 ;;
 		--target=*)     target=${o#*=} ;;
 		-A)             target='*' ;;
-		--repo)         repo=Sisyphus ;;
+		--pub|--ftp)    today=y ;&
+		--repo)         : "${repo:=Sisyphus}" ;;
 		--repo=*)       repo=${o#*=} ;;
-		--pub|--ftp)    today=y ;;
 		--task)         task=$(awk '{print $1}' .git/.girar-build | tail -1) ;;
 		--task=*)       task=${o#*=} ;;
 		--mount)        mount=y ;;
