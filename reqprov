@@ -40,18 +40,7 @@ else
 	SRPM="$NAME-$VERSION-$RELEASE"
 fi
 
-eval "$(hsh --printenv | grep -e '^def_repo=' -e '^workdir=')"
-cd  "$def_repo/${def_target:-$(arch)}/RPMS.hasher"
-
-list=()
-for i in $(set +f; echo *.rpm); do
-	SOURCERPM=$(rpm -qp --qf '%{SOURCERPM}' "$i")
-	SRCNAME=${SOURCERPM%-*-*}
-	SRCVREL=${SOURCERPM%.*.*}
-	[[ $SRCNAME == kernel-modules-* ]] && SRCVREL=${SRCVREL%.*.*}
-	[ "$SRPM" = "$SRCVREL" ] || continue
-	list+=( "$i" )
-done
+list=( $(hsh-pkglist --all) )
 
 if [ ${#list[@]} -eq 0 ]; then
 	echo >&2 "No matching $SRPM RPMs are found in $PWD, try setting --evr= or build locally."
@@ -91,7 +80,8 @@ sed_things() {
 	fi
 }
 
-for i in "${list[@]}"; do
+for f in "${list[@]}"; do
+	i=$(basename "$f")
 	name=${i%-*-*}
 	printf "%s= %s =\n" "$sep" "$name"
 	if [ -v SKIPDEBUGINFO ] && [[ "$name" =~ debuginfo ]]; then
@@ -101,9 +91,9 @@ for i in "${list[@]}"; do
 	rpmvrel=${i%.*.*}
 	rpmarch=${i#"$rpmvrel"}
 
-	rpm -qp "$i" "$@" > $tmp/$i~
-	sed_things "$i" "$tmp/$i~"
-	touch -r "$i" $tmp/$i~
+	rpm -qp "$f" "$@" > $tmp/$i~
+	sed_things "$f" "$tmp/$i~"
+	touch -r "$f" $tmp/$i~
 
 	r=$(set +f; ls /ALT/$REPO/files/*/RPMS/$name-+([^-])-+([^-])$rpmarch 2>/dev/null ||:)
 	if [ -e "$r" ]; then
