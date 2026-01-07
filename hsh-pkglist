@@ -6,11 +6,13 @@ allow_debuginfo=
 allow_checkinstall=
 invert_match=0
 allow_all=
+show_srpm=
 unset tag
 for o do
         shift
         case "$o" in
 		-a|--all)       allow_all=y ;;
+		--src)          show_srpm=y ;;
 		--debuginfo)    allow_debuginfo=y ;;
 		--checkinstall) allow_checkinstall=y ;;
 		--*)            tag=${o#--} ;;
@@ -18,26 +20,36 @@ for o do
 		*) set -- "$@" "$o"
 	esac
 done
+
 # shellcheck disable=SC2183,SC2046
 srcrpm=$(printf '%s-%s-%s.src.rpm' $(gear --describe --disable-specsubst))
 
 eval "$(hsh --printenv | grep -e '^def_repo=' -e '^workdir=')"
+
 # shellcheck disable=SC2154
-cd "$def_repo/${def_target:-$(arch)}/RPMS.hasher"
+if [ -n "$show_srpm" ]; then
+	cd "$def_repo/SRPMS.hasher"
+else
+	cd "$def_repo/${def_target:-$(arch)}/RPMS.hasher"
+fi
 
 for i in *.rpm; do
-        SOURCERPM=$(rpm -qp --qf '%{SOURCERPM}' "$i")
-        [ "$srcrpm" = "$SOURCERPM" ] || continue
-	if [ -z "$allow_all" ]; then
-		[ -n "$allow_checkinstall" ] || [[ $i != *-checkinstall-* ]] || continue
-		[ -n "$allow_debuginfo" ]    || [[ $i != *-debuginfo-* ]]    || continue
-	fi
-	if (( $# )); then
-		match=$invert_match
-		for m in "$@"; do
-			[[ $i =~ $m ]] && match=$((match ^ 1))
-		done
-		(( match )) || continue
+	if [ -n "$show_srpm" ]; then
+		[ "$srcrpm" = "$(basename "$i")" ] || continue
+	else
+		SOURCERPM=$(rpm -qp --qf '%{SOURCERPM}' "$i")
+		[ "$srcrpm" = "$SOURCERPM" ] || continue
+		if [ -z "$allow_all" ]; then
+			[ -n "$allow_checkinstall" ] || [[ $i != *-checkinstall-* ]] || continue
+			[ -n "$allow_debuginfo" ]    || [[ $i != *-debuginfo-* ]]    || continue
+		fi
+		if (( $# )); then
+			match=$invert_match
+			for m in "$@"; do
+				[[ $i =~ $m ]] && match=$((match ^ 1))
+			done
+			(( match )) || continue
+		fi
 	fi
 	if [ -v tag ]; then
 		q=$(sed -E 's/\w+/%{&}/g' <<< "$tag")
