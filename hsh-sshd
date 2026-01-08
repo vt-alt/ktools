@@ -52,6 +52,14 @@ if [[ $sshd == dropbear* ]]; then
 		fi
 		(set -x; hsh-rsync -a "$HOSTDIR" "$TARGET:$ETCDIR")
 		(set -x; hsh-rsync -a "$USERKEY.pub" "$TARGET:.ssh/authorized_keys")
+		cat > ~/.hasher/ssh_config <<-EOF
+		Host hsh hasher $TARGET
+		    User $TARGET
+		    HostName localhost
+		    Port $port
+		    IdentityFile ~/.ssh/id_hasher
+		    UserKnownHostsFile $HOSTDIR/known_hosts
+		EOF
 	fi
 
 	if [[ $mode == *run* ]]; then
@@ -78,6 +86,14 @@ if [[ $sshd == tinyssh ]]; then
 		( set -x
 		hsh-rsync -a "$HOSTDIR" "$TARGET:$ETCDIR"
 		hsh-rsync -a "$USERKEY.pub" "$TARGET:.ssh/authorized_keys" )
+		cat > ~/.hasher/ssh_config <<-EOF
+		Host hsh hasher $TARGET
+		    User $TARGET
+		    HostName localhost
+		    Port $port
+		    IdentityFile ~/.ssh/id_hasher
+		    UserKnownHostsFile $HOSTDIR/known_hosts
+		EOF
 	fi
 	if [[ $mode == *run* ]]; then
 		cmd="exec busybox tcpsvd localhost $port /usr/sbin/tinysshd -v $ETCDIR/tinyssh/sshkeydir"
