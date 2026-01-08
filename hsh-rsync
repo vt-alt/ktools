@@ -42,10 +42,7 @@ cat >"$tmp/rsh" <<-END
 		*) printf -v qcwd '%q' $qcwd ;;
 	esac
 	cat >"$tmp/entry" <<EOF
-		PS4='+ hsh-rsync: '
-		set -ex
 		cd \$qcwd
-		{ set +x; } 2>/dev/null
 		exec "\\\$@"
 	EOF
 	shift
