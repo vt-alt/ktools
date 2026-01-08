@@ -30,12 +30,15 @@ if [ ! -e "$USERKEY" ]; then
 	(set -x; ssh-keygen -t ed25519 -f "$USERKEY")
 fi
 
+TARGET=${runas#--}
 if [[ $runas == --rooter ]]; then
 	ETCDIR=/etc
+	unset fakeroot
 else
 	ETCDIR=/usr/src/.local/etc
+	unset runas
+	fakeroot=y
 fi
-TARGET=${runas#--}
 
 if [[ $sshd == dropbear* ]]; then
 	if [[ $mode == *install* ]]; then
@@ -64,9 +67,9 @@ if [[ $sshd == dropbear* ]]; then
 
 	if [[ $mode == *run* ]]; then
 		cmd="exec /usr/sbin/dropbear -r $ETCDIR/dropbear/dropbear_ed25519_host_key -F -E -p localhost:$port"
-		[ "$runas" = --builder ] && cmd="exec fakeroot sh -c 'chmod go-w /usr/src; $cmd'"
+		[ -v fakeroot ] && cmd="exec fakeroot sh -c 'chmod go-w /usr/src; $cmd'"
 		( set -x
-		share_network=1 hsh-run --mountpoints=/proc,/dev/pts,/dev/kvm "$runas" -- sh -c "$cmd" )
+		share_network=1 hsh-run --mountpoints=/proc,/dev/pts,/dev/kvm "${runas[@]}" -- sh -c "$cmd" )
 	fi
 fi
 if [[ $sshd == tinyssh ]]; then
@@ -97,11 +100,11 @@ if [[ $sshd == tinyssh ]]; then
 	fi
 	if [[ $mode == *run* ]]; then
 		cmd="exec busybox tcpsvd localhost $port /usr/sbin/tinysshd -v $ETCDIR/tinyssh/sshkeydir"
-		[ "$runas" = --builder ] && cmd="exec fakeroot sh -c 'chmod go-w /usr/src; $cmd'"
+		[ -v fakeroot ] && cmd="exec fakeroot sh -c 'chmod go-w /usr/src; $cmd'"
 		# tinyssh cannot create tty in hasher, so no ssh -t nor interactive shell
 		#   chown("/dev/pts/1", 501, 501) = -1 EROFS (Read-only file system)
 		#   +++ exited with 111 +++
 		( set -x
-		share_network=1 hsh-run --mountpoints=/proc,/dev/pts,/dev/kvm "$runas" -- sh -c "$cmd" )
+		share_network=1 hsh-run --mountpoints=/proc,/dev/pts,/dev/kvm "${runas[@]}" -- sh -c "$cmd" )
 	fi
 fi
