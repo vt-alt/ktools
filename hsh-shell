@@ -21,7 +21,7 @@ else
 fi
 
 workdir="${TMPDIR-/tmp/.private/$USER}/hasher"
-[ -d "$workdir" ] || workdir="$HOME/hasher"
+[ -d "$workdir/chroot" ] || workdir="$HOME/hasher"
 workdir_sh="$workdir/chroot/.host/shell"
 {
 	cat > "$workdir_sh" &&
