@@ -28,7 +28,8 @@ for opt do
 		--no-branch) unset_push_branch=y ;;
 		--test) disapprove=y; unset_push_branch=y ;;
 		--deps=*) deps="${opt#*=}" ;;
-		*) set -- "$opt" "$@"; break ;; # tags
+		-*) echo >&2 "Unknown option $opt"; exit 1 ;;
+		*) set -- "$opt" "$@" ;; # tags
 	esac
 done
 
