@@ -117,7 +117,7 @@ for tag; do
 	TS=$(date --iso-8601=minutes)
 	printf "%s\t%s\t%s\t%s\n" "$task" "$TS" "$PPIDID" "0" >> .git/.girar-build
 	ln -srf "$PWD" -T "$HOME/.girar-build-repo"
-	runcmd="ssh -n $girar task run --fail-late $commit $task $msg"
+	runcmd="ssh -n $girar task run --fail-early $commit $task $msg"
 	if [ -v runthetask ]; then
 		V $runcmd
 	else
