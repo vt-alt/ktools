@@ -49,7 +49,7 @@ else
 		fvnew=$brflvr
 	fi
 fi
-fvold=$(git config gear.specsubst.kflavour)
+fvold=$(git config gear.specsubst.kflavour ||:)
 if [ "$fvold" = "$fvnew" ]; then
 	echo >&2 "${GREEN}Flavour is already $fvold${NORM}"
 else
