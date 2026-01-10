@@ -8,10 +8,10 @@ invert_match=0
 allow_all=
 show_srpm=
 unset tag target repo today task mount umount
-unset with_filenames
+unset with_filenames ls_opts
 for o do
-        shift
-        case "$o" in
+	shift
+	case "$o" in
 		-a|--all)       allow_all=y ;;
 		--src)          show_srpm=y ;;
 		--debuginfo)    allow_debuginfo=y ;;
@@ -27,6 +27,7 @@ for o do
 		--mount)        mount=y ;;
 		--umount)       umount=y ;;
 		-H)             with_filenames=y ;;
+		-l|--full-time) ls_opts+=("$o") ;;
 		--*)            tag=${o#--} ;;
 		-v)             invert_match=1 ;;
 		*) set -- "$@" "$o"
@@ -50,7 +51,9 @@ shopt -s nullglob
 shopt -s lastpipe
 # shellcheck disable=SC2154
 if [ -v task ]; then
-	[ -v tag ] && mount=y
+	if [ -v tag ] || [ -v ls_opts ]; then
+		mount=y
+	fi
 	set -o pipefail
 	export NO_PROXY='*'
 	export HTTPDIRFS_LOG_LEVEL=3
@@ -120,7 +123,9 @@ for i in "${list[@]}"; do
 		done
 		(( match )) || continue
 	fi
-	if [ -v tag ]; then
+	if [ -v ls_opts ]; then
+		ls "${ls_opts[@]}" -- "$i"
+	elif [ -v tag ]; then
 		q="[ $(sed -E 's/\w+/%{&}/g' <<< "$tag")\n]"
 		[ -v with_filenames ] && q="${i//[%\}\{\]\[]/\\&}:$q"
 		rpmquery --qf "$q" -p "$i"
@@ -128,4 +133,3 @@ for i in "${list[@]}"; do
 		printf "%s\n" "$i"
 	fi
 done
-
