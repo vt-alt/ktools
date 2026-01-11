@@ -64,6 +64,7 @@ if [ -v from_hsh ]; then
 			apt-get install -y $pre_install
 			apt-get install -y $install
 		"
+	gear-checklist --update ci-upgrade-hsh
 	# docker container ls -a
 	if [ ! -v keep ]; then
 		echo "🔴 To clear containers run: docker container prune -f"
@@ -86,6 +87,7 @@ elif [ -v task ]; then
 		RUN apt-repo add $task $version && apt-get update
 		RUN apt-get install -y $install
 	EOF
+	gear-checklist --task="$task" ci-upgrade-task --skip=ci-upgrade-hsh
 	# docker image ls
 	if [ ! -v keep ]; then
 		docker rmi "task$task"
