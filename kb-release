@@ -118,7 +118,8 @@ elif [ "$update" = version ]; then
 			0) kernel_latest=mainline ;;
 			1) kernel_latest=latest1 ;;
 			2) kernel_latest=latest ;;
-		esac
+			*) false ;;
+		esac &&
 		sed -iE "/^%define kernel_latest/s/\t[[:alnum:]]\+/\t$kernel_latest/" "$specfile"
 		unset kernel_latest
 	else
