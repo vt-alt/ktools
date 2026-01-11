@@ -70,12 +70,12 @@ if [ -v from_hsh ]; then
 		echo "🔴 To clear containers run: docker container prune -f"
 	fi
 elif [ -v task ]; then
-	repo=$(curl -sSf "https://git.altlinux.org/tasks/$task/task/repo")
-	pre_install=$(curl -sSf "https://git.altlinux.org/tasks/$task/plan/rm-bin" | pkgnames)
+	repo=$(curl -sSfL "https://git.altlinux.org/tasks/$task/task/repo")
+	pre_install=$(curl -sSfL "https://git.altlinux.org/tasks/$task/plan/rm-bin" | pkgnames)
 	update_pre_install
-	install=$(curl -sSf "https://git.altlinux.org/tasks/$task/plan/add-bin" | pkgnames)
+	install=$(curl -sSfL "https://git.altlinux.org/tasks/$task/plan/add-bin" | pkgnames)
 	# Version to automatically invalidate Docker cache, apt-repo ignores that argument.
-	version=$(curl -sSf "https://git.altlinux.org/tasks/$task/task/version")
+	version=$(curl -sSfL "https://git.altlinux.org/tasks/$task/task/version")
 
 	echo >&2 "+ docker build -t task$task ..."
 	# shellcheck disable=SC2086
