@@ -1,0 +1,105 @@
+#!/bin/bash
+set -efu +o posix
+
+if [ -t 1 ]; then
+  BRIGHT=$'\e[1m'
+     RED=$'\e[31m'
+   GREEN=$'\e[32m'
+  YELLOW=$'\e[33m'
+    BLUE=$'\e[34m'
+ MAGENTA=$'\e[35m'
+    CYAN=$'\e[36m'
+   WHITE=$'\e[37m'
+    NORM=$'\e[m'
+else
+  BRIGHT='' RED='' GREEN='' YELLOW='' BLUE='' MAGENTA='' CYAN='' WHITE='' NORM=''
+fi
+export BRIGHT RED GREEN YELLOW BLUE MAGENTA CYAN WHITE NORM
+
+fatal() { echo >&2 "${0##*/}: $*"; exit 1; }
+topdir=$(git rev-parse --show-toplevel)
+cd "$topdir"
+cl=.git/checklists
+mkdir -p "$cl"
+
+mode=check
+unset task hasher skip
+for o do
+	shift
+	arg=${o#*=}
+        case "$o" in
+		--list|-l) mode=list ;;
+		--check)   mode=check ;;
+		--update)  mode=update ;;
+		--task=*)  mode=update; task=$arg ;;
+		--skip=*)  skip+=("$arg") ;;
+		-*) fatal "Unknown option $o" ;;
+		*)  set -- "$@" "$o" ;;
+	esac
+done
+
+head_rev=$(git rev-parse @)
+# prev_release=$(git describe --tags --match '*-alt*' --abbrev=0 @~)
+
+check_ref() {
+	local item=$1 ref=$2 desc; shift 2
+	desc=$*
+	local bright=$BRIGHT
+	[[ $item == *- ]] && bright=
+	if git diff --quiet "$head_rev" "$ref"; then
+		echo -e "\t$bright${GREEN}YES${NORM}\t$item\t$desc"
+	elif [[ $item == *- ]]; then
+		echo -e "\t$bright${BLUE}SKIP${NORM}\t$item\t$desc"
+	else
+		echo -e "\t$bright${RED}NO${NORM}\t$item\t$desc"
+		return 1
+	fi
+}
+
+shopt -s nullglob
+if [[ $mode == check ]]; then
+	ret=0
+	set +f
+	for i in "$cl/"*; do
+		[[ $i == *~ ]] && continue
+		t=$(tail -1 "$i")
+		# shellcheck disable=SC2086
+		check_ref "$(basename $i)" $t || ret=$?
+	done
+	exit $ret
+elif [[ $mode == update ]]; then
+	name=${1:?checklist item name}; shift
+	shopt -s lastpipe
+	unset updated
+	ts=$(date --iso-8601=minutes)
+	# Updated item is unskipped.
+	[[ -e $cl/$name- ]] && mv -n "$cl/$name-" "$cl/$name"
+	if [ -v task ]; then
+		curl -Y0 -LSsf "https://git.altlinux.org/tasks/$task/info.json" |
+			grep -P -o '"tag_id": "\K[0-9a-z]+' |
+			while read -r ref; do
+				rev=$(git rev-parse "$ref^{commit}" 2>/dev/null || :)
+				if [[ $head_rev == "$rev" ]]; then
+					echo "$ref $ts $*" >> "$cl/$name"
+					updated=y
+					break
+				fi
+			done
+	else
+		echo "$head_rev $ts $*" >> "$cl/$name"
+		updated=y
+	fi
+	if [ -v updated ]; then
+		for i in "${skip[@]}"; do
+			mv -n "$cl/$i" "$cl/$i-"
+		done
+	else
+		echo >&2 "! checklist is not updated"
+		exit 1
+	fi
+else
+	set +f
+	for i in "$cl/"*[^~]; do
+		ls -l "$i"
+	done
+fi
