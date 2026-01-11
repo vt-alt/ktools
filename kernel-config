@@ -35,7 +35,7 @@ else
 		elif [ "$i" = --file ]; then
 			show_file=only
 		else
-			echo >&2 "Unknwon package selector: $i"
+			echo >&2 "Unknown package selector: $i"
 			exit 2
 		fi
 	done

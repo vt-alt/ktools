@@ -41,7 +41,7 @@ for opt do
 		--closed) state=closed ;;
 		--query=*) user_query=$arg ;;
 		-v) setx='set -x' ;;
-		-*) fatal "Unknwon option: $opt" ;;
+		-*) fatal "Unknown option: $opt" ;;
 		*) set -- "$@" "$opt";;
 	esac
 done

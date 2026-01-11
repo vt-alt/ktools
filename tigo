@@ -10,7 +10,7 @@ done
 set -- "${args[@]}" "$ref" "$@"
 
 # By the luck `@.. origin/master` does the same as `@..origin/master`, thus we
-# can use `tigo @..`. This works becasue `@..` is A..B range and actually
-# exludes reachability from `@` (A), so it downs to `^@ origin/master`.
+# can use `tigo @..`. This works because `@..` is A..B range and actually
+# excludes reachability from `@` (A), so it downs to `^@ origin/master`.
 
 exec tig "$@"

@@ -121,7 +121,7 @@ if [ -v archive_date ]; then
 	elif [[ $archive_date =~ ([[:digit:]]{4})([[:digit:]]{2})?([[:digit:]]{2})? ]]; then
 		archive_date=${BASH_REMATCH[1]}/${BASH_REMATCH[2]:-01}/${BASH_REMATCH[3]:-01}
 	else
-		fatal "Unknwon date format $archive_date"
+		fatal "Unknown date format $archive_date"
 	fi
 fi
 
@@ -232,7 +232,7 @@ if [ -v kconfig ]; then
 		       rpmb+=" -bc"
 		       set_rpmargs+=" --define 'kconfig_hook exit'"
 	       else
-		       fatal "--kconfig support not avaiable in spec"
+		       fatal "--kconfig support not available in spec"
 	       fi
        else
 	       fatal "--kconfig is only useful for kernel-image"

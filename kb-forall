@@ -144,7 +144,7 @@ fi
 
 for commit; do
 	if ! git rev-parse "$commit" &>/dev/null; then
-		echo >&2 "Incomprehensible commitish '$commit'."
+		echo >&2 "Incomprehensible committish '$commit'."
 		exit 1
 	fi
 	git log --pretty=format:'%h %ad %s (%an)%d' --date=short --no-walk "$commit"
