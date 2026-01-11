@@ -1,0 +1,40 @@
+#!/bin/bash
+set -efu +o posix
+
+fatal() { echo >&2 "${0##*/}: $*"; exit 1; }
+target=builder
+rooter=
+delete=
+exclude=
+mountpoints=
+mode=git
+for o do
+	shift
+	case "$o" in
+		--init) hsh-install rsync ;;
+		--proc|--kvm) mountpoints='--mountpoints=/proc,/sys,/dev/pts,/dev/kvm' ;;
+		--net|--network) export share_network=1 ;;
+		--rooter) rooter=$o; target=${o#--} ;;
+		--delete*) delete=$o ;;
+		--exclude=*) exclude+=" $o" ;;
+		--git) mode=git ;;
+		--dir) mode=dir ;;
+		-*) fatal "Unknown option $o" ;;
+		*)  fatal "Unknown argument $o" ;;
+	esac
+done
+
+if [[ $mode == git ]]; then
+	dir=$(git rev-parse --show-toplevel)
+	cd "$dir"
+else
+	dir=$PWD
+fi
+[[ $dir -ef $HOME ]] && fatal "Cannot rsync whole homedir."
+
+bn=$(basename "${dir:?}")
+# shellcheck disable=SC2086
+( set -x
+  hsh-rsync -a $delete $exclude "$dir" "$target:."
+  hsh-shell $rooter $mountpoints
+  hsh-rsync -a $delete --exclude=.git $exclude "$target":"$bn/" "$dir" )
