@@ -20,7 +20,7 @@ branches='' arches='' packages=''
 all_arch='' lsopts='-ltrd' rpmpeek='' lesser='' logs='' dts=''
 pattern='' query='' show_pkg='' srpms='' bat='' invert_grep=''
 dts_proto=''
-SELECTOR="gum choose --height=$((LINES-5))"
+[ -v LINES ] && SELECTOR="gum choose --height=$((LINES-5))" || SELECTOR="tail -1"
 unset show_task aptcache spec logdiff offset sourcerpm resolve
 unset summary_task preview set_package list_only no_prefix
 sed_expressions=()
