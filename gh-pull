@@ -1,0 +1,14 @@
+#!/bin/bash
+set -efu +o posix
+
+PR=${1:?pull request id}
+if [[ $PR =~ (https://github.com/.*/.*)/(pull/[[:digit:]]+) ]]; then
+	url=${BASH_REMATCH[1]}
+	pr=${BASH_REMATCH[2]}
+	(set -x; git fetch "$url.git" "$pr/head")
+elif [[ $PR =~ ^[[:digit:]]+$ ]]; then
+	(set -x; git fetch origin "pull/$PR/head")
+else
+	echo >&2 "Unknown URL format"
+	exit 1
+fi
