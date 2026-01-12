@@ -22,7 +22,7 @@ pattern='' query='' show_pkg='' srpms='' bat='' invert_grep=''
 dts_proto=''
 SELECTOR="gum choose --height=$((LINES-5))"
 unset show_task aptcache spec logdiff offset sourcerpm resolve
-unset summary_task preview set_package list_only
+unset summary_task preview set_package list_only no_prefix
 sed_expressions=()
 for i; do
 	shift
@@ -73,6 +73,7 @@ for i; do
 		-L ) query=--lastchange ;;
 		--disttag) query='--qf=%{DISTTAG}' ;;
 		--ls=* | --list=*) query=-l; pattern=${i#*=} ;;
+		--no-prefix) no_prefix=y ;;
 		--whatdepends |	--depends | --showpkg | --showsrc | --show | --policy | --pkgnames)
 			aptcache=${i#--} ;;
 		-v) invert_grep=-v ;;
@@ -382,9 +383,10 @@ elif [ -n "$query" ]; then
 		else
 			prefix=$REPO@$prefix
 		fi
+		[ -v no_prefix ] && sed_prefix= || sed_prefix="s,^,$prefix: ,"
 		rpm -qp "$query" -- "$rpm" |
 		resolver_filter |
-		if ! sed "s,^,$prefix: ," | grep --color=auto "$pattern"; then
+		if ! sed "$sed_prefix" | grep --color=auto "$pattern"; then
 			echo "$prefix: no match"
 		fi
 	done
