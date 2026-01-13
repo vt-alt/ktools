@@ -8,6 +8,7 @@ delete=
 exclude=
 mountpoints=
 mode=git
+copy_only=
 for o do
 	shift
 	case "$o" in
@@ -19,6 +20,7 @@ for o do
 		--exclude=*) exclude+=" $o" ;;
 		--git) mode=git ;;
 		--dir) mode=dir ;;
+		--get|--put) copy_only=$o ;;
 		-*) fatal "Unknown option $o" ;;
 		*)  fatal "Unknown argument $o" ;;
 	esac
@@ -34,7 +36,11 @@ fi
 
 bn=$(basename "${dir:?}")
 # shellcheck disable=SC2086
-( set -x
-  hsh-rsync -a $delete $exclude "$dir" "$target:."
-  hsh-shell $rooter $mountpoints
-  hsh-rsync -a $delete --exclude=.git $exclude "$target":"$bn/" "$dir" )
+{
+	[[ $copy_only == --get ]] || (set -x; hsh-rsync -a $delete $exclude "$dir" "$target:.")
+	[[ -n $copy_only ]]       ||
+		( [ -v share_network ] && PS4="+ share_network=$share_network "
+		  set -x
+		  hsh-shell $rooter $mountpoints )
+	[[ $copy_only == --put ]] || (set -x; hsh-rsync -a $delete --exclude=.git $exclude "$target":"$bn/" "$dir")
+}
