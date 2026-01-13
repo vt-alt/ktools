@@ -31,7 +31,7 @@ for opt do
 		--rebuild) hsh_cmd=hsh-rebuild ;;
 		-b[abcEiMpstf] | --short-circuit) rpmb+=" $opt" ;;
 		--no-cache) no_cache=1 ;;
-		--ini|--init|--initroot) initroot=only ;;
+		--ini|--init|--initroot) initroot=$opt ;;
 		--no-ini*) noinitroot=ci ;;
 		--rpmi=*|--ci=*) pkgi+=(${arg//,/ }) ;;
 		--no-beep) NOBEEP=y ;;
@@ -191,6 +191,11 @@ unset build_state
 
 unset initonly
 if [ -n "${initroot-}" ]; then
+	if [[ $initroot == --init ]]; then
+		IFS+=, read -ra rpmi <<< "$(git config --get-all bb.rpmi | xargs)"
+		pkgi+=( "${rpmi[@]}" )
+		unset rpmi
+	fi
 	log_config
 	pkg_install
 	initonly=y
