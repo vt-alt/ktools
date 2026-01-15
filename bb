@@ -109,7 +109,9 @@ if [ ! -v targets ]; then
 	[ -v set_target ] && targets=("$set_target") || targets=("$HOSTTYPE")
 fi
 for set_target in "${targets[@]}"; do
-	[ ! -f "/ALT/${branch-sisyphus}/$set_target/base/release" ] && fatal "Unknown target=$set_target."
+	[ ! -f "/ALT/${branch-sisyphus}/$set_target/base/release" ] &&
+	[ ! -f "/ALT/ports/$set_target/Sisyphus/$set_target/base/release" ] &&
+		fatal "Unknown target=$set_target."
 done
 
 if [ -v archive_date ]; then

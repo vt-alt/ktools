@@ -47,6 +47,11 @@ if [ -n "${archive_date-}" ]; then
 		url="http://ftp.altlinux.org/pub/distributions/archive"
 	[ -n "${do_rsync-}" ] && url="rsync://ftp.altlinux.org/alt-repo"
 	url+="/$branch/date/$archive_date/"
+elif [[ $def_target == @(riscv64|loongarch64|armh|mipsel) ]]; then
+	url="/ALT/ports/$def_target/${branch^s}"
+	[ -d "$url" ] && url="file://$url" ||
+		url="https://ftp.altlinux.org/pub/distributions/ALTLinux/ports/$def_target/${branch^s}"
+	qemu_arch=$def_target
 else
 	url="file:/ALT/$branch"
 fi
