@@ -1,0 +1,79 @@
+#!/bin/bash
+# git-remote-ext command to git push to or fetch from hasher
+
+# export GIT_ALLOW_PROTOCOL=ext
+# git config set protocol.ext.allow user
+
+set -efu +o posix
+fatal() { echo >&2 "${0##*/}: $*"; exit 1; }
+
+# Determine work-tree inside of hasher. Runs only once when remote is set up to
+# not move if the repo is gear'ed.
+guess_work_tree() {
+	local cdup home=/usr/src
+	if ! cdup=$(git rev-parse --show-cdup 2>/dev/null); then
+		echo >&2 "${0##*/}: Work-tree guess only works in git repositories"
+		exit 1
+	fi
+	if [ -e "${cdup}.gear-rules" ] || [ -e "${cdup}.gear/rules" ]; then
+		# A package.
+		local name version release builddir
+		read -r name version release <<<"$(gear --describe --disable-specsubst 2>/dev/null)"
+		if [[ $name == kernel-image-* ]]; then
+			# Kernel package.
+			local kernel_src_version
+			kernel_src_version=$(grep -Po 'kernel_src_version\s+\K\S+' "${cdup}kernel-image.spec")
+			builddir="$name-$version-$release/kernel-source-$kernel_src_version"
+		else
+			# Another package.
+			builddir="$name-$version"
+		fi
+		echo "$home/RPM/BUILD/$builddir"
+	else
+		# Not a package.
+		echo "$home/$(basename "$(git rev-parse --show-toplevel)")"
+	fi
+}
+
+unset work_tree
+setup_remote() {
+	work_tree=${1-}
+	local action ext
+	# Enable ext protocol for this repo.
+	git config get protocol.ext.allow &>/dev/null || (set -x; git config set protocol.ext.allow user)
+	[ -n "$work_tree" ] || work_tree=$(guess_work_tree)
+	git remote get-url hasher &>/dev/null && action=set-url || action=add
+	ext=(ext::hsh-run "${hsh[@]}" -- %S "$work_tree")
+	(set -x; git remote "$action" hasher "${ext[*]}")
+}
+
+usage() {
+	echo >&2 "Run ${0##*/} --ini to set up 'hasher' remote."
+	echo >&2 "Optionally pass a path to the work-tree inside of hasher."
+	exit 0
+}
+
+hsh=()
+unset add ini
+for o do
+	shift
+	case "$o" in
+		--ini|--init) ini=y; add=y ;;
+		--add|--set|--set-url) add=only ;;
+		--rooter|--builder|--number=*|--*wait-lock|--workdir=*) hsh+=("$o") ;;
+		--help|-h) usage ;;
+		-*) fatal "Unknown option $o" ;;
+		*) set -- "$@" "$o" ;;
+	esac
+done
+
+[ $# -le 1 ] || fatal "Too much arguments instead of single work-tree path."
+[ -v add ] && setup_remote "$@"
+if [ -v ini ]; then
+	hsh-install git-core
+	# Remote repo is checked out, thus need to allow to update checked out branch.
+	# You'll need to `git reset --hard` on remote after a push.
+	hsh-run "${hsh[@]}" -- git -C "$work_tree" config get receive.denyCurrentBranch &>/dev/null ||
+		(set -x; hsh-run "${hsh[@]}" -- git -C "$work_tree" config set receive.denyCurrentBranch warn)
+fi
+exit 0
