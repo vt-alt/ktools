@@ -11,7 +11,6 @@ mode=git
 copy_only=
 unset mounts
 for o do
-	shift
 	case "$o" in
 		--init) hsh-install rsync ;;
 		--net|--network) export share_network=1 ;&
@@ -24,9 +23,11 @@ for o do
 		--git) mode=git ;;
 		--dir) mode=dir ;;
 		--get|--put) copy_only=$o ;;
+		--) break ;;
 		-*) fatal "Unknown option $o" ;;
 		*)  fatal "Unknown argument $o" ;;
 	esac
+	shift
 done
 
 if [[ -v mounts ]]; then
@@ -47,6 +48,6 @@ bn=$(basename "${dir:?}")
 	[[ -n $copy_only ]]       ||
 		( [ -v share_network ] && PS4="+ share_network=$share_network "
 		  set -x
-		  hsh-shell $rooter $mountpoints )
+		  hsh-shell $rooter $mountpoints "$@" )
 	[[ $copy_only == --put ]] || (set -x; hsh-rsync -a $delete --exclude=.git $exclude "$target":"$bn/" "$dir")
 }
