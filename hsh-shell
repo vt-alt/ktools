@@ -1,8 +1,26 @@
 #!/bin/bash
+set -efu +o posix
+
+unset rooter opts cmd
+setx=
+for o do
+	shift
+	case "$o" in
+		--) break ;;
+		-x|--verbose) setx='set -x' ;;
+		--rooter) rooter=y ;&
+		*) opts+=("$o") ;;
+	esac
+done
+
+# Swap opts and $@
+(( $# )) && cmd="$*"
+set -- "${opts[@]}"
+unset opts
 
 toplevel=$(git rev-parse --show-toplevel 2>/dev/null) && h="$toplevel/.git/bb" || h="$HOME/.cache/hsh-shell"
 mkdir -p "$h"
-if [[ $* == *--rooter* ]]; then
+if [[ -v rooter ]]; then
 	hist=/root/.bash_history
 	opt=(--rooter)
 	f=$h/.bash_history--rooter
@@ -33,11 +51,12 @@ workdir_sh="$workdir/chroot/.host/shell"
 	  cd ~/RPM/BUILD/*
 	  cd ~/RPM/BUILD/*-*
 	  cd kernel-source-*; } 2>/dev/null
-	exec -a -bash bash
+	$setx
+	exec -a -bash bash ${cmd+-c ${cmd@Q}}
 EOF
 
 TERM=${TERM#screen.}
-/usr/bin/hsh-shell "$@"
+($setx; /usr/bin/hsh-shell "$@")
 ret=$?
 
 [ -d "$h" ] || exit "$ret"
