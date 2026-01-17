@@ -38,6 +38,13 @@ else
 	fi
 fi
 
+unset exports
+if [[ -v share_network ]] && [[ -v ALL_PROXY ]]; then
+	exports+="ALL_PROXY=${ALL_PROXY@Q}"
+	[[ -v NO_PROXY ]] && exports+=" NO_PROXY=${NO_PROXY@Q}"
+fi
+[[ -v exports ]] && exports="export $exports"
+
 workdir="${TMPDIR-/tmp/.private/$USER}/hasher"
 [ -d "$workdir/chroot" ] || workdir="$HOME/hasher"
 workdir_sh="$workdir/chroot/.host/shell"
@@ -51,6 +58,7 @@ workdir_sh="$workdir/chroot/.host/shell"
 	  cd ~/RPM/BUILD/*
 	  cd ~/RPM/BUILD/*-*
 	  cd kernel-source-*; } 2>/dev/null
+	${exports-}
 	$setx
 	exec -a -bash bash ${cmd+-c ${cmd@Q}}
 EOF
