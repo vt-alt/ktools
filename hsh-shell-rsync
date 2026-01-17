@@ -9,12 +9,15 @@ exclude=
 mountpoints=
 mode=git
 copy_only=
+unset mounts
 for o do
 	shift
 	case "$o" in
 		--init) hsh-install rsync ;;
-		--proc|--kvm) mountpoints='--mountpoints=/proc,/sys,/dev/pts,/dev/kvm' ;;
-		--net|--network) export share_network=1 ;;
+		--net|--network) export share_network=1 ;&
+		--kvm)  mounts+=(/dev/kvm)   ;&
+		--proc) mounts+=(/proc /sys) ;&
+		--pty)  mounts+=(/dev/pts) ;;
 		--rooter) rooter=$o; target=${o#--} ;;
 		--delete*) delete=$o ;;
 		--exclude=*) exclude+=" $o" ;;
@@ -26,6 +29,9 @@ for o do
 	esac
 done
 
+if [[ -v mounts ]]; then
+	mountpoints="--mountpoints=$(IFS=,; echo "${mounts[*]}")"
+fi
 if [[ $mode == git ]]; then
 	dir=$(git rev-parse --show-toplevel)
 	cd "$dir"
