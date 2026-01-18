@@ -44,10 +44,10 @@ fi
 bn=$(basename "${dir:?}")
 # shellcheck disable=SC2086
 {
-	[[ $copy_only == --get ]] || (set -x; hsh-rsync -a $delete $exclude "$dir" "$target:.")
+	[[ $copy_only == --get ]] || (set -x; hsh-rsync -rlptDSH $delete $exclude "$dir" "$target:.")
 	[[ -n $copy_only ]]       ||
 		( [ -v share_network ] && PS4="+ share_network=$share_network "
 		  set -x
 		  hsh-shell $rooter $mountpoints "$@" )
-	[[ $copy_only == --put ]] || (set -x; hsh-rsync -a $delete --exclude=.git $exclude "$target":"$bn/" "$dir")
+	[[ $copy_only == --put ]] || (set -x; hsh-rsync -rlptDSH -i $delete --exclude=.git $exclude "$target":"$bn/" "$dir")
 }
