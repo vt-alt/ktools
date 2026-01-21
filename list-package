@@ -135,8 +135,14 @@ resolver_filter() {
 
 packages=${packages# }
 if [ -z "$packages" ]; then
-	NAME=$(git config --local --get gear.package) || gear_describe
-	packages=$NAME
+	if toplevel=$(git rev-parse --show-toplevel 2>/dev/null); then
+		if [ -e "$toplevel/.gear/rules" ] || [ -e "$toplevel/.gear-rules" ]; then
+			NAME=$(git config --local --get gear.package) || gear_describe
+		else
+			NAME=$(basename "$PWD")
+		fi
+		packages=$NAME
+	fi
 fi
 
 # List package in all branches.
