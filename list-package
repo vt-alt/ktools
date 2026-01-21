@@ -427,6 +427,8 @@ elif [ -v spec ]; then
 fi
 if [ -t 1 ]; then
 	HIGHLIGHT=$'sed -E s!/([Ss]isyphus)/!/\e[1;33m\\1\e[m/!'
+	[ -n "${VERSION-}" ] &&
+		HIGHLIGHT+=$';s!\\b'${VERSION//./\\.}-${RELEASE//./\\.}$'\\b!\e[1;36m&\e[m!'
 else
 	HIGHLIGHT='cat'
 fi
