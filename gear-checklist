@@ -34,7 +34,9 @@ for o do
 		--task=*)  mode=update; task=$arg ;;
 		--skip=*)  skip+=("$arg") ;;
 		--commit)  commit_head=y ;;
-		-*) fatal "Unknown option $o" ;;
+		--*) fatal "Unknown option $o" ;;
+		+*)        mode=update; set -- "$@" "${o#+}" ;;
+		*-)        mode=update; skip+=("${o%-}") ;;
 		*)  set -- "$@" "$o" ;;
 	esac
 done
@@ -69,14 +71,23 @@ if [[ $mode == check ]]; then
 	done
 	exit $ret
 elif [[ $mode == update ]]; then
-	name=${1:?checklist item name}; shift
 	shopt -s lastpipe
-	unset updated
-	ts=$(date --iso-8601=minutes)
-	# Updated item is unskipped.
-	[[ -e $cl/$name- ]] && mv -n "$cl/$name-" "$cl/$name"
-	if [ -v task ]; then
-		curl -Y0 -LSsf "https://git.altlinux.org/tasks/$task/info.json" |
+	unset updated name
+	if (( $# )); then
+		name=$1
+		shift
+		ts=$(date --iso-8601=minutes)
+		if [[ $name == *- ]]; then
+			# Only skip, do nothing else.
+			[[ -e $cl/${name%-} ]] && mv -n "$cl/${name%-}" "$cl/$name"
+			unset name
+			updated=y
+		else
+			# Return from skipped status.
+			[[ -e $cl/$name- ]] && mv -n "$cl/$name-" "$cl/$name"
+		fi
+		if [ -v task ]; then
+			curl -Y0 -LSsf "https://git.altlinux.org/tasks/$task/info.json" |
 			grep -P -o '"tag_id": "\K[0-9a-z]+' |
 			while read -r ref; do
 				rev=$(git rev-parse "$ref^{commit}" 2>/dev/null || :)
@@ -86,13 +97,16 @@ elif [[ $mode == update ]]; then
 					break
 				fi
 			done
-	else
-		echo "$head_rev $ts $*" >> "$cl/$name"
+		elif [ -v name ]; then
+			echo "$head_rev $ts $*" >> "$cl/$name"
+			updated=y
+		fi
+	elif [ -v skip ]; then
 		updated=y
 	fi
 	if [ -v updated ]; then
 		for i in "${skip[@]}"; do
-			mv -n "$cl/$i" "$cl/$i-"
+			[ -e "$cl/$i" ] && mv -n "$cl/$i" "$cl/$i-"
 		done
 	else
 		echo >&2 "! checklist is not updated"
