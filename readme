@@ -12,6 +12,7 @@ for opt do
 		--adoc) patterns=('**.adoc') ;;
 		--md) patterns=('**.md') ;;
 		--readme) patterns=(':(icase)**readme*') ;;
+		--readme0) patterns=(':(icase)readme*') ;;
 		--news) patterns=(':(icase)**news') ;;
 		--txt) patterns=('**.txt') ;;
 		--stat|--oneline|-p|--no-merges) opts+=("$opt") ;;
