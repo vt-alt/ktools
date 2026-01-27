@@ -12,6 +12,9 @@ bin_list=/ALT/$repo/files/list/bin.list
 pkg_list=/ALT/acl/list.packages.$repo
 group_list=/ALT/acl/list.groups.$repo
 (( $# )) || set -- "$(basename "$PWD")"
+t=$(mktemp) && trap 'rm -- "$t"' 0
+readonly t
+
 for m; do
 	if [[ "$m" == @* ]]; then
 		grep --color=auto -e "^$m" "$group_list"
@@ -23,6 +26,8 @@ for m; do
 		grep -P -e "$m" |
 		cut -f2 |
 		sed 's/.*/^&\t/' |
-		grep -f- "$pkg_list" |
-		grep --color=auto -e "$m" -e ''
+		grep -f- "$pkg_list" > "$t"
+	{ grep  -Pe "$m\\t" "$t"
+	  grep -vPe "$m\\t" "$t"
+	} | column -t -s $'\t' | grep --color=auto -e "$m" -e ''
 done
