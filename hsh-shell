@@ -34,7 +34,7 @@ else
 	f=$h/.bash_history
 	if [ -s "$f" ]; then
 		hsh-run -- /usr/bin/test -e "$hist" </dev/null ||
-			hsh-copy "$f" </dev/null
+			hsh-copy -q "$f" ~/.gitconfig ~/.vimrc ~/.bashrc ~/.fsearch . </dev/null
 	fi
 fi
 
