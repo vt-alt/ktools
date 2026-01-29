@@ -27,7 +27,7 @@ for m; do
 		cut -f2 |
 		sed 's/.*/^&\t/' |
 		grep -f- "$pkg_list" > "$t"
-	{ grep  -Pe "$m\\t" "$t"
-	  grep -vPe "$m\\t" "$t"
+	{ grep  -Pe "^\Q$m\E\\t" "$t"
+	  grep -vPe "^\Q$m\E\\t" "$t"
 	} | column -t -s $'\t' | grep --color=auto -e "$m" -e ''
 done
