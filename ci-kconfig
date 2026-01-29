@@ -3,6 +3,7 @@ set -efu +o posix
 
 fatal() { echo >&2 "${0##*/}: error: $*"; exit 1; }
 
+if [ -t 1 ]; then
   BRIGHT=$'\e[1m'
      RED=$'\e[31m'
    GREEN=$'\e[32m'
@@ -12,6 +13,17 @@ fatal() { echo >&2 "${0##*/}: error: $*"; exit 1; }
     CYAN=$'\e[36m'
    WHITE=$'\e[37m'
     NORM=$'\e[m'
+else
+  BRIGHT=
+     RED=
+   GREEN=
+  YELLOW=
+    BLUE=
+ MAGENTA=
+    CYAN=
+   WHITE=
+    NORM=
+fi
 export BRIGHT RED GREEN YELLOW BLUE MAGENTA CYAN WHITE NORM
 
 br=$(git br --show-current)
