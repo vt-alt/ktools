@@ -1,0 +1,32 @@
+#!/bin/bash -efu
+
+cd ~/src/kernel-image
+shopt -s lastpipe
+
+describe() {
+	local opt=${1#[+-]}
+	(( $# > 1 )) && shift
+	opt=${opt#CONFIG_}
+	git grep -h -A2 -Ee "^[[:space:]]*(menu)?config $opt\$" -- '**/Kconfig*' |
+	while read -r a b; do
+		[[ $a == *config ]] && continue
+		[[ $a == "default" ]] && continue
+		printf "%s\t%s %s\n" "$*" "$a" "$b"
+		return 0
+	done
+	printf "%s\n" "$*"
+}
+
+for i in "$@"; do
+	if [[ $i == - ]]; then
+		while IFS= read -r a; do
+			if [[ $a =~ [A-Z0-9_]+ ]]; then
+				describe "$BASH_REMATCH" "$a"
+			else
+				printf "%s\n" "$a"
+			fi
+		done | column -t -s $'\t' -l 2
+	else
+		describe "$@"
+	fi
+done
