@@ -54,8 +54,8 @@ echo >&2 "Compare with $rpm_a ($size_a bytes, $date_a)"
 
 if [ ! -v skip_bb ]; then
 	# shellcheck disable=SC2086
-	gum spin --title="Building .config ($repo/$arch)..." -- bb --repo="$repo" --arch="$arch" $bb_opts --kconfig --no-log
-	echo "Built .config for $repo/$arch"
+	gum spin --title="Building .config ($repo/$arch)..." -- bb --repo="$repo" --arch="$arch" $bb_opts --kconfig --no-log >/dev/null
+	echo >&2 "Built .config for $repo/$arch"
 fi
 bn_b=".config"
 f_b="$tmp/$bn_b"
