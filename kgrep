@@ -9,7 +9,7 @@ unset CDPATH
 [ -t 1 ] && color=--color=always || color=
 _color=$color
 
-unset update describe log all alt
+unset update describe log all alt search_refs
 _grep=grep
 _setx=:
 grep_opt=
@@ -31,6 +31,7 @@ for opt do
 		--match=*) match=${opt#*=} ;;
 		--commit) grep_opt+=" -n"; show_commit=y ;;
 		--line-number | -n) grep_opt+=" $opt" ;;
+		--search-refs=*) search_refs=${opt#*=} ;;
 		-*) echo >&2 "unknown option: $opt"; exit 1 ;;
                 *) set -- "$@" "$opt";;
         esac
@@ -81,6 +82,11 @@ do_kgrep() {
 		if [ -v describe ]; then
 			[ -e .git/kgrep-skip-describe ] && continue
 			[ -d .git ] && printf '%s\t%s\n' "$HOME/linux/$root${remote:+ : $remote}" "$(git describe --always --dirty --tags 2>&1 || :)"
+			continue
+		fi
+		if [ -v search_refs ]; then
+			echo -e "\e[1;33m$HOME/linux/$root${remote:+ : $remote}\e[m"
+			{ git br -r; git t; } | grep --color=auto $search_refs || :
 			continue
 		fi
 		if [ -v log ]; then
