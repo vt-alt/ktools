@@ -1,0 +1,24 @@
+#!/bin/bash
+set -efu +o posix
+
+if [[ ${1-} == --ini* ]]; then
+	TOPLEVEL=$(git rev-parse --show-toplevel)
+	ln -vrsf "$0" -t "$TOPLEVEL/.git/hooks"
+	exit
+fi
+
+COMMIT_MSG_FILE=$1
+FILES=$(git diff --cached --name-only)
+DIRS=$(for i in $FILES; do dirname "$i"; done | LC_ALL=C sort -u)
+unset PREFIX
+
+if (( $(wc -l <<<"$FILES") == 1 )); then
+	[[ $FILES == *.spec ]] && PREFIX=spec || PREFIX=$FILES
+elif (( $(wc -l <<<"$DIRS") == 1 )); then
+	PREFIX=$DIRS
+fi
+if [ -v PREFIX ]; then
+	read -r FIRST_LINE < "$COMMIT_MSG_FILE"
+	[ -n "$FIRST_LINE" ] || sed -i "1s!^!$PREFIX: !" "$COMMIT_MSG_FILE"
+fi
+exit 0
