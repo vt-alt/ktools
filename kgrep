@@ -9,7 +9,7 @@ unset CDPATH
 [ -t 1 ] && color=--color=always || color=
 _color=$color
 
-unset update log all alt
+unset update describe log all alt
 _grep=grep
 _setx=:
 grep_opt=
@@ -20,6 +20,7 @@ for opt do
         shift
         case "$opt" in
 		--update) update=y ;;
+		--describe) describe=y ;;
 		--log) log=y ;;
 		--blame) _grep=blame-grep; _color= ;;
 		-[[:digit:]]) grep_opt+=" $opt" ;;
@@ -66,7 +67,7 @@ do_kgrep() {
 				if [ "$br" = '' ]; then
 					(set -x; git pull --rebase ||:)
 				elif [ -n "$remote" ]; then
-					(set -x; git fetch "$remote" ||:)
+					(set -x; git fetch --tags "$remote" ||:)
 				else
 					echo -e >&2 "\e[1;31m- $PWD unknown how to update branch $branch\e[m"
 					continue
@@ -75,6 +76,11 @@ do_kgrep() {
 			else
 				echo -e >&2 "\e[1;35m- $PWD is not a git repository.\e[m"
 			fi
+			continue
+		fi
+		if [ -v describe ]; then
+			[ -e .git/kgrep-skip-describe ] && continue
+			[ -d .git ] && printf '%s\t%s\n' "$HOME/linux/$root${remote:+ : $remote}" "$(git describe --always --dirty --tags 2>&1 || :)"
 			continue
 		fi
 		if [ -v log ]; then
