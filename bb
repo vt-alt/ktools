@@ -33,10 +33,10 @@ for opt do
 		--no-cache) no_cache=1 ;;
 		--ini|--init|--initroot) initroot=$opt ;;
 		--no-ini*) noinitroot=ci ;;
-		--rpmi=*|--ci=*) pkgi+=(${arg//,/ }) ;;
 		--no-beep) NOBEEP=y ;;
 		--ci) ci=checkinstall ;;
-		--ci-all) ci=all ;;
+		--ci=all) ci=all ;;
+		--rpmi=*|--ci=*) pkgi+=(${arg//,/ }) ;;
 		--ci-command=*) ci_command="${opt#*=}" ;;
 		--ci-script=*) ci_script=$arg ;;
 		--repo-clean) hsh_clean=y ;;
