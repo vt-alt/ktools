@@ -23,7 +23,8 @@ cl=.git/checklists
 mkdir -p "$cl"
 
 mode=check
-unset task hasher skip commit_head
+commit_head=@
+unset task hasher skip
 for o do
 	shift
 	arg=${o#*=}
@@ -33,7 +34,8 @@ for o do
 		--update)  mode=update ;;
 		--task=*)  mode=update; task=$arg ;;
 		--skip=*)  skip+=("$arg") ;;
-		--commit)  commit_head=y ;;
+		--commit)   unset commit_head ;;
+		--commit=*) commit_head=$arg ;;
 		--*) fatal "Unknown option $o" ;;
 		+*)        mode=update; set -- "$@" "${o#+}" ;;
 		*-)        mode=update; skip+=("${o%-}") ;;
@@ -41,7 +43,11 @@ for o do
 	esac
 done
 
-head_rev=$([[ -v commit_head ]] && git stash create || git rev-parse @)
+if [[ -v commit_head ]]; then
+	head_rev=$(git rev-parse "$commit_head")
+else
+	head_rev=$(git stash create)
+fi
 # prev_release=$(git describe --tags --match '*-alt*' --abbrev=0 @~)
 
 check_ref() {
