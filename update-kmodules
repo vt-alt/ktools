@@ -26,8 +26,13 @@ def rpm_hdr(rpm_file):
 def changelog_hdr(task, subtask):
     url = f"https://git.altlinux.org/tasks/{task}/build/{subtask}/changelog"
     res = requests.get(url)
-    evr = re.match(r".* (\S+-\S+)$", res.text, re.MULTILINE).group(1)
-    m = re.match(r"(?:(\d+):)?([^-]+)-([^-]+)", evr)
+    if res.status_code == 200:
+        evr = re.match(r".* (\S+-\S+)$", res.text, re.MULTILINE).group(1)
+    else:
+        url = f"https://git.altlinux.org/tasks/{task}/gears/{subtask}/nevr"
+        res = requests.get(url)
+        evr = re.match(r".*\s(\S+)", res.text).group(1)
+    m = re.match(r"(?:(\d+):)?([^\-]+)-([^\-]+)", evr)
     epoch, ver, rel = m.group(1, 2, 3)
     hdr = rpm.hdr()
     if epoch:
@@ -110,6 +115,7 @@ def update_task(task):
         srpm = srpm[0]
         tv = changelog_hdr(task, ti)
         pv = rpm_hdr(f"{dir}/{srpm}")
+        tv[rpm.RPMTAG_BUILDTIME] = pv[rpm.RPMTAG_BUILDTIME]
         if rpm.versionCompare(tv, pv) != -1:
             continue
         tv_ver = tv[rpm.RPMTAG_EVR].decode("utf-8")
