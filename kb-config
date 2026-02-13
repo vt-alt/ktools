@@ -12,7 +12,7 @@ list_branches() {
 }
 
 pathspec=( "config*" )
-unset show_unmatched show_tag
+unset show_unmatched show_tag print_matches re
 for o do
 	shift
 	case "$o" in
@@ -28,6 +28,10 @@ for o do
 			;;
 		--show-no-match) show_unmatched=y ;;
 		--tag) show_tag=y ;;
+		--print)   print_matches=y ;;
+		--print=*) print_matches=y; re=${o*=} ;;
+		--grep=*)  re=${o#*=} ;;&
+		-[SG]*)    re=${o#-?} ;;&
 		*) set -- "$@" "$o"
 	esac
 done
@@ -47,10 +51,18 @@ while read -r br; do
 		printf -v tag '%-20s' "[$tag]"
 		prefix+="$tag "
 	fi
-	if git log --oneline --format='%h %cd - %s (%an)' --date=short "$@" "$br" -- "${pathspec[@]}" | grep .; then
-		:
-	elif [ -v show_unmatched ]; then
-		echo "No match"
-	fi | sed "s!^!$prefix!"
+	shopt -s lastpipe
+	unset matched
+	git log --oneline --format='%h %cd - %s (%an)' --date=short "$@" "$br" -- "${pathspec[@]}" |
+	while read -r h a; do
+		matched=y
+		printf -- '%s %s %s\n' "$prefix" "$h" "$a"
+		[[ -v print_matches ]] &&
+			git show -p "$h" | grep -H --label="  $prefix" --color -Pe "$re" || :
+	done
+	if [[ -v show_unmatched && ! -v matched ]]; then
+		ts=$(git show -s --date=short --format=%cd "$br")
+		printf '%s No match (%s)\n' "$prefix" "$ts"
+	fi
 done < <(list_branches)
 
