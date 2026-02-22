@@ -93,16 +93,32 @@ elif [[ $mode == update ]]; then
 			[[ -e $cl/$name- ]] && mv -n "$cl/$name-" "$cl/$name"
 		fi
 		if [ -v task ]; then
+			declare -i count=0
+			unset remote_rev
 			curl -Y0 -LSsf "https://git.altlinux.org/tasks/$task/info.json" |
 			grep -P -o '"tag_id": "\K[0-9a-z]+' |
 			while read -r ref; do
+				count+=1
 				rev=$(git rev-parse "$ref^{commit}" 2>/dev/null || :)
 				if [[ $head_rev == "$rev" ]]; then
 					echo "$ref $ts $*" >> "$cl/$name"
 					updated=y
 					break
+				elif [[ -n $rev ]]; then
+					remote_rev=$rev
 				fi
 			done
+			if [[ ! -v updated ]]; then
+				echo "The ref[$count] from task $task is not HEAD in this repo."
+				current_head=$(git rev-parse @)
+				print_head=$head_rev
+				[[ $head_rev == "$current_head" ]] && print_head=
+				# shellcheck disable=SC2086
+				[ -v remote_rev ] &&
+				(set -x; git diff --stat "$remote_rev" $print_head)
+				unset print_head
+			fi
+			unset count remote_rev
 		elif [ -v name ]; then
 			echo "$head_rev $ts $*" >> "$cl/$name"
 			updated=y
@@ -115,7 +131,7 @@ elif [[ $mode == update ]]; then
 			[ -e "$cl/$i" ] && mv -n "$cl/$i" "$cl/$i-"
 		done
 	else
-		echo >&2 "! checklist is not updated"
+		echo >&2 "$BRIGHT$RED! checklist is not updated$NORM"
 		exit 1
 	fi
 else
