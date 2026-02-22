@@ -130,6 +130,7 @@ elif [[ $mode == update ]]; then
 		for i in "${skip[@]}"; do
 			[ -e "$cl/$i" ] && mv -n "$cl/$i" "$cl/$i-"
 		done
+		true
 	else
 		echo >&2 "$BRIGHT$RED! checklist is not updated$NORM"
 		exit 1
