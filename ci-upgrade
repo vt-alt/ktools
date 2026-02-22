@@ -15,6 +15,7 @@ fatal() { echo >&2 "${0##*/}: error: $*"; exit 1; }
 export BRIGHT RED GREEN YELLOW BLUE MAGENTA CYAN WHITE NORM
 
 unset task docker_opts keep from_hsh
+unset pre_ins pre_add post_ins post_add
 for opt do
         shift
 	arg=${opt#*=}
@@ -24,6 +25,10 @@ for opt do
 		--hsh | --local) from_hsh=y ;;
 		--no-cache) docker_opts+=" $opt" ;;
 		--no-cache=*) docker_opts+=" --no-cache-filter=$arg" ;;
+		--pre-install=*)      pre_ins=$arg ;;
+		--pre-install-add=*)  pre_add=$arg ;;
+		--post-install=*)     post_ins=$arg ;;
+		--post-install-add=*) post_add=$arg ;;
 		--keep) keep= ;;
 		-*) fatal "unknown option: $opt" ;;
                 *) fatal "unknown argument: $opt" ;;
@@ -32,13 +37,26 @@ done
 
 pkgnames() { cut -f1 | sort -u | grep -Eve '-(debuginfo|checkinstall)' | xargs -r; }
 
-update_pre_install() {
-	local pre_ins pre_add
+update_install_lists() {
+	local git_pre_ins git_pre_add git_post_ins git_post_add
 	# Git config ci.pre-install overrides, ci.pre-install-add adds.
-	pre_ins=$(git config --local --get ci.pre-install) &&
-		pre_install=$pre_ins
-	pre_add=$(git config --local --get ci.pre-install-add) &&
+	git_pre_ins=$(git config --local --get ci.pre-install) &&
+		pre_install=$git_pre_ins
+	git_pre_add=$(git config --local --get ci.pre-install-add) &&
+		pre_install+=" $git_pre_add"
+	[ -v pre_ins ] &&
+		pre_install="$pre_ins"
+	[ -v pre_add ] &&
 		pre_install+=" $pre_add"
+	# Installs.
+	git_post_ins=$(git config --local --get ci.post-install) &&
+		install=" $git_post_ins"
+	git_post_add=$(git config --local --get ci.post-install-add) &&
+		install+=" $git_post_add"
+	[ -v post_ins ] &&
+		install="$post_ins"
+	[ -v post_add ] &&
+		install+=" $post_add"
 	return 0
 }
 
@@ -50,8 +68,8 @@ if [ -v from_hsh ]; then
 	eval "$(hsh --printenv)"
 	repo=$(grep -m1 -Po 'branch=\K\S*(?= target=)' log)
 	pre_install=$(sed -En 's!^\S+ Wrote:\s/usr/src/RPM/RPMS/[[:graph:]/]+/(\S+)-[^-]+-alt\S+\.rpm\s.*!\1!p' log | pkgnames)
-	update_pre_install
 	install=$(sed -En 's!^\S+ Wrote:\s/usr/src/RPM/RPMS/[[:graph:]/]+/(\S+-[^-]+-alt\S+\.rpm)\s.*!/repo/\1!p' log | pkgnames)
+	update_install_lists
 	name="hsh.${pre_install%% *}"
 	echo >&2 "+ docker run --name=$name ..."
 	# shellcheck disable=SC2086,SC2154
@@ -72,7 +90,7 @@ if [ -v from_hsh ]; then
 elif [ -v task ]; then
 	repo=$(curl -sSfL "https://git.altlinux.org/tasks/$task/task/repo")
 	pre_install=$(curl -sSfL "https://git.altlinux.org/tasks/$task/plan/rm-bin" | pkgnames)
-	update_pre_install
+	update_install_lists
 	install=$(curl -sSfL "https://git.altlinux.org/tasks/$task/plan/add-bin" | pkgnames)
 	# Version to automatically invalidate Docker cache, apt-repo ignores that argument.
 	version=$(curl -sSfL "https://git.altlinux.org/tasks/$task/task/version")
