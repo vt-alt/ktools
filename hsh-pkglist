@@ -7,12 +7,14 @@ allow_checkinstall=
 invert_match=0
 allow_all=
 show_srpm=
+gear_describe=--disable-specsubst
 unset tag target repo today task mount umount
 unset with_filenames ls_opts
 for o do
 	shift
 	case "$o" in
 		-a|--all)       allow_all=y ;;
+		--commit)       gear_describe=$o ;;
 		--src)          show_srpm=y ;;
 		--debuginfo)    allow_debuginfo=y ;;
 		--checkinstall) allow_checkinstall=y ;;
@@ -37,8 +39,10 @@ done
 eval "$(hsh --printenv | grep -e '^def_repo=' -e '^workdir=' -e '^def_target=')"
 [ -v target ] || target=${def_target-}
 
-read -r name version release <<<"$(gear --describe --disable-specsubst)"
+read -r name version release <<<"$(gear --describe "$gear_describe")"
 srcrpm="$name-$version-$release.src.rpm"
+[[ $srcrpm =~ @.*@ ]] &&
+	echo >&2 "Unparsed specsubst in $srcrpm, try --commit"
 
 fuse_root=~/mnt/tasks
 if [ -v umount ]; then
