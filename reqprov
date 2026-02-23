@@ -5,6 +5,7 @@ shopt -s extglob
 
 DIFF=colordiff
 REPO=sisyphus
+unset SED_NAME
 for opt do
         shift
         case "$opt" in
@@ -18,6 +19,7 @@ for opt do
 		--strip=*) STRIP=${opt#*=} ;;
 		--diff=*) DIFF=${opt#*=} ;;
 		--repo=*) REPO=${opt#*=} ;;
+		--sed-name=*) SED_NAME=${opt#*=} ;;
 		-R) SEDVER=---; SEDDT=y; set -- -R ;;
 		--) break ;;
                 *) set -- "$@" "$opt";;
@@ -40,7 +42,7 @@ else
 	SRPM="$NAME-$VERSION-$RELEASE"
 fi
 
-list=( $(hsh-pkglist --all) )
+list=( $(hsh-pkglist --all --commit) )
 
 if [ ${#list[@]} -eq 0 ]; then
 	echo >&2 "No matching $SRPM RPMs are found in $PWD, try setting --evr= or build locally."
@@ -95,6 +97,7 @@ for f in "${list[@]}"; do
 	sed_things "$f" "$tmp/$i~"
 	touch -r "$f" $tmp/$i~
 
+	[ -v SED_NAME ] && name=$(echo "$name" | sed -e "$SED_NAME")
 	r=$(set +f; ls /ALT/$REPO/files/*/RPMS/$name-+([^-])-+([^-])$rpmarch 2>/dev/null ||:)
 	if [ -e "$r" ]; then
 		rr=$(basename $r)
