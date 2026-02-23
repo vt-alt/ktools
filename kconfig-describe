@@ -25,7 +25,7 @@ for i in "$@"; do
 			else
 				printf "%s\n" "$a"
 			fi
-		done | column -t -s $'\t' -l 2
+		done | column -t -s $'\t' -l2 -E1
 	else
 		describe "$@"
 	fi
