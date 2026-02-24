@@ -60,6 +60,7 @@ for opt do
 		--kernel-latest=*) set_rpmargs+=" --define 'kernel_latest $arg'" ;;
 		--kflavour=*) kflavour=${opt#*=} ;;
 		--tree-ish=* | --tag=* | -t=*) commit=("-t" "${opt#*=}") ;;
+		--commit) commit=("$opt"); echo >&2 "$opt is default" ;;
 		--no-ts) ts= ;;
 		--ts=*) ts=${opt#*=} ;;
 		--no-log) no_log=y ;;
