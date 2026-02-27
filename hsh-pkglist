@@ -9,11 +9,12 @@ allow_all=
 show_srpm=
 gear_describe=--disable-specsubst
 unset tag target repo today task mount umount
-unset with_filenames ls_opts
+unset with_filenames ls_opts name_glob
 for o do
 	shift
 	case "$o" in
 		-a|--all)       allow_all=y ;;
+		-n)             name_glob=y ;;
 		--commit)       gear_describe=$o ;;
 		--src)          show_srpm=y ;;
 		--debuginfo)    allow_debuginfo=y ;;
@@ -123,7 +124,13 @@ for i in "${list[@]}"; do
 	if (( $# )); then
 		match=$invert_match
 		for m in "$@"; do
-			[[ $i =~ $m ]] && match=$((match ^ 1))
+			if [ -v name_glob ]; then
+				name=$(rpm -qp "$i" --qf '%{NAME}')
+				# shellcheck disable=SC2053
+				[[ $name == $m ]] && match=$((match ^ 1))
+			else
+				[[ $i =~ $m ]] && match=$((match ^ 1))
+			fi
 		done
 		(( match )) || continue
 	fi
