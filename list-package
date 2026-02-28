@@ -416,7 +416,7 @@ elif [ -n "$dts" ]; then
 	select_one --no-dts
 	grab_dts
 	printf '%s\n' "- $DTS_FILE" >&2
-	printf '%s\n' "$DTS_LIST" |& less
+	printf '%s\n' "$DTS_LIST" |& less +G
 	exit
 elif [ -v spec ]; then
 	select_one
