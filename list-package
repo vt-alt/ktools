@@ -137,7 +137,8 @@ packages=${packages# }
 if [ -z "$packages" ]; then
 	if toplevel=$(git rev-parse --show-toplevel 2>/dev/null); then
 		if [ -e "$toplevel/.gear/rules" ] || [ -e "$toplevel/.gear-rules" ]; then
-			NAME=$(git config --local --get gear.package) || gear_describe
+			gear_describe
+			_NAME=$(git config --local --get gear.package) && NAME=$_NAME
 		else
 			NAME=$(basename "$PWD")
 		fi
