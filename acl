@@ -11,7 +11,13 @@ done
 bin_list=/ALT/$repo/files/list/bin.list
 pkg_list=/ALT/acl/list.packages.$repo
 group_list=/ALT/acl/list.groups.$repo
-(( $# )) || set -- "$(basename "$PWD")"
+if (( !$# )); then
+	if [[ . -ef ~ ]]; then
+		grep --color -P "\t.*\K\b$USER\b" "$pkg_list" "$group_list"
+		exit
+	fi
+	set -- "$(basename "$PWD")"
+fi
 t=$(mktemp) && trap 'rm -- "$t"' 0
 readonly t
 
