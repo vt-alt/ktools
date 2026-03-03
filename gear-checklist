@@ -61,6 +61,8 @@ check_ref() {
 		echo -e "\t$bright${BLUE}SKIP${NORM}\t$item\t$desc"
 	else
 		echo -e "\t$bright${RED}NO${NORM}\t$item\t$desc"
+		n=$(git diff --stat "$ref" "$head_rev" | wc -l)
+		((n<5)) && git diff --stat "$ref" "$head_rev"
 		return 1
 	fi
 }
