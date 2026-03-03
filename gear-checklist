@@ -84,6 +84,7 @@ elif [[ $mode == update ]]; then
 	if (( $# )); then
 		name=$1
 		shift
+		[[ -n "$*" ]] || set -- "$(xargs -0 < "/proc/$PPID/cmdline")"
 		ts=$(date --iso-8601=minutes)
 		if [[ $name == *- ]]; then
 			# Only skip, do nothing else.
