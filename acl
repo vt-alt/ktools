@@ -10,10 +10,10 @@ for o do
 done
 bin_list=/ALT/$repo/files/list/bin.list
 pkg_list=/ALT/acl/list.packages.$repo
-group_list=/ALT/acl/list.groups.$repo
+group_list=/ALT/acl/list.groups
 if (( !$# )); then
 	if [[ . -ef ~ ]]; then
-		grep --color -P "\t.*\K\b$USER\b" "$pkg_list" "$group_list"
+		grep --color -P "\t.*\K\b$USER\b" "$pkg_list" "$group_list.$repo"
 		exit
 	fi
 	set -- "$(basename "$PWD")"
@@ -23,7 +23,7 @@ readonly t
 
 for m; do
 	if [[ "$m" == @* ]]; then
-		grep --color=auto -e "^$m" "$group_list"
+		grep --color=auto -e "^$m" "$group_list".*
 		continue
 	fi
 	cut -f1,5 "$bin_list" |
