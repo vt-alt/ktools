@@ -1,6 +1,15 @@
 #!/bin/bash
 set -efu +o posix
 
+unset pick
+for o do
+        shift
+        case "$o" in
+		--cherry-pick|--pick) pick=y ;;
+		*) set -- "$@" "$o"
+	esac
+done
+
 PR=${1:?pull request id}
 if [[ $PR =~ (https://github.com/.*/.*)/(pull/[[:digit:]]+) ]]; then
 	url=${BASH_REMATCH[1]}
@@ -11,4 +20,9 @@ elif [[ $PR =~ ^[[:digit:]]+$ ]]; then
 else
 	echo >&2 "Unknown URL format"
 	exit 1
+fi
+if [ -v pick ]; then
+	git l ..FETCH_HEAD
+	gum confirm 'Pick?'
+	(set -x; git cherry-pick -s ..FETCH_HEAD)
 fi
