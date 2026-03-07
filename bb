@@ -50,6 +50,7 @@ for opt do
 		--nprocs=*) NPROCS=${opt#*=} ;;
 		-j[0-9]*) NPROCS=${opt#-j} ;;
 		--kconfig) kconfig=y ;;
+		-x) set_rpmargs+=" --define '___build_args -ex'" ;;
 		--define=*) set_rpmargs+=" --define '$arg'" ;;
 		--disable-lto | --no-lto) set_rpmargs+=" --define 'optflags_lto %nil'" ;;
 		--lto) opt='-flto=auto' ;;&
