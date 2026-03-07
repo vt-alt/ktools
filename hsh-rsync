@@ -8,6 +8,10 @@
 
 set -efu +o posix
 
+have_rsync=$(hsh-run -- bash -c 'type -p rsync ||:')
+if [ -z "$have_rsync" ]; then
+	(set -x; hsh-install rsync)
+fi
 cwd="/usr/src"
 if cdup=$(git rev-parse --show-cdup 2>/dev/null); then
 	if [ -e "${cdup}.gear-rules" ] || [ -e "${cdup}.gear/rules" ]; then
