@@ -1,0 +1,4 @@
+#!/bin/bash
+cmd="ssh girar task ls --user=all $*"
+[ -t 1 ] && cmd="gum spin --show-stdout -- $cmd"
+$cmd | awk '{print$2}' | sort | uniq -c
