@@ -1,4 +1,48 @@
 #!/bin/bash
-cmd="ssh girar task ls --user=all $*"
-[ -t 1 ] && cmd="gum spin --show-stdout -- $cmd"
-$cmd | awk '{print$2}' | sort | uniq -c
+
+if [ -t 1 ]; then
+  BRIGHT=$'\e[1m' RED=$'\e[31m' GREEN=$'\e[32m' YELLOW=$'\e[33m'
+  BLUE=$'\e[34m' MAGENTA=$'\e[35m' CYAN=$'\e[36m' WHITE=$'\e[37m'
+  NORM=$'\e[m'
+else
+  BRIGHT='' RED='' GREEN='' YELLOW=''
+  BLUE='' MAGENTA='' CYAN='' WHITE='' NORM=''
+fi
+export BRIGHT RED GREEN YELLOW BLUE MAGENTA CYAN WHITE NORM
+
+needs=
+repo=
+state=
+user='--user=all'
+for o do
+	shift
+	case "$o" in
+		-l|--list)	state=' ' ;;
+		-b|--build*)	state='--state=building,committing,failing' ;;
+		maint|tester)	needs="--needs-approval=$o" ;;
+		[[:digit:]]*|[cpt][[:digit:]]*|icarus|sisyphus)
+				repo="--repo=$o" ;;
+		awaiting|building|committing|done|eperm|failing|failed|new|pending|postponed|swept|tested)
+				state="--state=$o" ;;
+		--*) set -- "$@" "$o" ;;
+		*)		user="--user=$o" ;;
+	esac
+done
+
+if [ "$repo$user$state$needs" != '--user=all' ]; then
+	# shellcheck disable=SC2086
+	ssh girar task ls $repo $user $state $needs \
+	| sed -E \
+		-e "s/\bFAIL\S+/$BRIGHT$RED&$NORM/i" \
+		-e "s/\bBUILDING/$BRIGHT$GREEN&$NORM/i" \
+		-e "s/\bCOMMIT\S+/$BRIGHT$YELLOW&$NORM/i" \
+		-e "s/\bEPERM/$MAGENTA&$NORM/i" \
+		-e "s/\bTESTED/$GREEN&$NORM/i" \
+		-e "s/\[test-only\]/$GREEN&$NORM/" \
+		-e "s/ ([cpt][[:digit:]]+[^[:space:]/]*)(\/)?(\S+)?/ $BLUE\1\2$BRIGHT\3$NORM/" \
+		-e "s/ (icarus|sisyphus)(\/)?(\S+)?/ $CYAN\1\2$BRIGHT\3$NORM/"
+else
+	cmd="ssh girar task ls $user $*"
+	[ -t 1 ] && cmd="gum spin --show-stdout -- $cmd"
+	$cmd | awk '{print$2}' | sort | uniq -c
+fi
