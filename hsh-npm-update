@@ -1,0 +1,63 @@
+#!/bin/bash
+set -eu -o pipefail
+
+toplevel=$(git rev-parse --show-toplevel)
+dir=$(basename "$toplevel")
+cd "$toplevel"
+hook=.gear/npm-build
+if [ ! -s "$hook" ]; then
+	echo >&2 "Define $hook hook."
+	exit 1
+fi
+workdir=$(grep -Po '^workdir=\K\S+' "$hook" ||:)
+target=$(grep -Po '^target=\K\S+' "$hook" ||:)
+if [ -z "$workdir" ]; then
+	echo >&2 "Define workdir= in $hook"
+	exit 1
+elif [ -z "$target" ]; then
+	echo >&2 "Define target= in $hook"
+	exit 1
+fi
+for i in package.json package-lock.json; do
+	if [ ! -e "$workdir/$i" ]; then
+		echo >&2 "No $workdir/$i"
+		exit 1
+	fi
+done
+
+printf '%s\n\n' "ALT: Generate $target" > .git/NPM.log
+( set -x
+  hsh --ini
+  hsh-install git npm rsync )
+hsh-run --rooter -- bash -c 'echo nameserver 1.1.1.1 > /etc/resolv.conf'
+hsh-run --rooter -- bash -c 'echo precedence ::ffff:0:0/96 100 > /etc/gai.conf'
+
+(set -x; hsh-rsync -a "$toplevel" builder:)
+
+share_network=1 \
+hsh-run --mountpoints=/proc -- bash <<-EOF |& tee -a .git/NPM.log
+	export NO_PROXY=${NO_PROXY@Q} ALL_PROXY=${ALL_PROXY@Q}
+	cd
+	set -ex
+	mkdir ~/.npm-global
+	npm config set prefix ~/.npm-global
+	npm install -g @aikidosec/safe-chain
+	PATH=~/.npm-global/bin:\$PATH
+	rm -rf "$dir/$target"
+	cd "$dir/$workdir"
+	$(cat < "$hook")
+EOF
+
+# Target can be a dir or a single file.
+slash=$([ -d "$target" ] && echo / || :)
+trap 'git reset; beep' EXIT
+( set -x
+  hsh-rsync -av --delete --exclude=.git builder:"$dir/$target$slash" "$target"
+  git add -Af "$target" )
+
+if git diff --cached --quiet -- "$target"; then
+	echo >&2 "Nothing changed in $target."
+else
+	(set -x; git commit -F .git/NPM.log)
+fi
+(set -x; gear-checklist --update hsh-npm-update)
