@@ -23,7 +23,7 @@ dts_proto=''
 [ -v LINES ] && SELECTOR="gum choose --height=$((LINES-5))" || SELECTOR="tail -1"
 unset show_task aptcache spec logdiff offset sourcerpm resolve
 unset summary_task preview set_package list_only no_prefix
-unset override_task
+unset override_task log_task
 sed_expressions=()
 for i; do
 	shift
@@ -52,6 +52,7 @@ for i; do
 		--peek|--rpmpeek) rpmpeek=y; lsopts=; break ;;
 		--less) lesser=y; lsopts= ;;
 		-[0-9]) offset=$i ;;
+		--log-task=*) log_task=${i#*=} ;;
 		--logdiff) logdiff=log; logtool=logdiff ;;
 		--logdiff2) logdiff=log; logtool=logdiff2 ;;
 		--log) logs=y ;;
@@ -352,9 +353,21 @@ elif [ -v logdiff ]; then
 	curl -sSf -L "$baseurl/srpm.log" > "$log_remote"
 	sed -i 's/^/00:00:00 /' "$log_remote"
 	curl -sSf -L "$baseurl/log"     >> "$log_remote"
-	[[ $SELECTOR = *fzf* ]] && offset=
-	log_local="$tmp/log-local${offset-}"
-	log ${offset--0} > "$log_local"
+	if [ -v log_task ]; then
+		pkgname=$(rpm -qp "$RPM" --qf '%{N}')
+		logbase="https://git.altlinux.org/tasks/$log_task"
+		logurlplan="$logbase/plan/add-bin"
+		logsubtask=$(curl -sSf "$logurlplan" | awk -v"P=$pkgname" -v"A=$arch" '$1 == P && $3 == A {print $6}')
+		log_local="$tmp/log-task[$log_task-$logsubtask-$arch]"
+		logurl="$logbase/build/$logsubtask/$arch"
+		curl -sSf -L "$logurl/srpm.log" > "$log_local"
+		sed -i 's/^/00:00:00 /' "$log_local"
+		curl -sSf -L "$logurl/log"     >> "$log_local"
+	else
+		[[ $SELECTOR = *fzf* ]] && offset=
+		log_local="$tmp/log-local${offset-}"
+		log ${offset--0} > "$log_local"
+	fi
 	for i in "${sed_expressions[@]}"; do
 		sed -Ei "$i" "$log_remote" "$log_local"
 	done
