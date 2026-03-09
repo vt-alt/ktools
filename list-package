@@ -23,6 +23,7 @@ dts_proto=''
 [ -v LINES ] && SELECTOR="gum choose --height=$((LINES-5))" || SELECTOR="tail -1"
 unset show_task aptcache spec logdiff offset sourcerpm resolve
 unset summary_task preview set_package list_only no_prefix
+unset override_task
 sed_expressions=()
 for i; do
 	shift
@@ -58,6 +59,7 @@ for i; do
 		--dts | --ver*) dts=y ;;
 		--dts=*) dts=${i#*=} ;;
 		--summary) dts=y; summary_task=y ;&
+		--override-task=*) override_task=${i#*=} ;;
 		--task) show_task=--brief ;;
 		--task-full) show_task= ;;
 		-p | --pkg | --packages) show_pkg=y ;;
@@ -244,6 +246,15 @@ select_one() {
 		# Corner case: we need just some rpm for meta-info.
 		# shellcheck disable=SC2128
 		RPM=$list
+	elif [ -v override_task ]; then
+		# Just one RPM to get %NAME
+		RPM=${list[1]}
+		pkgname=$(rpm -qp "$RPM" --qf '%{N}')
+		TASK=$override_task
+		URL=https://git.altlinux.org/tasks/$TASK/plan/add-bin
+		SUBTASK=$(gum spin -- curl -sSf "$URL" | awk -v"P=$pkgname" -v"A=$arch" '$1 == P && $3 == A {print $6}')
+		unset pkgname st_rpms RPM
+		return
 	else
 		local default=$(ls -1 "${list[@]}" | grep -i -m1 '/sisyphus/')
 		RPM=$(gum choose --header='Select one:' --cursor='-> ' --selected="$default" "${list[@]}")
