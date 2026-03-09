@@ -9,7 +9,7 @@ allow_all=
 show_srpm=
 gear_describe=--disable-specsubst
 unset tag target repo today task mount umount
-unset with_filenames ls_opts name_glob
+unset with_filenames ls_opts name_glob rpmq
 for o do
 	shift
 	case "$o" in
@@ -31,6 +31,9 @@ for o do
 		--umount)       umount=y ;;
 		-H)             with_filenames=y ;;
 		-l|--full-time) ls_opts+=("$o") ;;
+		-lv|--list|--dump|--state|--docfiles|--configfiles|--licensefiles| \
+		--scripts|--last|--info|--filesbypkg|--triggerscripts|--triggers|\
+		--verify|-Vv)   rpmq=$o ;;
 		--*)            tag=${o#--} ;;
 		-v)             invert_match=1 ;;
 		*) set -- "$@" "$o"
@@ -140,6 +143,8 @@ for i in "${list[@]}"; do
 		q="[ $(sed -E 's/\w+/%{&}/g' <<< "$tag")\n]"
 		[ -v with_filenames ] && q="${i//[%\}\{\]\[]/\\&}:$q"
 		rpmquery --qf "$q" -p "$i"
+	elif [ -v rpmq ]; then
+		(set -x; rpm -qp "$i" "$rpmq")
 	else
 		printf "%s\n" "$i"
 	fi
