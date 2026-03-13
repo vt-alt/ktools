@@ -19,6 +19,7 @@ for opt do
         shift
 	arg=${opt#*=}
         case "$opt" in
+		-C*) cd "${opt#-C}" ;;
 		+32)  targets+=("$HOSTTYPE") ;&
 		-32 | --32) targets+=('i586') ;;
 		--arch=* | --target=*) targets+=( "${opt#*=}" ) ;;
