@@ -5,7 +5,7 @@ set -efu +o posix
 
 cr=$'\n'
 unset spec_at configs_at checkout_at keep_debug bb_prep ensure_check reset_before reset_after
-unset repo hsh_clean eval_cmd
+unset repo hsh_clean eval_cmd bisect
 for opt do
 	shift
 	arg=${opt#*=}
@@ -54,6 +54,12 @@ fi
 
 [ -v checkout_at ] || { echo >&2 "--checkout= is required."; exit 1; }
 checkout_short=$(git rev-parse --short "$checkout_at")
+if [ -e .git/BISECT_LOG ]; then
+	# The bisect step, for each step to be higher release. This is still
+	# unreliable for version comparison in long bisects, since the kernel
+	# version could become lower.
+	bisect=.$(grep -c ^git .git/BISECT_LOG)
+fi
 
 [ -v spec_at ]     ||
 [ -v configs_at ]  ||
@@ -96,7 +102,7 @@ PATCHLEVEL=$(sed -n '/^PATCHLEVEL =/s/.*= //p' Makefile)
 SUBLEVEL=$(sed -n '/^SUBLEVEL =/s/.*= //p' Makefile)
 sed -E "s/^(%define kernel_base_version).*/\1\t$VERSION.$PATCHLEVEL/" -i kernel-image.spec
 sed -E "s/^(%define kernel_sublevel).*/\1\t.$SUBLEVEL/" -i kernel-image.spec
-sed -E "s/^(Release: .*)/\1.commit_$checkout_short/" -i kernel-image.spec
+sed -E "s/^(Release: .*)/\1${bisect-}.commit_$checkout_short/" -i kernel-image.spec
 
 message="- kb-commit-bb on:$cr"
 if [ -s .git/BISECT_RUN ]; then
@@ -119,7 +125,7 @@ echo "$cb" > .git/KBB_START
 [ -v bb_prep ] && exit 0
 
 set +e -o pipefail
-bb --wait-lock "$@" |& sed "s/^/$checkout_short▲/"
+bb --wait-lock "$@" |& sed "s/^/$checkout_short${bisect-}▲/"
 status=$?
 set -e
 
