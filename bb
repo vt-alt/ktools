@@ -40,6 +40,7 @@ for opt do
 		--ci-command=*) ci_command="${opt#*=}" ;;
 		--ci-script=*) ci_script=$arg ;;
 		--repo-clean) hsh_clean=y ;;
+		--clean-after) hsh_clean_after=y ;;
 		--no-repo) set_repo=/var/empty ;;
 		--set-repo=*) set_repo=$arg ;;
 		--fresh) fresh=y ;;
@@ -348,6 +349,7 @@ for branch in "${branches[@]}"; do
 	((${#pkgi[@]})) &&
 		pkg_install |& ts "$ts" | tee -a "$log"
 	run_ci_script |& ts "$ts" | tee -a "$log"
+	[ -v hsh_clean_after ] && hsh-pkglist --clean
 	sep=$'\n'
 done
 done
