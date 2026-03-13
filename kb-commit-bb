@@ -64,8 +64,8 @@ fi
 [ -v spec_at ]     ||
 [ -v configs_at ]  ||
 	spec_at=$(git tag --contains "$checkout_at" --merged="$cb" 'kernel-image-*' | head -1)
-[ -v spec_at ]     || spec_at=$configs_at
-[ -v configs_at ]  || configs_at=$spec_at
+[ -v spec_at ]     || spec_at=${configs_at:-$cb}
+[ -v configs_at ]  || configs_at=${spec_at:-$cb}
 
 # We don't need to checkout before/after bisect.
 atexit() {
