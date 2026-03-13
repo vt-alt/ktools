@@ -6,17 +6,18 @@ allow_debuginfo=
 allow_checkinstall=
 invert_match=0
 allow_all=
-show_srpm=
+show_mode=rpm
 gear_describe=--disable-specsubst
 unset tag target repo today task mount umount
 unset with_filenames ls_opts name_glob rpmq
+unset repo_clean
 for o do
 	shift
 	case "$o" in
-		-a|--all)       allow_all=y ;;
+		-a|--all)       allow_all=y; show_mode=all ;;
 		-n)             name_glob=y ;;
 		--commit)       gear_describe=$o ;;
-		--src)          show_srpm=y ;;
+		--src)          show_mode=srpm ;;
 		--debuginfo)    allow_debuginfo=y ;;
 		--checkinstall) allow_checkinstall=y ;;
 		-32)            target=i586 ;;
@@ -30,6 +31,7 @@ for o do
 		--mount)        mount=y ;;
 		--umount)       umount=y ;;
 		-H)             with_filenames=y ;;
+		--clean)        repo_clean=y; show_mode=all ;;
 		-l|--full-time) ls_opts+=("$o") ;;
 		-lv|--list|--dump|--state|--docfiles|--configfiles|--licensefiles| \
 		--scripts|--last|--info|--filesbypkg|--triggerscripts|--triggers|\
@@ -67,11 +69,12 @@ if [ -v task ]; then
 	export HTTPDIRFS_LOG_LEVEL=3
 	base_url="http://git.altlinux.org/tasks/${task:?}"
 
-	if [ -n "$show_srpm" ]; then
+	if [ "$show_mode" != rpm ]; then
 		add_src=$(curl -sL "$base_url/plan/add-src")
 		read -r _ _ _ pkg st <<<"$add_src"
 		list+=("$pkg")
-	else
+	fi
+	if [ "$show_mode" != srpm ]; then
 		curl -sL "$base_url/plan/add-bin" |
 			while read -r _ _ ar _ pkg _st _; do
 				[[ $ar == @(noarch|$target) ]] || continue
@@ -98,9 +101,10 @@ elif [ -v repo ]; then
 	read -r name _ <<<"$(gear --describe --disable-specsubst)"
 	[ -v today ] && repo_base="/mnt/space/pub/distributions/ALTLinux/$repo" || repo_base="/ALT/$repo"
 	repo_srpm=$(ugrep -z -P "^\Q$name\E\t" "$repo_base/files/list/src.list.xz" | awk '{print $3}')
-	if [ -n "$show_srpm" ]; then
+	if [ "$show_mode" != rpm ]; then
 		list=("$repo_base/files/SRPMS/$repo_srpm")
-	else
+	fi
+	if [ "$show_mode" != srpm ]; then
 		ugrep -z -F "$repo_srpm" "$repo_base/files/list/bin.list.xz" |
 		awk -v srpm="$repo_srpm" '$5 == srpm' |
 			while read -r _ _ ar bp _; do
@@ -108,18 +112,26 @@ elif [ -v repo ]; then
 				list+=("$repo_base/files/$ar/RPMS/$bp")
 			done
 	fi
-elif [ -n "$show_srpm" ]; then
-	list=("$def_repo/SRPMS.hasher/$srcrpm")
 else
-	cd "$def_repo/${target:-$(arch)}/RPMS.hasher"
-	for i in *.rpm; do
-		SOURCERPM=$(rpm -qp --qf '%{SOURCERPM}' "$i")
-		[ "$srcrpm" = "$SOURCERPM" ] || continue
-		list+=("$def_repo/${target:-$(arch)}/RPMS.hasher/$i")
-	done
+	if [ "$show_mode" != rpm ]; then
+		f="$def_repo/SRPMS.hasher/$srcrpm"
+		[ -e "$f" ] && list=("$f")
+	fi
+	if [ "$show_mode" != srpm ]; then
+		cd "$def_repo/${target:-$(arch)}/RPMS.hasher"
+		for i in *.rpm; do
+			SOURCERPM=$(rpm -qp --qf '%{SOURCERPM}' "$i")
+			[ "$srcrpm" = "$SOURCERPM" ] || continue
+			list+=("$def_repo/${target:-$(arch)}/RPMS.hasher/$i")
+		done
+	fi
 fi
 
 for i in "${list[@]}"; do
+	if [ -v repo_clean ]; then
+		rm -v "$i" || :
+		continue
+	fi
 	if [ -z "$allow_all" ]; then
 		[ -n "$allow_checkinstall" ] || [[ $i != *-checkinstall-* ]] || continue
 		[ -n "$allow_debuginfo" ]    || [[ $i != *-debuginfo-* ]]    || continue
