@@ -42,7 +42,7 @@ else
 	SRPM="$NAME-$VERSION-$RELEASE"
 fi
 
-list=( $(hsh-pkglist --all --commit) )
+list=( $(hsh-pkglist -a --commit) )
 
 if [ ${#list[@]} -eq 0 ]; then
 	echo >&2 "No matching $SRPM RPMs are found in $PWD, try setting --evr= or build locally."
