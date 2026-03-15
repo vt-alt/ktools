@@ -11,19 +11,37 @@ for o do
 	esac
 done
 
+get_base() {
+	local url=$1 owner repo
+
+	if [[ $url =~ https://github.com/([^/]+)/(.*) ]]; then
+		owner=${BASH_REMATCH[1]}
+		repo=${BASH_REMATCH[2]}
+		repo=${repo%.git}
+	else
+		echo >&2 "OWNER/REPO unknown."
+		exit 1
+	fi
+
+	curl -sSLf "https://api.github.com/repos/$owner/$repo/pulls/$PR" \
+		| jq -r .base.sha
+}
+
 PR=${1:?pull request id}
 if [[ $PR =~ (https://github.com/.*/.*)/(pull/[[:digit:]]+) ]]; then
 	url=${BASH_REMATCH[1]}
 	pr=${BASH_REMATCH[2]}
 	(set -x; git fetch "$url.git" "$pr/head")
 elif [[ $PR =~ ^[[:digit:]]+$ ]]; then
+	url=$(git remote get-url origin)
 	(set -x; git fetch origin "pull/$PR/head")
 else
 	echo >&2 "Unknown URL format"
 	exit 1
 fi
 if [ -v pick ]; then
-	git l ..FETCH_HEAD
+	base=$(get_base "$url")
+	git l "$base..FETCH_HEAD"
 	gum confirm 'Pick?'
-	(set -x; git cherry-pick "${pickopts[@]}" ..FETCH_HEAD)
+	(set -x; git cherry-pick "${pickopts[@]}" "$base..FETCH_HEAD")
 fi
