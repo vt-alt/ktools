@@ -1,10 +1,11 @@
 #!/bin/bash
 set -efu +o posix
 
-unset pick
+unset pick pickopts
 for o do
         shift
         case "$o" in
+		-e|-s|-n|-m|-x|--no-ff|--ff) pickopts+=("$o") ;;
 		--cherry-pick|--pick) pick=y ;;
 		*) set -- "$@" "$o"
 	esac
@@ -24,5 +25,5 @@ fi
 if [ -v pick ]; then
 	git l ..FETCH_HEAD
 	gum confirm 'Pick?'
-	(set -x; git cherry-pick -s ..FETCH_HEAD)
+	(set -x; git cherry-pick "${pickopts[@]}" ..FETCH_HEAD)
 fi
