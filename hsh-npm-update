@@ -3,6 +3,7 @@ set -eu -o pipefail
 
 toplevel=$(git rev-parse --show-toplevel)
 dir=$(basename "$toplevel")
+readonly dir
 cd "$toplevel"
 hook=.gear/npm-build
 if [ ! -s "$hook" ]; then
@@ -26,6 +27,27 @@ for i in package.json package-lock.json; do
 done
 
 printf '%s\n\n' "ALT: Generate $target" > .git/NPM.log
+prev_tag=$(git describe --candidates=1 --tags --match '*-alt*' --abbrev=0 gears/sisyphus 2>/dev/null || :)
+{
+	header="State before update"
+	if [ -n "$prev_tag" ]; then
+		header+=" since $prev_tag"
+		prev_tag+='..'
+	fi
+	header+=$':\n'
+	for sdir in "$workdir" "$target"; do
+		# shellcheck disable=SC2086
+		if [ -n "$(git l $prev_tag -- "$sdir" 2>/dev/null ||:)" ]; then
+			echo -n "$header"
+			header=
+			echo -n "  $sdir: "
+			git log -1 --pretty=format:'%h %ad %s (%an)%n' --date=short -- "$sdir"
+		fi
+	done
+	[ -z "$header" ] && echo
+	unset sdir header
+} >> .git/NPM.log
+
 ( set -x
   hsh --ini
   hsh-install git npm rsync )
