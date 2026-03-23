@@ -17,6 +17,7 @@ commits=
 describe=
 pick=
 tag_grep=
+show_diff=
 show_tags=
 allow_diverged=
 all=
@@ -49,6 +50,7 @@ for opt do
 		--no-fzf) fzf=n ;;
 		--commits) commits=y ;;
 		--describe) describe=y; commits=y ;;
+		--diff) show_diff=y ;;
 		--tag=*) tag_grep=${opt#*=} ;&
 		--tag | --tags) show_tags=tags ;;
 		--log ) show_tags=log ;;
@@ -333,8 +335,10 @@ for lbr in $branches; do
 					git log --line-prefix='   ' --color=always \
 						--format='%C(yellow)%h%Creset %C(bold)%x01%N%x01%Creset %s' \
 						--first-parent "$topmost..$rbr"
-
 				fi | sed -Ez 's/\x1\x1/ /g;s/\x1[^\x1]+\x1/N/g'
+				if [ -n "$show_diff" ]; then
+					git diff "$log_from..$lbr"
+				fi
 			fi
 			unset log_from
 		fi
