@@ -1,0 +1,27 @@
+#!/bin/bash
+# Requires to be set in advance (per repo):
+#   git config core.logAllRefUpdates always
+set -efu
+shopt -s lastpipe
+toplevel=$(git rev-parse --show-toplevel)
+cd "$toplevel"
+if (($#)) && [[ -f ".git/logs/refs/tags/$1" ]]; then
+	tag=$1
+	shift
+else
+	tag=$(git describe --tag --abbrev=0 --match '*alt*')
+fi
+log=".git/logs/refs/tags/$tag"
+tac "$log" | while read -r a b c; do
+	if [[ $a == 0000000000000000000000000000000000000000 ]]; then
+		continue
+	fi
+	echo
+	echo "  $c"
+	if git diff --quiet "$a" "$b"; then
+		# No difference
+		(set -x; git l "$a...$b")
+	else
+		(set -x; git diff --stat "$@" "$a" "$b")
+	fi
+done
