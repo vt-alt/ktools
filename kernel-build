@@ -10,7 +10,7 @@ kmodules=y
 runthetask=y
 commit=--test-only
 kernelbot=y
-unset push_branch unset_push_branch
+unset push_branch
 for opt do
 	shift
 	case "$opt" in
@@ -25,8 +25,7 @@ for opt do
 		--no-run) unset runthetask ;;
 		--disapprove) disapprove=y ;;
 		--branch) push_branch=y ;;
-		--no-branch) unset_push_branch=y ;;
-		--test) disapprove=y; unset_push_branch=y ;;
+		--test) disapprove=y ;;
 		--deps=*) deps="${opt#*=}" ;;
 		-*) echo >&2 "Unknown option $opt"; exit 1 ;;
 		*) set -- "$opt" "$@" ;; # tags
@@ -44,7 +43,6 @@ else
 	approver=girar
 	girar=girar
 fi
-[ -v unset_push_branch ] && unset push_branch
 
 br=$(git branch --show-current)
 [ -n "${branch-}" ] || branch=${br#*/}
@@ -62,16 +60,6 @@ case $brflvr in
 		;;
 	*) echo >&2 "Invalid flavour $brflvr"; exit 1 ;;
 esac
-
-if [ -v push_branch -o -v kmodules ]; then
-	tests=$(git log --oneline --author=altlinux -i --grep=test "@{u}..")
-	if [ -n "$tests" ]; then
-		echo "$tests" | sed 's/^/\t(test) /'
-		echo >&2 "Test build, do not push branch, do not add kmodules."
-		unset push_branch
-		unset kmodules
-	fi
-fi
 
 # Set tags to build.
 if [ "$*" ]; then
