@@ -64,7 +64,7 @@ case $brflvr in
 esac
 
 if [ -v push_branch -o -v kmodules ]; then
-	tests=$(git log --oneline --author=altlinux -i --grep=test "$remote/$br..")
+	tests=$(git log --oneline --author=altlinux -i --grep=test "@{u}..")
 	if [ -n "$tests" ]; then
 		echo "$tests" | sed 's/^/\t(test) /'
 		echo >&2 "Test build, do not push branch, do not add kmodules."
