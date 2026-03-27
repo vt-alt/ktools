@@ -294,7 +294,9 @@ for branch in "${branches[@]}"; do
 		log=/dev/null
 	else
 		for log in log log1 .log build.log; do
-			[[ -d "$log" ]] || break
+			[[ -d $log ]] ||
+			git ls-files --error-unmatch -- "$log" &>/dev/null ||
+			break
 		done
 		L=.git/bb/log.$(date +%F_%H%M)
 		[ "sisyphus" = "$branch" ] && unset branch || L+=".$branch"
