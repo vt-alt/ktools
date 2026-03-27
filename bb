@@ -224,6 +224,8 @@ toplevel=$(git rev-parse --show-toplevel)
 	cd "$toplevel"
 }
 
+[ -f .gear-rules ] || [ -f .gear/rules ] || fatal "Cannot build non-gear repo or branch."
+
 if [ -d .git ] && [ ! -d .git/bb ]; then
         mkdir .git/bb
 	if [[ -n $(set +f; ls log.2024* 2>/dev/null) ]]; then
