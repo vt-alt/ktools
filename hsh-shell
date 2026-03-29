@@ -16,27 +16,32 @@ done
 # Swap opts and $@
 (( $# )) && cmd="$*"
 set -- "${opts[@]}"
-unset opts
+unset opts opt
 
 toplevel=$(git rev-parse --show-toplevel 2>/dev/null) && h="$toplevel/.git/bb" || h="$HOME/.cache/hsh-shell"
 mkdir -p "$h"
+
+workdir="${TMPDIR-/tmp/.private/$USER}/hasher"
+[ -d "$workdir/chroot" ] || workdir="$HOME/hasher"
+
 if [[ -v rooter ]]; then
-	hist=/root/.bash_history
 	opt=(--rooter)
+	hist=/root/.bash_history
 	f=$h/.bash_history--rooter
 	if [ -s "$f" ]; then
-		hsh-run --rooter -- /usr/bin/test -e "$hist" </dev/null ||
+		[ -e "$workdir/chroot/$hist" ] ||
 			hsh-run --rooter -- /bin/dd of="$hist" status=none < "$f"
 	fi
 else
+	files=(~/.gitconfig ~/.vimrc ~/.bashrc ~/.fsearch)
 	hist=/usr/src/.bash_history
-	opt=()
 	f=$h/.bash_history
-	if [ -s "$f" ]; then
-		hsh-run -- /usr/bin/test -e "$hist" </dev/null ||
-			hsh-copy -q "$f" ~/.gitconfig ~/.vimrc ~/.bashrc ~/.fsearch . </dev/null
-	fi
+	[ -s "$f" ] && files+=("$f")
+	[ -e "$workdir/chroot/usr/src/.gitconfig" ] ||
+		hsh-copy -q "${files[@]}" . </dev/null
 fi
+readonly f hist
+unset files
 
 unset exports
 if [[ -v share_network ]] && [[ -v ALL_PROXY ]]; then
@@ -45,8 +50,6 @@ if [[ -v share_network ]] && [[ -v ALL_PROXY ]]; then
 fi
 [[ -v exports ]] && exports="export $exports"
 
-workdir="${TMPDIR-/tmp/.private/$USER}/hasher"
-[ -d "$workdir/chroot" ] || workdir="$HOME/hasher"
 workdir_sh="$workdir/chroot/.host/shell"
 {
 	cat > "$workdir_sh" &&
@@ -64,8 +67,12 @@ workdir_sh="$workdir/chroot/.host/shell"
 EOF
 
 TERM=${TERM#screen.}
+# Shell will exit with the exit code of the last interactive command, we should
+# not break copying because the last command was unsuccessful.
+set +e
 ($setx; /usr/bin/hsh-shell "$@")
 ret=$?
+set -e
 
 [ -d "$h" ] || exit "$ret"
 
