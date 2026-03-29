@@ -65,7 +65,10 @@ fi
 
 [ -v spec_at ]     ||
 [ -v configs_at ]  ||
-	spec_at=$(git tag --contains "$checkout_at" --merged="$cb" 'kernel-image-*' | head -1)
+{
+	spec_at=$(git -P tag --contains "$checkout_at" --merged="$cb" 'kernel-image-*' | head -1)
+	[ -n "$spec_at" ] || spec_at=$cb
+}
 [ -v spec_at ]     || spec_at=${configs_at:-$cb}
 [ -v configs_at ]  || configs_at=${spec_at:-$cb}
 
