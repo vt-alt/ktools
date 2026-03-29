@@ -24,7 +24,8 @@ for opt do
 		--hsh-clean)		hsh_clean=y ;;
 		--kasan)		kasan=y ;;
 		-*)	set -- "$@" "$opt" ;;
-		*)	echo >&2 "Unknown argument $opt"; exit 1 ;;
+		*)	checkout_at=$(git rev-parse "$opt" 2>/dev/null) ||
+			{ echo >&2 "Unknown argument $opt"; exit 1; } ;;
 	esac
 done
 
