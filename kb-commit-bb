@@ -5,7 +5,7 @@ set -efu +o posix
 
 cr=$'\n'
 unset spec_at configs_at checkout_at keep_debug bb_prep ensure_check reset_before reset_after
-unset repo hsh_clean eval_cmd bisect
+unset repo hsh_clean eval_cmd bisect kasan
 for opt do
 	shift
 	arg=${opt#*=}
@@ -22,6 +22,7 @@ for opt do
 		--repo=*)		repo=$arg ;;
 		--eval=*)		eval_cmd=$arg ;;
 		--hsh-clean)		hsh_clean=y ;;
+		--kasan)		kasan=y ;;
 		-*)	set -- "$@" "$opt" ;;
 		*)	echo >&2 "Unknown argument $opt"; exit 1 ;;
 	esac
@@ -94,6 +95,29 @@ if [ ! -v keep_debug ]; then
 	sed -i '/CONFIG_DEBUG_INFO/d'      config
 	echo "CONFIG_DEBUG_INFO_NONE=y" >> config
 	sed -i '/_stripped_files_terminate_build/d' kernel-image.spec
+fi
+
+if [ -v kasan ]; then
+	cat >> config <<-EOF
+	CONFIG_KASAN_VMALLOC=y
+	CONFIG_KASAN_STACK=y
+	CONFIG_KASAN_OUTLINE=y
+	CONFIG_KASAN_MODULE_TEST=m
+	CONFIG_KASAN_GENERIC=y
+	CONFIG_KASAN_EXTRA_INFO=y
+	CONFIG_KFENCE=y
+	CONFIG_KFENCE_STATIC_KEYS=y
+	# CONFIG_KCSAN is not set
+	CONFIG_KASAN=y
+	CONFIG_UBSAN=y
+	CONFIG_LOCK_DEBUGGING_SUPPORT=y
+	CONFIG_LOCKDEP=y
+	CONFIG_PROVE_LOCKING=y
+	CONFIG_PROVE_RAW_LOCK_NESTING=y
+	CONFIG_RCU_EXPERT=y
+	CONFIG_PROVE_RCU=y
+	CONFIG_PROVE_RCU_LIST=y
+	EOF
 fi
 
 # Need to update versioning so package builds correctly.
