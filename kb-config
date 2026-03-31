@@ -12,7 +12,7 @@ list_branches() {
 }
 
 pathspec=( "config*" )
-unset show_unmatched show_tag print_matches re print_patch_id
+unset show_unmatched show_tag print_matches re print_patch_id update_gears
 for o do
 	shift
 	case "$o" in
@@ -31,12 +31,21 @@ for o do
 		--print)   print_matches=y ;;
 		--print=*) print_matches=y; re=${o*=} ;;
 		--patch-id) print_patch_id=y ;;
+		--update-gears) update_gears=y ;;
 		--) echo >&2 "Perhaps, you need to use --pathspec="; exit 1 ;;
 		--grep=*)  re=${o#*=} ;;&
 		-[SG]*)    re=${o#-?} ;;&
 		*) set -- "$@" "$o"
 	esac
 done
+
+if [ -v update_gears ]; then
+	git remote | grep -P '^gears/\d\.\d+' | sort -V |
+		while read -r remote; do
+			(set -x; git fetch "$remote" --tags)
+		done
+	exit 0
+fi
 
 if [[ $* == [A-Z]* ]]; then
 	echo >&2 "Error: Perhaps, run: $(basename "$0") -G'$*'"
