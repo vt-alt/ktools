@@ -12,7 +12,7 @@ list_branches() {
 }
 
 pathspec=( "config*" )
-unset show_unmatched show_tag print_matches re
+unset show_unmatched show_tag print_matches re print_patch_id
 for o do
 	shift
 	case "$o" in
@@ -30,6 +30,7 @@ for o do
 		--tag) show_tag=y ;;
 		--print)   print_matches=y ;;
 		--print=*) print_matches=y; re=${o*=} ;;
+		--patch-id) print_patch_id=y ;;
 		--) echo >&2 "Perhaps, you need to use --pathspec="; exit 1 ;;
 		--grep=*)  re=${o#*=} ;;&
 		-[SG]*)    re=${o#-?} ;;&
@@ -59,7 +60,12 @@ while read -r br; do
 	git log --oneline --format='%h %cd - %s (%an)' --date=short "$@" "$br" "${pathspec[@]}" |
 	while read -r h a; do
 		matched=y
-		printf -- '%s %s %s\n' "$prefix" "$h" "$a"
+		patch_id=
+		if [ -v print_patch_id ]; then
+			patch_id=$(git show "$h" | git patch-id)
+			[ -n "$patch_id" ] && patch_id="<${patch_id:0:5}> "
+		fi
+		printf -- '%s %s %s\n' "$prefix" "$patch_id$h" "$a"
 		[[ -v print_matches ]] &&
 			git show -p "$h" | grep -H --label="  $prefix" --color -Pe "$re" || :
 	done
