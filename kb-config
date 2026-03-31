@@ -30,6 +30,7 @@ for o do
 		--tag) show_tag=y ;;
 		--print)   print_matches=y ;;
 		--print=*) print_matches=y; re=${o*=} ;;
+		--) echo >&2 "Perhaps, you need to use --pathspec="; exit 1 ;;
 		--grep=*)  re=${o#*=} ;;&
 		-[SG]*)    re=${o#-?} ;;&
 		*) set -- "$@" "$o"
@@ -41,7 +42,9 @@ if [[ $* == [A-Z]* ]]; then
 	exit 1
 fi
 
-echo >&2 ":: git log $* -- ${pathspec[*]}"
+[ -v pathspec ] && pathspec=(-- "${pathspec[@]}")
+
+echo >&2 ":: git log $* ${pathspec[*]}"
 while read -r br; do
 	printf -v prefix '%-30s ' "${br#gears/}"
 	if [ -v show_tag ]; then
@@ -53,7 +56,7 @@ while read -r br; do
 	fi
 	shopt -s lastpipe
 	unset matched
-	git log --oneline --format='%h %cd - %s (%an)' --date=short "$@" "$br" -- "${pathspec[@]}" |
+	git log --oneline --format='%h %cd - %s (%an)' --date=short "$@" "$br" "${pathspec[@]}" |
 	while read -r h a; do
 		matched=y
 		printf -- '%s %s %s\n' "$prefix" "$h" "$a"
