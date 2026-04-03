@@ -58,10 +58,12 @@ hsh-run --rooter -- bash -c 'echo precedence ::ffff:0:0/96 100 > /etc/gai.conf'
 
 share_network=1 \
 hsh-run --mountpoints=/proc -- bash <<-EOF |& tee -a .git/NPM.log
+	mkdir ~/.npm-global
 	export NO_PROXY=${NO_PROXY@Q} ALL_PROXY=${ALL_PROXY@Q}
+	npm config set proxy ${HTTP_PROXY@Q}
+	npm config set https-proxy ${HTTPS_PROXY@Q}
 	cd
 	set -ex
-	mkdir ~/.npm-global
 	npm config set prefix ~/.npm-global
 	npm install -g @aikidosec/safe-chain
 	PATH=~/.npm-global/bin:\$PATH
