@@ -17,6 +17,7 @@ for opt do
 		--logdiff | --logdiff2) difftool=${opt#--} ;;
 		--diff-grep=*) pattern+=("${opt#*=}") ;;
 		--diff-sed=*) sedcmds+=("${opt#*=}") ;;
+		s/*/*/ | s!*!*!) sedcmds+=("$opt") ;;
 		-f | --filename) print_filename=y ;;
 		--no-ts) LESSOPEN='|sed -E "s/^[0-9:]{8}\s//" %s' ;;
 		--rm) rm_logs=y ;;
