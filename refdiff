@@ -40,6 +40,11 @@ tac "$log" | while read -r a b c; do
 	if [[ $a == 0000000000000000000000000000000000000000 ]]; then
 		continue
 	fi
+	if [[ $c =~ \>[[:space:]]([[:digit:]]+)[[:space:]]\+[[:digit:]]{4}[[:space:]] ]]; then
+		t=${BASH_REMATCH[1]}
+		d=$(date -d "@$t" "+%Y-%m-%d")
+		c=${c/$t/$d}
+	fi
 	echo '┌─────────────────────────────────────────────'
 	echo "│ $c"
 	if git diff --quiet "$a" "$b"; then
