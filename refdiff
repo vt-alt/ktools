@@ -5,23 +5,50 @@ set -efu
 shopt -s lastpipe
 toplevel=$(git rev-parse --show-toplevel)
 cd "$toplevel"
-if (($#)) && [[ -f ".git/logs/refs/tags/$1" ]]; then
-	tag=$1
-	shift
+if (($#)); then
+	for refs in tags heads; do
+		if [[ -f ".git/logs/refs/$refs/$1" ]]; then
+			ref=$1
+			refs=tags
+			shift
+			break
+		fi
+	done
 else
-	tag=$(git describe --tag --abbrev=0 --match '*alt*')
+	ref=$(git tag --points-at @)
+	refs=tags
+	if [[ -z $ref ]]; then
+		ref=$(git branch --show-current)
+		refs=heads
+	fi
 fi
-log=".git/logs/refs/tags/$tag"
+commit_resolve() {
+	local tag headref
+	headref=$(git rev-parse @)
+	tag=$(git tag --points-at "$1")
+	if [[ -n $tag ]]; then
+		echo "$tag"
+	elif [[ $1 == "$headref" ]]; then
+		echo "@"
+	else
+		echo "$1"
+	fi
+}
+
+log=".git/logs/refs/$refs/$ref"
 tac "$log" | while read -r a b c; do
 	if [[ $a == 0000000000000000000000000000000000000000 ]]; then
 		continue
 	fi
-	echo
-	echo "  $c"
+	echo '┌─────────────────────────────────────────────'
+	echo "│ $c"
 	if git diff --quiet "$a" "$b"; then
 		# No difference
-		(set -x; git l "$a...$b")
+		(set -x; git -P l --color=always "$a...$b")
+		echo
 	else
-		(set -x; git diff --stat "$@" "$a" "$b")
+		a=$(commit_resolve "$a")
+		b=$(commit_resolve "$b")
+		(set -x; git -P diff --color=always -p --stat "$@" "$a" "$b")
 	fi
-done
+done |& less
