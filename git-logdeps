@@ -1,0 +1,54 @@
+#!/bin/bash -efu
+# shellcheck disable=SC2001
+shopt -s lastpipe
+export LC_ALL=C
+
+unset tcommit print tags
+for opt do
+        shift
+        case "$opt" in
+		--commit=*|=*) tcommit+=("${opt#*=}") ;;
+		--print) print='exit' ;;
+		-p) print=':' ;;
+		--tags) tags=y ;; # very slow
+                *) set -- "$@" "$opt";;
+        esac
+done
+
+t=$(mktemp) && trap 'rm -- "$t"' 0
+
+funclist() {
+	grep -Po -e '^([-+ ]|@@.+@@\s)([#\w][\w\s]*\s)?\K[a-z_]\w+?(?=\()' |
+	sort -u
+}
+
+for tc in "${tcommit[@]}"; do
+	git -P show -p "$tc" | funclist
+done | sort -u > "$t"
+
+if [[ -v print ]]; then
+	cat -n "$t"
+	$print
+else
+	n=$(wc -l < "$t")
+	if ((!n)); then
+		echo >&2 "No functions in ${tcommit[*]}"
+		exit 1
+	else
+		echo >&2 "Matching for $n functions"
+	fi
+fi
+
+git rev-list "$@" |
+while read -r sha; do
+	if [[ -v tags ]]; then
+		tag=$(git tag --points-at "$sha")
+		[[ -n $tag ]] && echo >&2 "($tag)"
+	fi
+	fnmatched=$(git -P show -p "$sha" | funclist | comm -12 "$t" -)
+	if [[ -n $fnmatched ]]; then
+		# One-line git log with describe in format.
+		git ld -1 "$sha"
+		sed 's/^/\t/' <<< "$fnmatched"
+	fi
+done
